@@ -1,0 +1,22 @@
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${BOILERATE_SQL_PASSWORD:?Set a unique development SQL password}"
+    ports: ["127.0.0.1:14333:1433"]
+    volumes: ["mssql-data:/var/opt/mssql"]
+  postgresql:
+    image: postgres:17
+    environment:
+      POSTGRES_PASSWORD: "${BOILERATE_PG_PASSWORD:?Set a unique development PostgreSQL password}"
+    ports: ["127.0.0.1:54333:5432"]
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+volumes:
+  mssql-data:
+  postgres-data:

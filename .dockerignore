@@ -1,0 +1,11 @@
+**/bin
+**/obj
+**/Logs
+**/logs
+**/Files
+artifacts
+.git
+.vs
+**/*.env
+**/*.user
+**/*.pfx

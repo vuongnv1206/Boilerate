@@ -1,0 +1,8 @@
+{
+  "BlobStorageSettings": {
+    "Enabled": false,
+    "Provider": "Azure",
+    "DefaultContainer": "files",
+    "DefaultPublicAccess": false
+  }
+}

@@ -1,0 +1,35 @@
+@host = http://localhost:5020
+@email = {{ADMIN_EMAIL}}
+@password = {{ADMIN_PASSWORD}}
+@accessToken = {{ACCESS_TOKEN}}
+@roleId = {{ROLE_ID}}
+@roleVersion = {{ROLE_VERSION}}
+@functionId = {{FUNCTION_ID}}
+@actionId = {{ACTION_ID}}
+
+GET {{host}}/health/live
+
+### Login; copy token privately into ACCESS_TOKEN
+POST {{host}}/api/tokens/get
+Content-Type: application/json
+
+{"email":"{{email}}","password":"{{password}}"}
+
+### Current sessions
+GET {{host}}/api/tokens/sessions
+Authorization: Bearer {{accessToken}}
+
+### Definitions
+GET {{host}}/api/functions
+Authorization: Bearer {{accessToken}}
+
+### Load role version first
+GET {{host}}/api/roles/{{roleId}}
+Authorization: Bearer {{accessToken}}
+
+### Replace desired grants with current version
+PUT {{host}}/api/roles/{{roleId}}/permissions
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{"version":"{{roleVersion}}","permissions":[{"functionId":"{{functionId}}","actionId":"{{actionId}}"}]}

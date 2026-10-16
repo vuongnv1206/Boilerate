@@ -1,0 +1,16 @@
+{
+  "SecuritySettings": {
+    "Provider": "Jwt",
+    "RequireConfirmedAccount": false,
+    "AllowSelfRegistration": false,
+    "PublicBaseUrl": "https://localhost:7001",
+    "AuthenticationRequestsPerMinute": 10,
+    "JwtSettings": {
+      "Key": "",
+      "Issuer": "Boilerate",
+      "Audience": "Boilerate.Api",
+      "TokenExpirationInMinutes": 15,
+      "RefreshTokenExpirationInDays": 30
+    }
+  }
+}

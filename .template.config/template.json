@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/template",
+  "author": "Boilerate contributors",
+  "classifications": ["Web", "API", "Backend"],
+  "identity": "Boilerate.CleanArchitecture.Template",
+  "name": "Boilerate backend with database permissions",
+  "shortName": "boilerate",
+  "sourceName": "Boilerate",
+  "preferNameDirectory": true,
+  "tags": { "language": "C#", "type": "solution" },
+  "sources": [{
+    "exclude": ["**/[Bb]in/**", "**/[Oo]bj/**", "**/[Ll]ogs/**", "**/Files/**", "**/__pycache__/**", "**/*.pyc", "artifacts/**", "**/*.user", "**/*.env", "**/*.pfx", "**/.vs/**", "**/*.nupkg"]
+  }]
+}

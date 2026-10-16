@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Boilerate.Migrators.PostgreSQL</RootNamespace>
+    <AssemblyName>Boilerate.Migrators.PostgreSQL</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup><ProjectReference Include="..\Infrastructure\Infrastructure.csproj" /></ItemGroup>
+</Project>

@@ -1,0 +1,12 @@
+{
+  "SMTPEmailSettings": {
+    "DisplayName": "Boilerate Team",
+    "EnableVerification": true,
+    "From": "",
+    "SMTPServer": "smtp.gmail.com",
+    "Port": 587,
+    "UseSsl": false,
+    "Username": "",
+    "Password": ""
+  }
+}

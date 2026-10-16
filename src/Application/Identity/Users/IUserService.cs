@@ -1,0 +1,34 @@
+using Boilerate.Application.Common.Interfaces;
+using Boilerate.Application.Common.Models;
+using Boilerate.Application.Identity.Users.Password;
+
+namespace Boilerate.Application.Identity.Users;
+
+public interface IUserService : IScopedService
+{
+    Task<PaginationResponse<UserDetailDto>> SearchAsync(UserParameterFilter filter, CancellationToken cancellationToken);
+    Task<bool> ExistsWithNameAsync(string name);
+    Task<bool> ExistsWithEmailAsync(string email, string? exceptId = null);
+    Task<bool> ExistsWithPhoneNumberAsync(string phoneNumber, string? exceptId = null);
+    Task<string> GetFullName(Guid userId);
+    Task<List<UserDetailDto>> GetListAsync(CancellationToken cancellationToken);
+    Task<int> GetCountAsync(CancellationToken cancellationToken);
+    Task<UserDetailDto> GetAsync(string userId, CancellationToken cancellationToken);
+
+    Task<string> CreateAsync(CreateUserRequest request, string origin);
+    Task UpdateAsync(UpdateUserRequest request, string userId);
+    Task ToggleStatusAsync(ToggleUserStatusRequest request, CancellationToken cancellationToken);
+
+    Task<List<UserRoleDto>> GetRolesAsync(string userId, CancellationToken cancellationToken);
+    Task<string> AssignRolesAsync(string userId, UserRolesRequest request, CancellationToken cancellationToken);
+
+    Task<List<string>> GetPermissionsAsync(string userId, CancellationToken cancellationToken);
+    Task<bool> HasPermissionAsync(string userId, string permission, CancellationToken cancellationToken = default);
+
+    Task<string> ConfirmEmailAsync(string userId, string code, CancellationToken cancellationToken);
+    Task<string> ConfirmPhoneNumberAsync(string userId, string code);
+
+    Task<string> ForgotPasswordAsync(ForgotPasswordRequest request, string origin);
+    Task<string> ResetPasswordAsync(ResetPasswordRequest request);
+    Task ChangePasswordAsync(ChangePasswordRequest request, string userId);
+}

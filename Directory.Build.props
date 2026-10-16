@@ -1,0 +1,28 @@
+<Project>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+		<AnalysisLevel>latest</AnalysisLevel>
+		<AnalysisMode>All</AnalysisMode>
+		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+		<NoWarn>$(NoWarn);SA1600;SA1633;SA1101;SA1502;SA1313;SA1128;SA1413;SA1629;SA1611;SA1615;SA1503;CA1002;CA1062;IDE0011;CS1591;SA1518;SA1028;CA1716;CA1711;CA1056;SA1516;SA1402;S6968;CA1515;SA1309;CA1849;CA2007;S6966;S927;CA1725;S6678;SA1116;CA1308;CA1805;SA1649;CA1305;CA1311;CA1304;CA1307;CA1724;SA1210</NoWarn>
+	</PropertyGroup>
+	
+	<ItemGroup>
+		<PackageReference
+			Include="StyleCop.Analyzers"
+			PrivateAssets="all"
+			Condition="$(MSBuildProjectExtension) == '.csproj'"
+		/>
+		<PackageReference
+			Include="SonarAnalyzer.CSharp"
+			PrivateAssets="all"
+			Condition="$(MSBuildProjectExtension) == '.csproj'"
+		/>
+	</ItemGroup>
+	
+	<ItemGroup>
+		<AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" Link="stylecop.json" />
+	</ItemGroup>
+</Project>

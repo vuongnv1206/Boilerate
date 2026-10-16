@@ -1,0 +1,75 @@
+name: Backend and template
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  windows-boundaries:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet restore Boilerate.sln --locked-mode
+      - run: dotnet build Boilerate.sln -c Release --no-restore
+      - run: dotnet test Boilerate.sln -c Release --no-build --filter "Category!=ProviderIntegration"
+  linux-integration:
+    runs-on: ubuntu-latest
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: CiIsolatedSql!297584
+        ports: [1433:1433]
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: CiIsolatedPg!298745
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      BOILERATE_TEST_MSSQL: Server=127.0.0.1,1433;Database=master;User Id=sa;Password=CiIsolatedSql!297584;TrustServerCertificate=true
+      BOILERATE_TEST_POSTGRES: Host=127.0.0.1;Database=postgres;Username=postgres;Password=CiIsolatedPg!298745
+      BOILERATE_TEST_ARTIFACTS: ${{ github.workspace }}/artifacts/pdf-qa
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - run: dotnet tool restore
+      - run: dotnet restore Boilerate.sln --locked-mode
+      - run: dotnet build Boilerate.sln -c Release --no-restore
+      - name: Wait for SQL Server
+        shell: pwsh
+        run: |
+          $ready = $false
+          for ($attempt = 0; $attempt -lt 30; $attempt++) {
+            $socket = [Net.Sockets.TcpClient]::new()
+            try { $socket.Connect('127.0.0.1', 1433); $ready = $true; break } catch { Start-Sleep -Seconds 2 } finally { $socket.Dispose() }
+          }
+          if (!$ready) { throw 'SQL Server did not start' }
+          Start-Sleep -Seconds 10
+      - run: dotnet test Boilerate.sln -c Release --no-build --logger "trx;LogFileName=integration.trx"
+      - name: Audit resolved packages
+        shell: pwsh
+        run: |
+          dotnet list Boilerate.sln package --vulnerable --include-transitive --no-restore --format json > artifacts/audit.json
+          if ($LASTEXITCODE) { throw 'Package audit failed' }
+          $audit = Get-Content artifacts/audit.json -Raw | ConvertFrom-Json
+          if ($audit.projects.frameworks.topLevelPackages.vulnerabilities -or $audit.projects.frameworks.transitivePackages.vulnerabilities) { throw 'Vulnerable packages found' }
+      - name: Rename, migrate and run template matrix
+        shell: pwsh
+        run: ./scripts/verify-template.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verification
+          path: |
+            artifacts/verification/**/result.txt
+            artifacts/verification/**/cli-*.log
+            artifacts/pdf-qa
+            artifacts/audit.json
+            **/TestResults/*.trx

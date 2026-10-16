@@ -1,0 +1,45 @@
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+insert_final_newline = false
+trim_trailing_whitespace = true
+
+[*.cs]
+indent_size = 4
+
+# PascalCase cho classes
+dotnet_naming_rule.types_should_be_pascal_case.severity = warning
+dotnet_naming_rule.types_should_be_pascal_case.symbols = types
+dotnet_naming_rule.types_should_be_pascal_case.style = pascal_case
+
+dotnet_naming_symbols.types.applicable_kinds = class, struct, interface, enum
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+# _camelCase cho private fields
+dotnet_naming_rule.private_fields_should_be_camel_case_with_underscore.severity = warning
+dotnet_naming_rule.private_fields_should_be_camel_case_with_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_should_be_camel_case_with_underscore.style = camel_case_with_underscore
+
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+
+dotnet_naming_style.camel_case_with_underscore.required_prefix = _
+dotnet_naming_style.camel_case_with_underscore.capitalization = camel_case
+
+# var preferences
+csharp_style_var_for_built_in_types = false:warning
+csharp_style_var_when_type_is_apparent = true:suggestion
+
+# File-scoped namespaces
+csharp_style_namespace_declarations = file_scoped:warning
+
+# Always use braces
+csharp_prefer_braces = true:warning
+
+[*.{xml,csproj,props,targets}]
+indent_size = 2
+
+[*.json]
+indent_size = 2

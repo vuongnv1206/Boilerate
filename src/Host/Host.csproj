@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>Boilerate-Host-Development</UserSecretsId>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Boilerate.Host</RootNamespace>
+    <AssemblyName>Boilerate.Host</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup><Content Remove="Logs/**;Files/**" /></ItemGroup>
+  <ItemGroup><InternalsVisibleTo Include="Boilerate.Tests" /></ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Application\Application.csproj" />
+    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\Migrators.MSSQL\Migrators.MSSQL.csproj" />
+    <ProjectReference Include="..\Migrators.PostgreSQL\Migrators.PostgreSQL.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NSwag.Annotations" />
+    <PackageReference Include="Swashbuckle.AspNetCore" />
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="Configurations\*.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <None Update="EmailTemplates\**\*.cshtml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>
