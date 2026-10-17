@@ -3,6 +3,7 @@
 Kế hoạch được quản lý song song với code trong [docs index](docs/README.md). Nguồn tiến độ chính thức là [roadmap](docs/roadmap.md); mỗi tính năng có kế hoạch theo bước và lịch sử riêng.
 
 - [Catalog v1: mục tiêu, thiết kế, thứ tự triển khai và trạng thái](docs/features/catalog-v1.md).
+- [MVP gọn cho một shop nhỏ](docs/features/shop-mvp.md).
 - [Lịch sử từng bước và commit](docs/history/README.md).
 - [Quy trình phát triển tài liệu cùng tính năng](docs/development-workflow.md).
 - [Bằng chứng kiểm chứng và giới hạn nghiệm thu](docs/verification/2026-10-17-commerce.md).

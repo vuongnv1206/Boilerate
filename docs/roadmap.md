@@ -12,11 +12,11 @@ Luồng hàng số đã chốt ở mức kịch bản nghiệp vụ: mã/tài kh
 
 Product thuộc đúng một ProductType và có 0–N Category qua bảng nối N–N. Category phục vụ phân loại, ProductType quyết định bộ trường. Chi tiết tại [thiết kế database](commerce-database.md).
 
-Đã chốt hành trình mua: vật lý và hàng số dùng chung giỏ/đơn, thanh toán một lần, từng món giao riêng. Đơn có hàng số phải trả trước toàn bộ; COD chỉ cho đơn thuần vật lý. Chưa triển khai checkout/fulfillment cho hành trình này; giữ hàng, lỗi/hủy/hoàn từng phần và nguồn xác nhận tiền vẫn còn mở.
+Đã chốt hành trình mua: vật lý và hàng số dùng chung giỏ/đơn, thanh toán một lần, từng món giao riêng. Đơn có hàng số phải trả trước toàn bộ; COD chỉ cho đơn thuần vật lý. Tạo đơn thành công thì giữ hàng; trả trước mặc định 30 phút/cấu hình. Trả sau hạn kiểm tra giữ lại đủ toàn bộ hoặc chờ nhân viên xử lý/hoàn tiền. Chưa triển khai checkout/fulfillment; lỗi/hủy/hoàn từng phần, giữ COD và nguồn xác nhận tiền xử lý ở bước liên quan.
 
 Tiến độ từng bước của mốc đầu nằm tại [hồ sơ Catalog v1](features/catalog-v1.md).
 
-Theo yêu cầu mới ngày 2026-10-18, ưu tiên làm việc hiện tại là [phỏng vấn và chốt kế hoạch nghiệp vụ](features/business-discovery.md). Chưa bắt đầu code checkout; các điều kiện nghiệm thu runtime/adapter trước vận hành thật vẫn còn hiệu lực.
+Theo chỉ dẫn mới nhất ngày 2026-10-18, ưu tiên **shop nhỏ, đủ luồng mua/quản trị thông thường**. Dừng vòng hỏi sâu và chuyển sang [kế hoạch MVP gọn](features/shop-mvp.md); [phỏng vấn](features/business-discovery.md) giữ các quyết định và chi tiết còn mở. Chưa bắt đầu code checkout; các điều kiện nghiệm thu runtime/adapter trước vận hành thật vẫn còn hiệu lực.
 
 ## Các mốc và điều kiện hoàn tất
 
@@ -29,16 +29,16 @@ Theo yêu cầu mới ngày 2026-10-18, ưu tiên làm việc hiện tại là [
 | 4. Catalog/giá/publication | ProductType/typed fields, Category N–N, options/SKU, giá, Draft/Published/Archived | Đã triển khai; có kiểm thử domain/API/database | Duy trì kiểm chứng hai provider khi mở rộng; xem giới hạn trong API docs |
 | 5. Inventory/public API | Balance MAIN, movement bất biến/idempotency, typed filters, Published-only/media | Đã triển khai; có kiểm thử concurrency và quyền | Chưa có reservation; bổ sung cùng checkout ở mốc sau |
 | 6. Hoàn thiện và nghiệm thu mốc đầu | Review/regression, template đổi tên, module flag, OpenAPI, vận hành/backup | Review/template đã kiểm; native recovery DB+media+keys/outbox local đạt 2/2, Catalog compatibility 2/2 | Đóng runtime/adapter; diễn tập deployment restore/RPO/RTO và session invalidation ở môi trường triển khai |
-| 7. Ordering/checkout | Cart/Order chung vật lý + số, OrderItem snapshot, giao riêng, reservation/idempotency | **Đã chốt hành trình chung; chưa triển khai/chưa tạo bảng** | Chốt giữ/nhả hàng, lỗi/hủy/hoàn từng phần, các khả năng MVP; thiết kế rồi mới tạo migrations |
+| 7. Ordering/checkout | Cart/Order chung vật lý + số, OrderItem snapshot, giao riêng, reservation/idempotency | **Đã chốt hành trình và giữ lúc tạo đơn; trả trước mặc định 30 phút/cấu hình; chưa triển khai/chưa tạo bảng** | Theo MVP: cách giao/kho số trước, sau đó Order/giữ hàng; trả muộn giữ lại đủ toàn bộ hoặc chờ nhân viên; thiết kế từng lát rồi mới migration |
 | 8. Payment | Attempts/refunds, webhook bền vững và deduplication, đối soát | **Chưa triển khai; chưa chọn provider** | Chốt provider và state machine; kiểm thử sandbox/thật theo phạm vi cho phép |
-| 9. Shipping | Shipment/ShipmentItem có số lượng, giao từng phần, trạng thái riêng | **Chưa triển khai; chưa chọn provider** | Chốt carrier, callback/idempotency và cách đồng bộ với Order |
+| 9. Shipping | Shipment/ShipmentItem có số lượng, giao từng phần, trạng thái riêng | **Chưa triển khai; MVP đề xuất nhân viên cập nhật vận chuyển** | Chốt thao tác admin/đồng bộ Order; tích hợp carrier/callback khi có nhu cầu, chưa bắt buộc chọn nhiều provider cho MVP |
 
 Các mốc 2–6 có phần triển khai song song. Tồn tại code ở mốc sau không làm các điều kiện nghiệm thu của mốc trước tự hoàn tất.
 
 ## Việc ưu tiên tiếp theo
 
-1. **Kế hoạch nghiệp vụ — đang ưu tiên:** đã chốt cấu hình loại/trường/options/SKU/cách giao sẵn có, một shop/một installation, giỏ/đơn chung vật lý + số, trả trước toàn bộ khi có hàng số, các kịch bản Unique/Shared/Extension và PendingVerification. Tiếp theo chốt cam kết/giữ hàng, ngoại lệ giao/thu tiền/hủy/hoàn, tài khoản khách và khả năng MVP. Không ép ví dụ PC thành nghiệp vụ bắt buộc; chưa chọn payment provider.
-2. **Thiết kế lát triển khai:** khi nghiệp vụ đủ rõ, viết hồ sơ theo [mẫu](templates/feature-plan.md), chốt reservation, giá snapshot và ranh giới Order/Payment/Shipment, cardinality/constraints và acceptance scenarios trước code.
+1. **MVP cho shop nhỏ — đang ưu tiên:** đã có [kế hoạch gọn](features/shop-mvp.md) từ các quyết định được ghi nhận. Dừng mở rộng phỏng vấn; triển khai các luồng bán hàng/admin thông thường và xử lý chi tiết khi tới bước liên quan. Chưa đưa rule builder/page builder/PC BOM hoặc nhiều adapter vào MVP.
+2. **Bước BE tiếp theo đề xuất:** thiết kế tối thiểu cách giao được hỗ trợ và kho số, dùng lại Catalog hiện có; sau đó Cart/Order/giữ hàng, nhận tiền/giao số, admin/giao vật lý/hủy/hoàn. Mỗi lát ghi cardinality/ownership/cột/constraints/concurrency/xóa, API/quyền và migrations hai DB theo [mẫu](templates/feature-plan.md). Giữ DDD có chọn lọc; không để handler tự bỏ qua quy tắc tồn/cấp phát/trạng thái.
 3. **Nghiệm thu runtime trước vận hành thật:** chạy Linux CI và container non-root trên SQL Server/PostgreSQL theo [runbook](operations-runbook.md); kiểm operator CLI, volume media/Data Protection keys, health và thay container. Local proxy đã đạt, nhưng chưa chứng minh cấu hình proxy của deployment cụ thể.
 4. **Vận hành/adapter trước vận hành thật:** [native recovery drill local](verification/2026-10-18-operations.md) đã đạt trên hai DB; tiếp tục staging restore/RPO/RTO/session policy và smoke các adapter được bật bằng cấu hình thật.
 

@@ -37,7 +37,7 @@ Tình huống: nhân viên A đã thao tác trên dịch vụ ngoài nhưng mấ
 
 | Chủ đề | Cần làm rõ trước khi triển khai |
 |---|---|
-| Kho Unique | Khi giữ mã/tài khoản, thời hạn giữ, giải phóng và xử lý đã thu tiền nhưng thiếu hàng |
+| Kho Unique | Đã chốt giữ lúc tạo đơn, trả trước mặc định 30 phút/cấu hình và trả muộn kiểm tra giữ lại toàn bộ; chi tiết hết hạn/cấp phát/nhả sẽ thiết kế cùng Order |
 | Shared | Cách tính tiền theo số lượng, quyền nhận được, giới hạn bán và thay link sau khi đã giao |
 | Gia hạn | Nhận diện tài khoản đích; tài khoản hết hạn; hai đơn gia hạn khác nhau cho cùng tài khoản; kết quả thiếu/một phần/thất bại và hoàn tiền |
 | Quyền xử lý | Ai được xác minh, xác nhận kết quả, bàn giao hoặc cho phép thực hiện tiếp sau đối chiếu; chưa mặc định chỉ quản lý |
@@ -46,6 +46,6 @@ Tình huống: nhân viên A đã thao tác trên dịch vụ ngoài nhưng mấ
 
 ## Bước tiếp theo và kiểm chứng
 
-Đã chốt [mức cấu hình quản trị và giỏ/đơn chung](product-flexibility.md). Tiếp theo chốt giữ hàng/cam kết hàng, các ngoại lệ và khả năng cần ở MVP; sau đó mới viết use case, state transitions, cardinality/ownership/constraints, API/quyền, transaction/idempotency và các ca nghiệm thu. ProductType hiện hành quyết định bộ trường nhập liệu; không đồng nhất nó với cách giao hàng.
+Đã chốt [mức cấu hình quản trị, giỏ/đơn chung và cam kết hàng](product-flexibility.md). Theo chỉ dẫn shop nhỏ, chuyển sang [MVP gọn](../features/shop-mvp.md), thiết kế/code từng lát thay vì tiếp tục hỏi sâu mọi ngoại lệ. Trước khi đổi database/API vẫn ghi rõ use case, cardinality/ownership/constraints, quyền, transaction/idempotency và ca nghiệm thu. ProductType hiện hành quyết định bộ trường nhập liệu; không đồng nhất nó với cách giao hàng.
 
 Hiện chỉ đối chiếu tài liệu với câu trả lời. Chưa có code, migration, kiểm thử hoặc nghiệm thu runtime cho các luồng giao hàng số/gia hạn này. Các kiểm thử Catalog trước đây không xác nhận chúng.

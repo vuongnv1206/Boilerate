@@ -1,12 +1,12 @@
 # Kế hoạch nghiệp vụ shop — phỏng vấn và chốt phạm vi
 
-Ngày bắt đầu/cập nhật: 2026-10-18, Asia/Saigon. Trạng thái: đang làm rõ yêu cầu; **chưa chốt kế hoạch triển khai nghiệp vụ mới**.
+Ngày bắt đầu/cập nhật: 2026-10-18, Asia/Saigon. Trạng thái: **kết thúc vòng hỏi sâu hiện tại theo chỉ dẫn shop nhỏ; chuyển sang [kế hoạch MVP gọn](shop-mvp.md)**. Chưa bắt đầu code nghiệp vụ mới.
 
 ## 1. Mục tiêu và phạm vi
 
 Theo yêu cầu mới, ưu tiên lập kế hoạch nghiệp vụ trước. Mục tiêu là quản trị sản phẩm linh hoạt như trải nghiệm Webflow: shop tự cấu hình loại/trường/options/SKU và chọn cách bán/giao đã hỗ trợ. Dùng ví dụ sản phẩm và đơn mua để làm rõ giới hạn/ngoại lệ rồi mới chia lát triển khai; không biến mỗi ví dụ thành tính năng bắt buộc. Các điều kiện nghiệm thu runtime trong [roadmap](../roadmap.md) vẫn được giữ, chưa được đánh dấu hoàn tất.
 
-Đợt này chỉ phỏng vấn, ghi quyết định và lập kế hoạch. Chưa sửa code, database, migration hoặc API thương mại; chưa chọn provider thanh toán/vận chuyển.
+Đợt này chỉ ghi quyết định và lập kế hoạch; vòng hỏi sâu đã dừng theo chỉ dẫn mới nhất. Chưa sửa code, database, migration hoặc API thương mại; chưa chọn provider thanh toán/vận chuyển.
 
 Đầu ra cần có:
 
@@ -33,13 +33,17 @@ Theo yêu cầu mới, ưu tiên lập kế hoạch nghiệp vụ trước. Mụ
 | Làm rõ PC và chọn mức flex ngày 2026-10-18 | **Đã chọn A: cấu hình quản trị** | Shop tự tạo loại/trường/options/SKU và chọn cách bán/giao sẵn có. Chưa yêu cầu rule/workflow builder hoặc kéo thả storefront. Không tiếp tục ép chốt tồn PC/linh kiện |
 | Trả lời giỏ/đơn chung ngày 2026-10-18 | **Đã chọn A: cùng đơn** | Hàng vật lý và hàng số dùng chung giỏ/đơn, thanh toán một lần; từng món giao theo cách riêng |
 | Trả lời chính sách COD ngày 2026-10-18 | **Đã chọn A: có hàng số phải trả trước** | Đơn có hàng số thanh toán trước toàn bộ; COD chỉ dành cho đơn thuần hàng vật lý. Chưa chọn provider hoặc cách xác nhận đã thu tiền |
-| Nguồn hàng, khách, cam kết hàng và chính sách ngoại lệ | **Còn mở** | Tài khoản bắt buộc, thời điểm giữ hàng, thời hạn/nhả hàng, xác nhận đơn, hủy/hoàn và các khả năng bắt buộc MVP |
+| Trả lời giữ hàng ngày 2026-10-18 | **Đã chọn A** | Tạo đơn thành công thì giữ hàng trong một thời hạn; người mua sau chờ nhả hàng |
+| Trả lời thời hạn ngày 2026-10-18 | **Đã chọn B: 30 phút** | Đơn trả trước giữ 30 phút kể từ tạo thành công; shop cấu hình được |
+| Trả lời trả muộn ngày 2026-10-18 | **Đã chọn A** | Khách thực sự trả sau hạn: tự thử giữ lại toàn bộ; đủ thì tiếp tục, thiếu thì chờ nhân viên xử lý/hoàn tiền. Chưa quyết định thông báo về muộn cho lần trả đúng hạn |
+| Chỉ dẫn mới nhất ngày 2026-10-18 | **Shop nhỏ, đủ nghiệp vụ thông thường** | Dừng hỏi quá sâu; gom kế hoạch thành các lát bán hàng/quản trị hoàn chỉnh; chi tiết còn mở xử lý khi đến bước liên quan |
+| Chi tiết khách và vận hành đơn | **Còn mở, theo bước MVP** | Tài khoản bắt buộc, giữ hàng COD, thông báo thanh toán về muộn, xác nhận đơn và hủy/hoàn. Giữ từ lúc tạo đơn/thời hạn trả trước/trả tiền sau hạn đã chốt ở trên |
 
 Baseline không cần hỏi lại nếu tình huống thực tế vẫn phù hợp. Nếu ví dụ mới cho thấy cần thay đổi, ghi rõ tác động và xin quyết định về phạm vi trước khi sửa thiết kế. Không tự nới phạm vi chỉ vì có thể triển khai được.
 
 ## 3. Các vòng dự kiến
 
-Hỏi từng vòng, chọn câu tiếp theo dựa trên trả lời; bảng này là lộ trình phỏng vấn, không phải danh sách yêu cầu đã được chốt.
+Bảng dưới giữ lịch sử và chủ đề khám phá, không phải yêu cầu phải phỏng vấn hết. Theo chỉ dẫn mới nhất, dừng vòng hỏi sâu tại đây; các chủ đề chưa hỏi chuyển sang từng bước trong [MVP](shop-mvp.md).
 
 | Vòng | Trọng tâm | Đầu ra cần chốt | Trạng thái |
 |---|---|---|---|
@@ -55,10 +59,11 @@ Hỏi từng vòng, chọn câu tiếp theo dựa trên trả lời; bảng này
 | 2A | Giỏ/đơn vật lý và hàng số | Mua chung hay tách đơn | Đã chọn cùng giỏ/đơn, trả một lần và giao từng món riêng |
 | 2B | COD cho đơn có hàng số | Khi nào bắt buộc trả trước toàn bộ | Đã chọn có hàng số phải trả trước; COD chỉ thuần vật lý |
 | 3 | Giá cam kết, giỏ hàng/checkout, phí và khuyến mãi | Giá nào áp dụng khi có thay đổi; tổng tiền được xác nhận lúc nào | Chưa hỏi |
-| 4 | Nhận đơn, tồn/giữ hàng, thời hạn, hủy/sửa và cạnh tranh mua món cuối | Khi nào shop cam kết hàng; khi nào nhả; xử lý hết giữ hàng | Chưa hỏi |
-| 5 | Thu tiền/xác nhận tiền, COD/chuyển khoản/online, trả thiếu/thừa/trễ và hoàn tiền | Quyền xác nhận, ngoại lệ và đối soát | Chưa hỏi |
+| 4 | Nhận đơn, tồn/giữ hàng, thời hạn, hủy/sửa và cạnh tranh mua món cuối | Khi nào shop cam kết hàng; khi nào nhả; xử lý hết giữ hàng | Đã chốt phần 4A; các chi tiết khác chuyển sang MVP |
+| 4A | Món cuối, thời hạn trả trước và trả sau hạn | Cam kết hàng và xử lý trả muộn | Đã chốt giữ lúc tạo đơn, mặc định 30 phút/cấu hình, trả muộn thử giữ lại toàn bộ hoặc chờ nhân viên |
+| 5 | Thu tiền/xác nhận tiền, COD/chuyển khoản/online, trả thiếu/thừa/trễ và hoàn tiền | Quyền xác nhận, ngoại lệ và đối soát | Đã chốt trả trước/COD và trả sau hạn; chi tiết còn lại theo bước MVP |
 | 6 | Chuẩn bị/giao/nhận tại shop, phí, giao lỗi và hậu mãi | Fulfillment, đổi/trả và phạm vi giao từng phần ở MVP | Chưa hỏi |
-| 7 | Vận hành/quyền/phê duyệt, ưu tiên và lát cắt phát hành | MVP hoàn chỉnh, phần hoãn và tiêu chí nghiệm thu | Chưa hỏi |
+| 7 | Vận hành/quyền/phê duyệt, ưu tiên và lát cắt phát hành | MVP hoàn chỉnh, phần hoãn và tiêu chí nghiệm thu | Đã có chỉ dẫn shop nhỏ và kế hoạch MVP đề xuất; quyền chi tiết theo bước triển khai |
 
 Các tình huống dùng để kiểm tra giả định khi phù hợp: số lượng theo cân có phần lẻ; đặt làm/preorder; khắc tên theo dòng đơn; combo trừ thành phần; giá đổi khi đang mua; thanh toán đến sau khi hết giữ hàng. Đây là câu hỏi khám phá, **chưa phải các tính năng được thêm vào scope**.
 
@@ -118,8 +123,14 @@ Người dùng ban đầu chọn cấu hình PC tạo sẵn, sau đó làm rõ P
 
 **Còn mở:** thời điểm cam kết/giữ hàng, thanh toán muộn, giao lỗi từng phần, hủy/hoàn, tài khoản khách và mức cấu hình ở Product/SKU. Chưa chọn provider, state machine, schema hoặc đưa toàn bộ ví dụ sản phẩm vào MVP.
 
+### 2026-10-18 — Giữ hàng và chuyển sang MVP cho shop nhỏ
+
+**Đã xác nhận:** giữ hàng từ khi tạo đơn thành công; đơn trả trước mặc định 30 phút, shop cấu hình được. Nếu khách thực sự trả sau hạn, kiểm tra giữ lại toàn bộ hàng: đủ thì tiếp tục, thiếu thì chờ nhân viên xử lý/hoàn tiền. Chưa dùng quyết định này để suy ra chính sách COD hoặc thông báo trả đúng hạn nhưng về muộn.
+
+**Chỉ dẫn mới nhất:** e-commerce nhỏ, đủ nghiệp vụ cho một shop bình thường, không cần hỏi quá kỹ. Dừng mở thêm vòng ngoại lệ. Đã lập [MVP](shop-mvp.md) từ cấu hình cách giao/kho số → đơn/giữ hàng → nhận tiền/giao số → admin/giao vật lý/hủy/hoàn → kiểm chứng. Giao vật lý và hoàn tiền do admin xử lý đơn giản là đề xuất cho MVP, chưa tự chọn adapter hoặc chính sách thay người dùng.
+
 ## 5. Quy tắc chuyển sang kế hoạch triển khai
 
-Chốt được hành trình mua chính và ngoại lệ quan trọng mới lập use cases/state transitions, database cardinality/ownership/FK/constraints, API/quyền, transaction/idempotency và acceptance scenarios. Nếu còn câu trả lời có thể làm thay đổi cấu trúc nghiệp vụ, giữ mục đó mở thay vì mặc định hóa trong code.
+Hành trình chính đủ để lập kế hoạch MVP. Thiết kế use cases/state transitions, database cardinality/ownership/FK/constraints, API/quyền, transaction/idempotency và acceptance scenarios theo từng lát. Các câu trả lời còn mở được giữ trong bước liên quan, không buộc phải phỏng vấn toàn bộ trước khi thiết kế lát đầu. Không tự coi đề xuất chính sách là quyết định đã xác nhận.
 
 Kiểm chứng hiện tại là đối chiếu docs/phạm vi; chưa có code/test nghiệp vụ mới. Các kết quả kiểm thử Catalog và vận hành trước đây không xác nhận những chính sách đang được hỏi ở đây.

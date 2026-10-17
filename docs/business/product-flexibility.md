@@ -30,7 +30,7 @@ Ví dụ: đơn đã nhận tiền, mã có thể được giao trong Đơn hàn
 
 **Chính sách thanh toán đã chọn A:** đơn có bất kỳ hàng số nào, kể cả đơn vật lý + hàng số, phải thanh toán trước toàn bộ. COD chỉ dành cho đơn thuần hàng vật lý. Chưa chọn payment provider, nguồn xác nhận tiền hoặc mặc định tất cả đơn vật lý bắt buộc dùng COD.
 
-Việc cho phép một đơn chung chưa quyết định cách giữ hàng, có giao phần đủ hàng khi phần khác lỗi hay không, hoặc cách hủy/hoàn tiền từng phần. Không tự coi toàn bộ đơn đã giao xong khi một món hoàn tất.
+Giữ hàng và trả tiền muộn đã chốt ở mục cam kết hàng bên dưới. Việc có giao phần đủ hàng khi phần khác lỗi hay không và cách hủy/hoàn từng phần sẽ xử lý ở bước liên quan. Không tự coi toàn bộ đơn đã giao xong khi một món hoàn tất.
 
 ## Những gì đã có và cần thiết kế tiếp
 
@@ -42,19 +42,28 @@ Việc cho phép một đơn chung chưa quyết định cách giữ hàng, có 
 | Giỏ/đơn chung vật lý + số; trả trước toàn bộ khi có hàng số | Đã chốt quy tắc; chưa có bảng Order/Payment/fulfillment hoặc luồng checkout |
 | Rule/workflow builder tùy ý, page builder, PC build/trừ tồn linh kiện | Chưa đưa vào MVP |
 
+## Cam kết hàng đã chốt
+
+- Khi tạo đơn thành công, giữ hàng cho khách trong một thời hạn. Khách đến sau chờ hàng được nhả nếu người trước không trả tiền.
+- Đơn trả trước mặc định giữ **30 phút kể từ khi tạo thành công**, shop có thể cấu hình thời hạn.
+- Nếu khách thực sự trả sau hạn, tự kiểm tra và giữ lại **toàn bộ hàng**. Đủ hàng thì tiếp tục đơn; thiếu thì chờ nhân viên xử lý/hoàn tiền. Không lấy phần đã dành cho đơn khác để bù.
+- Đây là quyết định về trả tiền muộn. Thông báo về muộn cho lần trả đúng hạn cần được đối chiếu với nguồn xác nhận tiền và tình trạng hàng; chưa gán một kết quả tài chính tự động cho trường hợp này.
+- Thời hạn 30 phút là cho đơn chờ trả trước. Chưa áp thời hạn đó cho COD, hàng đã trả tiền hoặc yêu cầu gia hạn đang chờ nhân viên.
+
+Chưa có reservation trong code Catalog hiện hành. Các quy tắc trên sẽ được triển khai cùng giỏ/đơn; chưa xác định bảng/cột và migration mới.
+
 ## Các bước và quyết định còn mở
 
-1. Chốt lúc shop cam kết hàng: giữ hàng trước thanh toán, thời hạn và thanh toán đến muộn; áp dụng cho tồn vật lý và kho Unique.
-2. Chốt cách giao, trạng thái lỗi/chờ và hủy/hoàn từng phần trong đơn chung.
-3. Chốt quyền truy cập hàng số, tài khoản khách, các thông tin mua bắt buộc và phương thức xác nhận tiền.
-4. Chốt nhóm khả năng cần chạy hoàn chỉnh ở MVP, mức cấu hình ở Product/SKU và chính sách sửa cấu hình đã có đơn mua.
-5. Từ các quyết định đó mới lập feature plan cho từng lát: cardinality/ownership, cột/PK/FK/unique/check/index, concurrency, xóa, migrations hai DB, API/quyền và kiểm chứng.
+Theo chỉ dẫn mới nhất, đây là **shop nhỏ, đủ luồng bán hàng thông thường**. Dừng mở rộng phỏng vấn ngoại lệ; dùng [kế hoạch MVP gọn](../features/shop-mvp.md) để triển khai từng lát. Các chi tiết còn mở được xử lý khi tới bước liên quan, với đề xuất đơn giản được ghi rõ; không tự coi đề xuất là quyết định đã xác nhận.
+
+Các chi tiết còn mở: xác nhận tiền/provider; thông tin khách và phí ship; hủy/hoàn từng phần; COD; mức cấu hình cách giao ở Product/SKU. Trước mỗi bước đổi database vẫn phải ghi cardinality/ownership, cột/PK/FK/unique/check/index, concurrency, xóa và migration hai DB.
 
 Các ca nghiệm thu dự kiến cho quy tắc đã chốt, **chưa thực thi**:
 
 - Shop thêm một loại sản phẩm và trường thông tin bằng cấu hình, dùng các khả năng bán/giao sẵn có.
 - Áo và mã cùng một đơn, trả một lần; có thể theo dõi tiến độ giao riêng.
 - Đơn có hàng số không được chọn COD; đơn thuần vật lý mới đủ điều kiện xét COD.
+- Đơn trả trước giữ hàng 30 phút mặc định; trả muộn kiểm tra giữ lại toàn bộ, thiếu hàng chờ nhân viên xử lý.
 - Mã/tài khoản cấp đúng số lượng Unique; gia hạn chờ xác minh không được thực hiện lại trước khi có kết quả đối chiếu.
 
 Chưa thay đổi database/API/code trong đợt phỏng vấn. Kiểm chứng docs không thay thế kiểm thử hoặc nghiệm thu vận hành.
