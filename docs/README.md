@@ -18,6 +18,7 @@ Tài liệu được cập nhật cùng phần code liên quan. Mỗi tính năn
 10. [Nghiệm thu vận hành Catalog](features/operations-acceptance.md): bước đang triển khai trước checkout.
 11. [Runbook vận hành/phục hồi](operations-runbook.md) và [kiểm chứng ngày 2026-10-18](verification/2026-10-18-operations.md).
 12. [Phỏng vấn nghiệp vụ](features/business-discovery.md) và [quy tắc giao hàng số/gia hạn](business/digital-fulfillment.md): các quyết định cho bước lập kế hoạch, chưa phải chức năng đã triển khai.
+13. [Sản phẩm linh hoạt và đơn mua chung](business/product-flexibility.md): mức tự cấu hình của shop, ví dụ tham khảo và chính sách thanh toán vật lý + số.
 
 Hướng dẫn dựng installation mới, cấu hình và các lệnh operator nằm tại [README dự án](../README.md). [plan.md](../plan.md) là bản tóm tắt phạm vi hiện tại; lộ trình chi tiết được theo dõi tại đây.
 

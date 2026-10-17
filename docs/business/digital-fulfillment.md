@@ -6,7 +6,7 @@ Cập nhật: 2026-10-18, Asia/Saigon. Nguồn: câu trả lời của người 
 
 | Ví dụ sản phẩm | Cách cấp phát | Khi khách mua số lượng 2 |
 |---|---|---|
-| Mã kích hoạt khóa học | Unique: mỗi mã cấp cho một khách | Hai mã khác nhau |
+| Mã kích hoạt khóa học | Unique: mỗi mã chỉ cấp một lần | Hai mã khác nhau |
 | Link khóa học | Shared: cùng link giao cho nhiều đơn | Hiển thị cùng một link, không cần nhân đôi nội dung |
 | Tài khoản có sẵn | Unique: mỗi tài khoản chỉ cấp một lần | Hai tài khoản khác nhau |
 | Gói gia hạn tài khoản | Extension: yêu cầu gia hạn cho cùng tài khoản | Nếu dịch vụ cho cộng dồn, 2 × 30 ngày tương đương thêm 60 ngày; kết quả thực tế phải được xác minh |
@@ -15,7 +15,7 @@ Unique/Shared/Extension là nhãn mô tả nghiệp vụ, chưa phải enum ho�
 
 Sau thanh toán thành công, mã/link/tài khoản có sẵn được lấy từ kho hàng số, gán cho đơn, hiển thị trong **Đơn hàng của tôi** và gửi email thông báo. Nội dung email chưa chốt; chưa mặc định gửi toàn bộ thông tin đăng nhập qua email.
 
-Không xây LMS và không tích hợp API cấp quyền bên ngoài cho những kịch bản này. Cách xác nhận thanh toán và payment provider vẫn chưa được chọn.
+Không xây LMS và không tích hợp API cấp quyền bên ngoài cho những kịch bản này. Đã chốt đơn có hàng số phải trả trước toàn bộ, kể cả đơn chung với hàng vật lý; COD chỉ dành cho đơn thuần vật lý. Cách xác nhận thanh toán và payment provider vẫn chưa được chọn. Xem [đơn mua chung](product-flexibility.md).
 
 ## Gia hạn do nhân viên thực hiện
 
@@ -46,6 +46,6 @@ Tình huống: nhân viên A đã thao tác trên dịch vụ ngoài nhưng mấ
 
 ## Bước tiếp theo và kiểm chứng
 
-Chốt ranh giới cấu hình sản phẩm, phạm vi MVP và hành trình mua trước; sau đó mới viết use case, state transitions, cardinality/ownership/constraints, API/quyền, transaction/idempotency và các ca nghiệm thu. ProductType hiện hành quyết định bộ trường nhập liệu; không đồng nhất nó với cách giao hàng.
+Đã chốt [mức cấu hình quản trị và giỏ/đơn chung](product-flexibility.md). Tiếp theo chốt giữ hàng/cam kết hàng, các ngoại lệ và khả năng cần ở MVP; sau đó mới viết use case, state transitions, cardinality/ownership/constraints, API/quyền, transaction/idempotency và các ca nghiệm thu. ProductType hiện hành quyết định bộ trường nhập liệu; không đồng nhất nó với cách giao hàng.
 
 Hiện chỉ đối chiếu tài liệu với câu trả lời. Chưa có code, migration, kiểm thử hoặc nghiệm thu runtime cho các luồng giao hàng số/gia hạn này. Các kiểm thử Catalog trước đây không xác nhận chúng.

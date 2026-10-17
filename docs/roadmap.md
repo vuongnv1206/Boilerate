@@ -6,11 +6,13 @@ Cập nhật: 2026-10-18. Lộ trình được cập nhật cùng code và [nh�
 
 Code Catalog v1 hiện có phục vụ một shop, hàng vật lý, giá VND nguyên đồng, một kho MAIN không bán âm. Dùng modular monolith, .NET 10/MediatR/EF Core, một database có schema nghiệp vụ; hỗ trợ SQL Server và PostgreSQL. DDD tập trung tại Product, ProductType và InventoryItem; handler/service điều phối quyền và transaction.
 
-Mục tiêu phát triển vừa được người dùng xác nhận: quần áo, điện thoại, laptop, PC tự build/cấu hình phức tạp, khóa học và tài khoản. Đã chọn mô hình A: **mỗi shop dùng một phần mềm được triển khai riêng, không yêu cầu multi-tenant**. Đang làm rõ cách bán/giao hàng số, cấu hình PC và MVP trong [business discovery](features/business-discovery.md); chưa coi các nghiệp vụ này là đã được code Catalog v1 đáp ứng.
+Mục tiêu phát triển vừa được người dùng xác nhận: **shop tự cấu hình loại sản phẩm, trường thông tin, options/SKU và chọn cách bán/giao được hỗ trợ**, tham khảo trải nghiệm Webflow. Quần áo, điện thoại, laptop, PC, khóa học và tài khoản là ví dụ kiểm tra độ linh hoạt; PC đã được làm rõ chỉ là ý tưởng, chưa yêu cầu nghiệp vụ build/tồn linh kiện ở MVP. **Mỗi shop dùng một installation riêng, không yêu cầu multi-tenant**. Xem [phạm vi linh hoạt](business/product-flexibility.md) và [business discovery](features/business-discovery.md); chưa coi mục tiêu mới là đã được Catalog v1 đáp ứng đầy đủ.
 
 Luồng hàng số đã chốt ở mức kịch bản nghiệp vụ: mã/tài khoản Unique, link Shared và gói Extension. Nội dung có sẵn được giao sau thanh toán qua Đơn hàng của tôi/email; gia hạn do nhân viên xử lý, lưu kết quả thực tế đã xác minh và tách với trạng thái nhận tiền. Kết quả chưa rõ phải PendingVerification, không được gia hạn lại trước khi đối chiếu. Không yêu cầu LMS/API cấp quyền. Chi tiết và các quyết định còn mở nằm trong [quy tắc giao hàng số](business/digital-fulfillment.md); chưa triển khai hoặc cam kết toàn bộ các kịch bản vào MVP.
 
 Product thuộc đúng một ProductType và có 0–N Category qua bảng nối N–N. Category phục vụ phân loại, ProductType quyết định bộ trường. Chi tiết tại [thiết kế database](commerce-database.md).
+
+Đã chốt hành trình mua: vật lý và hàng số dùng chung giỏ/đơn, thanh toán một lần, từng món giao riêng. Đơn có hàng số phải trả trước toàn bộ; COD chỉ cho đơn thuần vật lý. Chưa triển khai checkout/fulfillment cho hành trình này; giữ hàng, lỗi/hủy/hoàn từng phần và nguồn xác nhận tiền vẫn còn mở.
 
 Tiến độ từng bước của mốc đầu nằm tại [hồ sơ Catalog v1](features/catalog-v1.md).
 
@@ -27,7 +29,7 @@ Theo yêu cầu mới ngày 2026-10-18, ưu tiên làm việc hiện tại là [
 | 4. Catalog/giá/publication | ProductType/typed fields, Category N–N, options/SKU, giá, Draft/Published/Archived | Đã triển khai; có kiểm thử domain/API/database | Duy trì kiểm chứng hai provider khi mở rộng; xem giới hạn trong API docs |
 | 5. Inventory/public API | Balance MAIN, movement bất biến/idempotency, typed filters, Published-only/media | Đã triển khai; có kiểm thử concurrency và quyền | Chưa có reservation; bổ sung cùng checkout ở mốc sau |
 | 6. Hoàn thiện và nghiệm thu mốc đầu | Review/regression, template đổi tên, module flag, OpenAPI, vận hành/backup | Review/template đã kiểm; native recovery DB+media+keys/outbox local đạt 2/2, Catalog compatibility 2/2 | Đóng runtime/adapter; diễn tập deployment restore/RPO/RTO và session invalidation ở môi trường triển khai |
-| 7. Ordering/checkout | Cart, checkout, Order/OrderItem snapshot, reservation/idempotency | **Đang làm rõ nghiệp vụ; chưa triển khai/chưa tạo bảng** | Phỏng vấn hành trình mua và ngoại lệ; chốt luồng giữ/nhả hàng, thiết kế rồi mới tạo migrations |
+| 7. Ordering/checkout | Cart/Order chung vật lý + số, OrderItem snapshot, giao riêng, reservation/idempotency | **Đã chốt hành trình chung; chưa triển khai/chưa tạo bảng** | Chốt giữ/nhả hàng, lỗi/hủy/hoàn từng phần, các khả năng MVP; thiết kế rồi mới tạo migrations |
 | 8. Payment | Attempts/refunds, webhook bền vững và deduplication, đối soát | **Chưa triển khai; chưa chọn provider** | Chốt provider và state machine; kiểm thử sandbox/thật theo phạm vi cho phép |
 | 9. Shipping | Shipment/ShipmentItem có số lượng, giao từng phần, trạng thái riêng | **Chưa triển khai; chưa chọn provider** | Chốt carrier, callback/idempotency và cách đồng bộ với Order |
 
@@ -35,7 +37,7 @@ Các mốc 2–6 có phần triển khai song song. Tồn tại code ở mốc s
 
 ## Việc ưu tiên tiếp theo
 
-1. **Kế hoạch nghiệp vụ — đang ưu tiên:** đã chốt một shop/một installation, các kịch bản Unique/Shared/Extension và PendingVerification khi kết quả gia hạn chưa rõ. Tiếp theo làm rõ mức linh hoạt của sản phẩm, nhóm hàng MVP, hành trình mua, giữ/cấp phát hàng và ngoại lệ thanh toán. Ghi quyết định được xác nhận riêng với đề xuất; chưa mặc định chính sách checkout hoặc payment provider.
+1. **Kế hoạch nghiệp vụ — đang ưu tiên:** đã chốt cấu hình loại/trường/options/SKU/cách giao sẵn có, một shop/một installation, giỏ/đơn chung vật lý + số, trả trước toàn bộ khi có hàng số, các kịch bản Unique/Shared/Extension và PendingVerification. Tiếp theo chốt cam kết/giữ hàng, ngoại lệ giao/thu tiền/hủy/hoàn, tài khoản khách và khả năng MVP. Không ép ví dụ PC thành nghiệp vụ bắt buộc; chưa chọn payment provider.
 2. **Thiết kế lát triển khai:** khi nghiệp vụ đủ rõ, viết hồ sơ theo [mẫu](templates/feature-plan.md), chốt reservation, giá snapshot và ranh giới Order/Payment/Shipment, cardinality/constraints và acceptance scenarios trước code.
 3. **Nghiệm thu runtime trước vận hành thật:** chạy Linux CI và container non-root trên SQL Server/PostgreSQL theo [runbook](operations-runbook.md); kiểm operator CLI, volume media/Data Protection keys, health và thay container. Local proxy đã đạt, nhưng chưa chứng minh cấu hình proxy của deployment cụ thể.
 4. **Vận hành/adapter trước vận hành thật:** [native recovery drill local](verification/2026-10-18-operations.md) đã đạt trên hai DB; tiếp tục staging restore/RPO/RTO/session policy và smoke các adapter được bật bằng cấu hình thật.

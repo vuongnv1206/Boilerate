@@ -4,7 +4,7 @@ Ngày bắt đầu/cập nhật: 2026-10-18, Asia/Saigon. Trạng thái: đang l
 
 ## 1. Mục tiêu và phạm vi
 
-Theo yêu cầu mới, ưu tiên lập kế hoạch nghiệp vụ trước. Bắt đầu từ sản phẩm và đơn mua thực tế, làm rõ quyết định/ngoại lệ rồi mới chia lát triển khai. Các điều kiện nghiệm thu runtime trong [roadmap](../roadmap.md) vẫn được giữ, chưa được đánh dấu hoàn tất.
+Theo yêu cầu mới, ưu tiên lập kế hoạch nghiệp vụ trước. Mục tiêu là quản trị sản phẩm linh hoạt như trải nghiệm Webflow: shop tự cấu hình loại/trường/options/SKU và chọn cách bán/giao đã hỗ trợ. Dùng ví dụ sản phẩm và đơn mua để làm rõ giới hạn/ngoại lệ rồi mới chia lát triển khai; không biến mỗi ví dụ thành tính năng bắt buộc. Các điều kiện nghiệm thu runtime trong [roadmap](../roadmap.md) vẫn được giữ, chưa được đánh dấu hoàn tất.
 
 Đợt này chỉ phỏng vấn, ghi quyết định và lập kế hoạch. Chưa sửa code, database, migration hoặc API thương mại; chưa chọn provider thanh toán/vận chuyển.
 
@@ -19,18 +19,21 @@ Theo yêu cầu mới, ưu tiên lập kế hoạch nghiệp vụ trước. Bắ
 
 | Nguồn | Trạng thái | Nội dung |
 |---|---|---|
-| Phạm vi đã duyệt trước đây | Baseline của code Catalog v1 hiện có | Một shop, hàng vật lý, VND nguyên đồng, kho MAIN không âm. Mục tiêu nhiều shop vừa được nêu cần làm rõ; chưa suy ra baseline này là giới hạn của nền tảng tương lai |
+| Phạm vi đã duyệt trước đây | Baseline của code Catalog v1 hiện có | Một shop, hàng vật lý, VND nguyên đồng, kho MAIN không âm. Hướng mới là dùng lại phần mềm cho các installation riêng và cấu hình sản phẩm linh hoạt; baseline chưa đáp ứng toàn bộ mục tiêu đó |
 | Catalog đã triển khai | Hợp đồng hiện hành | ProductType → Product 1–N; Product ↔ Category N–N; SKU giữ giá/tồn, custom field khác option |
 | Hướng mốc sau đã duyệt | Chưa triển khai | OrderItem snapshot; Order/Payment/Shipment có trạng thái riêng; quan hệ tương lai trong database docs |
 | Yêu cầu ngày 2026-10-18 | Đã rõ | Tạm ưu tiên kế hoạch nghiệp vụ; hỏi sâu theo tình huống, phát triển tài liệu song song |
-| Trả lời vòng 1 và bổ sung ngày 2026-10-18 | Đã xác nhận hướng sản phẩm | Quần áo, điện thoại, laptop, PC tự build/cấu hình phức tạp; bổ sung khóa học và tài khoản. Mục tiêu gồm hàng vật lý và hàng số, còn cách bán/giao chi tiết chưa chốt |
+| Trả lời vòng 1 và bổ sung ngày 2026-10-18 | Ví dụ kiểm tra độ linh hoạt | Quần áo, điện thoại, laptop, PC, khóa học và tài khoản; không mặc định tất cả nghiệp vụ đặc thù bắt buộc ở MVP. Người dùng đã làm rõ PC chỉ là ý tưởng tham khảo |
 | Trả lời vòng 1A ngày 2026-10-18 | **Đã chọn A** | Một shop tương ứng một phần mềm được triển khai/vận hành riêng. Không yêu cầu multi-tenant; không đưa SaaS/marketplace vào kế hoạch hiện tại |
 | Trả lời vòng 1B ngày 2026-10-18 | **Đã chốt luồng giao hàng số** | Sau thanh toán thành công tự lấy mã/link/thông tin tài khoản từ kho hàng số, gán cho đơn, hiển thị trong Đơn hàng của tôi và gửi email thông báo |
 | Trả lời vòng 1B ngày 2026-10-18 | Phần loại khỏi scope | Không cần trình học trực tuyến/LMS hoặc API cấp quyền bên thứ ba cho luồng giao hàng số. Payment provider/cách xác nhận thanh toán vẫn chưa chốt |
 | Trả lời vòng 1C ngày 2026-10-18 | Đã chốt kịch bản cấp phát | Mã và tài khoản có sẵn là Unique, mua 2 nhận hai bản ghi khác nhau; link là Shared, mua 2 vẫn hiển thị cùng link; gói gia hạn là Extension cho cùng tài khoản |
 | Trả lời vòng 1D ngày 2026-10-18 | Đã chốt cách thực hiện gia hạn | Nhân viên thực hiện ở dịch vụ ngoài; thanh toán độc lập với kết quả gia hạn. Lưu hạn thực tế đã xác minh, lịch sử/thời điểm hoàn tất/bằng chứng nếu có; chống xử lý đồng thời và thực hiện trùng |
 | Trả lời vòng 1E ngày 2026-10-18 | Đã chốt ngoại lệ kết quả chưa rõ | `PendingVerification`: không được gia hạn lại cho đến khi xác định được kết quả lần trước. Người được quyền xác minh/bàn giao vẫn còn mở |
-| Đơn vị bán, lựa chọn cụ thể, nguồn hàng, khách, luồng mua và chính sách ngoại lệ | **Còn mở** | Chưa tự chọn COD/online, tài khoản bắt buộc, thời điểm giữ hàng hoặc tự xác nhận đơn; chưa coi PC build chỉ là một tổ hợp SKU |
+| Làm rõ PC và chọn mức flex ngày 2026-10-18 | **Đã chọn A: cấu hình quản trị** | Shop tự tạo loại/trường/options/SKU và chọn cách bán/giao sẵn có. Chưa yêu cầu rule/workflow builder hoặc kéo thả storefront. Không tiếp tục ép chốt tồn PC/linh kiện |
+| Trả lời giỏ/đơn chung ngày 2026-10-18 | **Đã chọn A: cùng đơn** | Hàng vật lý và hàng số dùng chung giỏ/đơn, thanh toán một lần; từng món giao theo cách riêng |
+| Trả lời chính sách COD ngày 2026-10-18 | **Đã chọn A: có hàng số phải trả trước** | Đơn có hàng số thanh toán trước toàn bộ; COD chỉ dành cho đơn thuần hàng vật lý. Chưa chọn provider hoặc cách xác nhận đã thu tiền |
+| Nguồn hàng, khách, cam kết hàng và chính sách ngoại lệ | **Còn mở** | Tài khoản bắt buộc, thời điểm giữ hàng, thời hạn/nhả hàng, xác nhận đơn, hủy/hoàn và các khả năng bắt buộc MVP |
 
 Baseline không cần hỏi lại nếu tình huống thực tế vẫn phù hợp. Nếu ví dụ mới cho thấy cần thay đổi, ghi rõ tác động và xin quyết định về phạm vi trước khi sửa thiết kế. Không tự nới phạm vi chỉ vì có thể triển khai được.
 
@@ -46,7 +49,11 @@ Hỏi từng vòng, chọn câu tiếp theo dựa trên trả lời; bảng này
 | 1C | Bản ghi kho hàng số dùng một lần hay dùng chung; ý nghĩa số lượng mua | Quy tắc tiêu thụ/cấp phát hàng số | Đã chốt Unique/Shared/Extension; giá và quyền của Shared còn mở |
 | 1D | Ai thực hiện gia hạn và nguồn hạn thực tế | Tách nhận tiền với hoàn tất; lịch sử và chống xử lý trùng | Đã chốt nhân viên thực hiện, chỉ lưu kết quả đã xác minh |
 | 1E | Mất kết nối sau khi đã thao tác gia hạn | Cách xử lý kết quả không xác định | Đã chốt PendingVerification và cấm làm lại khi chưa biết kết quả; quyền xác minh còn mở |
+| 1F | PC cấu hình sẵn hay khách tự build; tồn máy hay linh kiện | Kiểm tra ví dụ cấu hình phức tạp | Ban đầu chọn cấu hình sẵn, sau làm rõ PC chỉ là ví dụ; không yêu cầu chốt nghiệp vụ PC ở MVP |
+| 1G | Mức linh hoạt như Webflow | Ranh giới cấu hình được bởi chủ shop | Đã chọn A: loại/trường/options/SKU và chọn cách bán/giao đã hỗ trợ |
 | 2 | Khách lẻ/sỉ, tài khoản, cách mua, địa bàn/kênh bán và nhu cầu shop xác nhận | Một hành trình mua chính và người tham gia | Chưa hỏi |
+| 2A | Giỏ/đơn vật lý và hàng số | Mua chung hay tách đơn | Đã chọn cùng giỏ/đơn, trả một lần và giao từng món riêng |
+| 2B | COD cho đơn có hàng số | Khi nào bắt buộc trả trước toàn bộ | Đã chọn có hàng số phải trả trước; COD chỉ thuần vật lý |
 | 3 | Giá cam kết, giỏ hàng/checkout, phí và khuyến mãi | Giá nào áp dụng khi có thay đổi; tổng tiền được xác nhận lúc nào | Chưa hỏi |
 | 4 | Nhận đơn, tồn/giữ hàng, thời hạn, hủy/sửa và cạnh tranh mua món cuối | Khi nào shop cam kết hàng; khi nào nhả; xử lý hết giữ hàng | Chưa hỏi |
 | 5 | Thu tiền/xác nhận tiền, COD/chuyển khoản/online, trả thiếu/thừa/trễ và hoàn tiền | Quyền xác nhận, ngoại lệ và đối soát | Chưa hỏi |
@@ -100,6 +107,16 @@ Gia hạn do nhân viên xử lý, phải lưu lịch sử, thời điểm hoàn
 **Đã xác nhận ngoại lệ:** nếu không biết thao tác bên ngoài đã thành công chưa, giữ `PendingVerification`, không được gia hạn lại trước khi đối chiếu. Câu hỏi về ai được xác minh/bàn giao chưa được trả lời; giữ mở cho vòng vận hành/quyền, không mặc định chỉ quản lý.
 
 **Còn mở:** giữ hàng Unique, giá/quyền của Shared, tài khoản đích, kết quả gia hạn không khớp hoặc thất bại, hoàn tiền, quyền truy cập nội dung. Chưa chọn công thức tự tính hạn hoặc thiết kế schema thay cho quy tắc đã được xác nhận.
+
+### 2026-10-18 — Làm rõ flex, ví dụ PC và đơn mua chung
+
+Người dùng ban đầu chọn cấu hình PC tạo sẵn, sau đó làm rõ PC chỉ là một đề xuất và mục tiêu thực sự là sản phẩm linh hoạt như Webflow. **Chỉ dẫn mới thay thế cách hiểu PC là nghiệp vụ bắt buộc MVP**; dừng câu hỏi tồn máy/linh kiện và giữ nó như một khả năng tương lai chưa yêu cầu triển khai.
+
+**Đã chọn A về flex:** shop tự tạo loại sản phẩm, trường thông tin, options/SKU và chọn cách bán/giao hệ thống đã hỗ trợ. Đây là ưu tiên quản trị dữ liệu; chưa mở rộng sang rule/workflow builder tùy ý hoặc page builder. Phân tách bộ trường, lựa chọn bán và cách giao là đề xuất thiết kế cần cụ thể hóa, không đồng nhất loại sản phẩm với nghiệp vụ giao.
+
+**Đã chọn A về hành trình mua:** hàng vật lý và hàng số chung giỏ/đơn, thanh toán một lần, từng món giao riêng. **Đã chọn A về nhận tiền:** có hàng số phải trả trước toàn bộ; COD chỉ dành cho đơn thuần vật lý. Chi tiết tại [phạm vi sản phẩm linh hoạt](../business/product-flexibility.md).
+
+**Còn mở:** thời điểm cam kết/giữ hàng, thanh toán muộn, giao lỗi từng phần, hủy/hoàn, tài khoản khách và mức cấu hình ở Product/SKU. Chưa chọn provider, state machine, schema hoặc đưa toàn bộ ví dụ sản phẩm vào MVP.
 
 ## 5. Quy tắc chuyển sang kế hoạch triển khai
 
