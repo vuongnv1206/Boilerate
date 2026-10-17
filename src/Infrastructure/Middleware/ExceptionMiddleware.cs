@@ -38,7 +38,9 @@ internal sealed class ExceptionMiddleware(ILogger<ExceptionMiddleware> logger, I
             var problem = new ProblemDetails
             {
                 Status = status, Title = status >= 500 ? "An unexpected error occurred." : "Request rejected.",
-                Detail = ex is CustomException && status < 500 ? ex.Message : environment.IsDevelopment() ? ex.Message : null,
+                Detail = status < 500 && (ex is CustomException or DomainException)
+                    ? ex.Message
+                    : environment.IsDevelopment() ? ex.Message : null,
                 Instance = context.Request.Path
             };
             problem.Extensions["traceId"] = trace;

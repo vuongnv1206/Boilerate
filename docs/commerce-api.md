@@ -96,7 +96,7 @@ FieldType 1=text, 2=number, 3=boolean, 4=date, 5=single-select. Mỗi value ch�
 
 Field operators: text/boolean eq; number/date eq hoặc range với numberTo/dateTo; choice in với choiceIds. Các field kết hợp AND, mỗi field choice dùng OR trong tập lựa chọn. Giá/options/stock phải khớp cùng SKU; paging/count cùng predicate. ProductType/schema quản trị cung cấp thông tin dựng form; frontend storefront có thể lấy cấu hình bộ lọc đã chọn từ phần quản trị. Product detail trả label của field và choice để hiển thị, không yêu cầu client suy nhãn từ ID.
 
-Giá lọc tuân theo VND nguyên đồng, từ 0 đến 9999999999999999. Giá trị lọc number phải nằm trong miền `decimal(18,4)` (trị tuyệt đối nhỏ hơn 100000000000000, tối đa 4 chữ số thập phân); API trả 400 nếu vượt miền hoặc cần làm tròn, để hai database có cùng kết quả.
+Giá lọc tuân theo VND nguyên đồng, từ 0 đến 9999999999999999. Giá trị lọc number phải nằm trong miền `decimal(18,4)` (trị tuyệt đối nhỏ hơn 100000000000000, tối đa 4 chữ số thập phân); API trả 400 nếu vượt miền hoặc cần làm tròn, để hai database có cùng kết quả. Lỗi quy tắc nghiệp vụ trả lý do trong `ProblemDetails.detail`; lỗi máy chủ/database không công khai chi tiết nội bộ ở Production.
 
 ## Deployment, backup và worker
 

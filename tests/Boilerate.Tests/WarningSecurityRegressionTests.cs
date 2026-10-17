@@ -341,6 +341,31 @@ public sealed class WarningSecurityRegressionTests
         Assert.DoesNotContain("Private", body);
     }
 
+    [Theory]
+    [InlineData(400, true)]
+    [InlineData(500, false)]
+    public async Task ProductionBoundaryExplainsRejectedDomainRulesAndHidesServerFailures(int status, bool includesDetail)
+    {
+        const string explanation = "Active SKUs require prices before publication.";
+        var environment = Substitute.For<IHostEnvironment>();
+        environment.EnvironmentName.Returns(Environments.Production);
+        var middleware = new ExceptionMiddleware(NullLogger<ExceptionMiddleware>.Instance, environment);
+        using var services = new ServiceCollection().AddLogging().BuildServiceProvider();
+        var context = new DefaultHttpContext { RequestServices = services };
+        using var output = new MemoryStream();
+        context.Response.Body = output;
+        var rejected = new Boilerate.Domain.Common.Exceptions.DomainException(explanation, statusCode: (System.Net.HttpStatusCode)status);
+
+        await middleware.InvokeAsync(context, _ => Task.FromException(rejected));
+
+        Assert.Equal(status, context.Response.StatusCode);
+        using var body = System.Text.Json.JsonDocument.Parse(output.ToArray());
+        if (includesDetail)
+            Assert.Equal(explanation, body.RootElement.GetProperty("detail").GetString());
+        else
+            Assert.DoesNotContain(explanation, body.RootElement.GetRawText());
+    }
+
     private sealed class OneByteReadStream(byte[] bytes) : MemoryStream(bytes)
     {
         public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
