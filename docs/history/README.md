@@ -7,6 +7,7 @@
 - 2026-10-18: [Cấp phát Unique/Shared và gia hạn có xác minh](2026-10-18-09-digital-allocation-renewal.md).
 - 2026-10-18: [Sản phẩm linh hoạt, đơn chung và trả trước hàng số](2026-10-18-10-product-flexibility-mixed-cart.md).
 - 2026-10-18: [Giữ hàng và MVP gọn cho shop nhỏ](2026-10-18-11-small-shop-mvp.md).
+- 2026-10-18: [Thiết kế cách giao và kho số trước code](2026-10-18-12-digital-inventory-design.md).
 
 - 2026-10-18: [Lập kế hoạch nghiệm thu vận hành](2026-10-18-01-operations-plan.md).
 - 2026-10-18: [Gate runtime và trusted proxy](2026-10-18-02-runtime-gates.md).

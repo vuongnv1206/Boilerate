@@ -20,6 +20,7 @@ Tài liệu được cập nhật cùng phần code liên quan. Mỗi tính năn
 12. [Phỏng vấn nghiệp vụ](features/business-discovery.md) và [quy tắc giao hàng số/gia hạn](business/digital-fulfillment.md): các quyết định cho bước lập kế hoạch, chưa phải chức năng đã triển khai.
 13. [Sản phẩm linh hoạt và đơn mua chung](business/product-flexibility.md): mức tự cấu hình của shop, ví dụ tham khảo và chính sách thanh toán vật lý + số.
 14. [MVP shop nhỏ](features/shop-mvp.md): phạm vi gọn, thứ tự BE, tiêu chí nghiệm thu và các đề xuất cần xử lý khi tới bước liên quan.
+15. [Cách giao và kho hàng số](features/digital-inventory.md): thiết kế, bước triển khai và [kiểm chứng](verification/2026-10-18-digital-inventory.md).
 
 Hướng dẫn dựng installation mới, cấu hình và các lệnh operator nằm tại [README dự án](../README.md). [plan.md](../plan.md) là bản tóm tắt phạm vi hiện tại; lộ trình chi tiết được theo dõi tại đây.
 
