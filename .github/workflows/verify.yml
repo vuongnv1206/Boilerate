@@ -53,6 +53,12 @@ jobs:
           if (!$ready) { throw 'SQL Server did not start' }
           Start-Sleep -Seconds 10
       - run: dotnet test Boilerate.sln -c Release --no-build --logger "trx;LogFileName=integration.trx"
+      - name: Build production Linux container
+        run: docker build -t boilerate-ci .
+      - name: Run production container on both databases
+        env:
+          BOILERATE_CONTAINER_IMAGE: boilerate-ci
+        run: dotnet test Boilerate.sln -c Release --no-build --filter "Runtime=Container" --logger "trx;LogFileName=containers.trx"
       - name: Audit resolved packages
         shell: pwsh
         run: |

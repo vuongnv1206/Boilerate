@@ -1,7 +1,7 @@
 {
   "LoggerSettings": {
     "AppName": "Boilerate",
-    "WriteToFile": true,
+    "WriteToFile": false,
     "StructuredConsoleLogging": false,
     "MinimumLogLevel": "Information"
   }

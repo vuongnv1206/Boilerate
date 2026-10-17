@@ -26,6 +26,7 @@ public static class Startup
         IConfiguration config)
     {
         return services
+            .AddDeploymentRuntime(config)
             .AddPersistence()
             .AddCommerce(config)
             .AddIdentity(config)
@@ -45,9 +46,11 @@ public static class Startup
         this IApplicationBuilder builder,
         IConfiguration config)
     {
+        if (config.GetValue<bool>("ReverseProxy:Enabled")) builder.UseForwardedHeaders();
         return builder
             .UseExceptionMiddleware()
             .UseRouting()
+            .UseCors("storefront")
             .UseRateLimiter()
             .UseFileStorage()
             .UseAuth()

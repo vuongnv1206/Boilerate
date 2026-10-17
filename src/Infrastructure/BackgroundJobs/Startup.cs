@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 
 namespace Boilerate.Infrastructure.BackgroundJobs;
 
@@ -50,6 +51,7 @@ internal static class Startup
                     configuration.UsePostgreSqlStorage(options => options.UseNpgsqlConnection(settings.ConnectionString));
                     break;
                 case "memory":
+                    if (!sp.GetRequiredService<IHostEnvironment>().IsDevelopment()) throw new InvalidOperationException("In-memory jobs are only supported in Development.");
                     configuration.UseMemoryStorage();
                     break;
 
