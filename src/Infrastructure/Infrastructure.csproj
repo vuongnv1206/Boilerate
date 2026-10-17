@@ -36,6 +36,8 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" />
+    <!-- Patch pin for GHSA-qhrr-8q5h-9q3h in the Redis backplane dependency. -->
+    <PackageReference Include="MessagePack" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
     <PackageReference Include="Ardalis.Specification.EntityFrameworkCore" />
