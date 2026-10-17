@@ -1,5 +1,8 @@
 # Lịch sử phát triển
 
+- 2026-10-18: [Lập kế hoạch nghiệm thu vận hành](2026-10-18-01-operations-plan.md).
+- 2026-10-18: [Gate runtime và trusted proxy](2026-10-18-02-runtime-gates.md).
+
 Mỗi bước ghi mục tiêu, thay đổi, quyết định, kiểm chứng và bước tiếp theo. Không đưa raw logs hoặc secrets vào lịch sử. Các mục ngày 2026-10-17 dưới đây là bản ghi hồi cứu cho đợt code đã triển khai trước khi áp dụng quy ước docs song song; số thứ tự là cách phân nhóm commit, không phải giờ thực hiện lịch sử được suy đoán.
 
 | Bước | Bản ghi | Commit |

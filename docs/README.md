@@ -13,6 +13,8 @@ Tài liệu được cập nhật cùng phần code liên quan. Mỗi tính năn
 7. [Review commerce ngày 2026-10-17](commerce-review.md): lỗi đã sửa, cách kiểm chứng và giới hạn còn lại.
 8. [Lịch sử phát triển](history/README.md): các phần việc và commit đã thực hiện.
 9. [Kiểm chứng Catalog v1](verification/2026-10-17-commerce.md): kết quả từng lượt, phạm vi source và phần chưa nghiệm thu.
+10. [Nghiệm thu vận hành Catalog](features/operations-acceptance.md): bước đang triển khai trước checkout.
+11. [Runbook vận hành/phục hồi](operations-runbook.md) và [kiểm chứng ngày 2026-10-18](verification/2026-10-18-operations.md).
 
 Hướng dẫn dựng installation mới, cấu hình và các lệnh operator nằm tại [README dự án](../README.md). [plan.md](../plan.md) là bản tóm tắt phạm vi hiện tại; lộ trình chi tiết được theo dõi tại đây.
 
