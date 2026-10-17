@@ -8,6 +8,8 @@ Code Catalog v1 hiện có phục vụ một shop, hàng vật lý, giá VND ngu
 
 Mục tiêu phát triển vừa được người dùng xác nhận: quần áo, điện thoại, laptop, PC tự build/cấu hình phức tạp, khóa học và tài khoản. Đã chọn mô hình A: **mỗi shop dùng một phần mềm được triển khai riêng, không yêu cầu multi-tenant**. Đang làm rõ cách bán/giao hàng số, cấu hình PC và MVP trong [business discovery](features/business-discovery.md); chưa coi các nghiệp vụ này là đã được code Catalog v1 đáp ứng.
 
+Luồng hàng số đã chốt ở mức nghiệp vụ: thanh toán thành công thì lấy nội dung từ kho hàng số, gán cho đơn, hiển thị trong Đơn hàng của tôi và gửi email thông báo. Không yêu cầu LMS hoặc API cấp quyền bên ngoài. Cách tiêu thụ kho/số lượng, xác nhận tiền, reservation và ngoại lệ vẫn đang được phỏng vấn; chưa triển khai luồng này.
+
 Product thuộc đúng một ProductType và có 0–N Category qua bảng nối N–N. Category phục vụ phân loại, ProductType quyết định bộ trường. Chi tiết tại [thiết kế database](commerce-database.md).
 
 Tiến độ từng bước của mốc đầu nằm tại [hồ sơ Catalog v1](features/catalog-v1.md).
@@ -33,7 +35,7 @@ Các mốc 2–6 có phần triển khai song song. Tồn tại code ở mốc s
 
 ## Việc ưu tiên tiếp theo
 
-1. **Kế hoạch nghiệp vụ — đang ưu tiên:** đã chốt một shop/một installation, không multi-tenant. Đang hỏi khóa học/tài khoản được bàn giao hoặc cấp quyền thế nào; tiếp theo làm rõ PC build, nhóm hàng cần ở MVP, khách/luồng mua đến giá, giữ/cấp phát hàng, thu tiền, giao/hậu mãi. Ghi quyết định được xác nhận riêng với đề xuất; chưa mặc định LMS, tích hợp cấp tài khoản hay chính sách checkout.
+1. **Kế hoạch nghiệp vụ — đang ưu tiên:** đã chốt một shop/một installation và luồng giao từ kho hàng số sau thanh toán, không multi-tenant/LMS/API cấp quyền. Đang hỏi bản ghi dùng một lần/dùng chung và ý nghĩa số lượng; tiếp theo làm rõ giữ/cấp phát hàng/ngoại lệ thanh toán, PC build, nhóm hàng MVP và hành trình mua. Ghi quyết định được xác nhận riêng với đề xuất; chưa mặc định chính sách checkout hoặc payment provider.
 2. **Thiết kế lát triển khai:** khi nghiệp vụ đủ rõ, viết hồ sơ theo [mẫu](templates/feature-plan.md), chốt reservation, giá snapshot và ranh giới Order/Payment/Shipment, cardinality/constraints và acceptance scenarios trước code.
 3. **Nghiệm thu runtime trước vận hành thật:** chạy Linux CI và container non-root trên SQL Server/PostgreSQL theo [runbook](operations-runbook.md); kiểm operator CLI, volume media/Data Protection keys, health và thay container. Local proxy đã đạt, nhưng chưa chứng minh cấu hình proxy của deployment cụ thể.
 4. **Vận hành/adapter trước vận hành thật:** [native recovery drill local](verification/2026-10-18-operations.md) đã đạt trên hai DB; tiếp tục staging restore/RPO/RTO/session policy và smoke các adapter được bật bằng cấu hình thật.

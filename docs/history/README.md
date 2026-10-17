@@ -3,6 +3,7 @@
 - 2026-10-18: [Chuyển trọng tâm sang kế hoạch nghiệp vụ](2026-10-18-05-business-discovery.md).
 - 2026-10-18: [Sản phẩm cấu hình phức tạp và mục tiêu nhiều shop](2026-10-18-06-business-products-multishop.md).
 - 2026-10-18: [Chốt installation riêng và bổ sung hàng số](2026-10-18-07-separate-shops-digital-goods.md).
+- 2026-10-18: [Chốt giao hàng số sau thanh toán](2026-10-18-08-digital-delivery-flow.md).
 
 - 2026-10-18: [Lập kế hoạch nghiệm thu vận hành](2026-10-18-01-operations-plan.md).
 - 2026-10-18: [Gate runtime và trusted proxy](2026-10-18-02-runtime-gates.md).

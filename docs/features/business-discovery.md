@@ -25,6 +25,8 @@ Theo yêu cầu mới, ưu tiên lập kế hoạch nghiệp vụ trước. Bắ
 | Yêu cầu ngày 2026-10-18 | Đã rõ | Tạm ưu tiên kế hoạch nghiệp vụ; hỏi sâu theo tình huống, phát triển tài liệu song song |
 | Trả lời vòng 1 và bổ sung ngày 2026-10-18 | Đã xác nhận hướng sản phẩm | Quần áo, điện thoại, laptop, PC tự build/cấu hình phức tạp; bổ sung khóa học và tài khoản. Mục tiêu gồm hàng vật lý và hàng số, còn cách bán/giao chi tiết chưa chốt |
 | Trả lời vòng 1A ngày 2026-10-18 | **Đã chọn A** | Một shop tương ứng một phần mềm được triển khai/vận hành riêng. Không yêu cầu multi-tenant; không đưa SaaS/marketplace vào kế hoạch hiện tại |
+| Trả lời vòng 1B ngày 2026-10-18 | **Đã chốt luồng giao hàng số** | Sau thanh toán thành công tự lấy mã/link/thông tin tài khoản từ kho hàng số, gán cho đơn, hiển thị trong Đơn hàng của tôi và gửi email thông báo |
+| Trả lời vòng 1B ngày 2026-10-18 | Phần loại khỏi scope | Không cần trình học trực tuyến/LMS hoặc API cấp quyền bên thứ ba cho luồng giao hàng số. Payment provider/cách xác nhận thanh toán vẫn chưa chốt |
 | Đơn vị bán, lựa chọn cụ thể, nguồn hàng, khách, luồng mua và chính sách ngoại lệ | **Còn mở** | Chưa tự chọn COD/online, tài khoản bắt buộc, thời điểm giữ hàng hoặc tự xác nhận đơn; chưa coi PC build chỉ là một tổ hợp SKU |
 
 Baseline không cần hỏi lại nếu tình huống thực tế vẫn phù hợp. Nếu ví dụ mới cho thấy cần thay đổi, ghi rõ tác động và xin quyết định về phạm vi trước khi sửa thiết kế. Không tự nới phạm vi chỉ vì có thể triển khai được.
@@ -37,7 +39,8 @@ Hỏi từng vòng, chọn câu tiếp theo dựa trên trả lời; bảng này
 |---|---|---|---|
 | 1 | Ba sản phẩm thực tế: đơn vị bán, lựa chọn của khách, có sẵn/chuẩn bị theo yêu cầu | Mô hình mặt hàng và tình huống khó nhất | Đã nhận 4 nhóm sản phẩm và mục tiêu nhiều shop; chi tiết cách bán còn mở |
 | 1A | Ý nghĩa nhiều shop: cài đặt riêng, SaaS cửa hàng độc lập hay sàn chung | Chốt mô hình sử dụng bắt buộc ở bản đầu trước khi thiết kế ownership | Đã chọn A: một shop/một phần mềm, không multi-tenant |
-| 1B | Khóa học và tài khoản: sản phẩm thực tế, cách bàn giao/cấp quyền và khả năng học trên site | Xác định nghiệp vụ hàng số và giới hạn mốc đầu | Đã hỏi; chờ trả lời |
+| 1B | Khóa học và tài khoản: sản phẩm thực tế, cách bàn giao/cấp quyền và khả năng học trên site | Xác định nghiệp vụ hàng số và giới hạn mốc đầu | Đã chốt giao từ kho sau thanh toán, My Orders/email; không LMS/API cấp quyền |
+| 1C | Bản ghi kho hàng số dùng một lần hay dùng chung; ý nghĩa số lượng mua | Quy tắc tiêu thụ/cấp phát hàng số | Đã hỏi; chờ trả lời |
 | 2 | Khách lẻ/sỉ, tài khoản, cách mua, địa bàn/kênh bán và nhu cầu shop xác nhận | Một hành trình mua chính và người tham gia | Chưa hỏi |
 | 3 | Giá cam kết, giỏ hàng/checkout, phí và khuyến mãi | Giá nào áp dụng khi có thay đổi; tổng tiền được xác nhận lúc nào | Chưa hỏi |
 | 4 | Nhận đơn, tồn/giữ hàng, thời hạn, hủy/sửa và cạnh tranh mua món cuối | Khi nào shop cam kết hàng; khi nào nhả; xử lý hết giữ hàng | Chưa hỏi |
@@ -74,6 +77,14 @@ Vòng 1A đã hỏi ba cách sử dụng A/B/C và yêu cầu chọn mô hình c
 **Đề xuất thứ tự tiếp theo:** hỏi một ví dụ khóa học và một ví dụ tài khoản, mô tả đầu ra khách nhận sau thanh toán. Phân biệt giao hàng số/cấp quyền với tổ chức việc học; chưa tự đưa LMS hoặc tích hợp cấp tài khoản vào scope.
 
 Vòng 1B đã hỏi các trường hợp trên, chờ câu trả lời. Thiết kế hiện hành vẫn mô tả code đã làm; phạm vi chỉ hàng vật lý của Catalog v1 không được dùng để bỏ qua mục tiêu hàng số mới.
+
+### 2026-10-18 — Vòng 1B: chốt đầu ra sau thanh toán
+
+**Đã xác nhận:** sau thanh toán thành công, hệ thống tự lấy mã, link hoặc thông tin tài khoản từ kho hàng số, gán cho đơn hàng, hiển thị ở "Đơn hàng của tôi" và gửi email thông báo. Không xây trình học trực tuyến và không tích hợp API cấp quyền bên ngoài cho nghiệp vụ giao hàng số này.
+
+**Còn mở:** nguồn xác nhận thanh toán thành công; nội dung email; khách có bắt buộc đăng nhập không; mỗi bản ghi là độc quyền một đơn hay tái dùng; mua số lượng 2 nghĩa là hai nội dung hay gia hạn; giữ hàng trước thanh toán, trường hợp đã thu tiền nhưng chưa cấp được và gửi lại thông báo. Không suy diễn email phải chứa toàn bộ thông tin tài khoản, hoặc yêu cầu này đã loại bỏ payment gateway.
+
+**Đề xuất thứ tự tiếp theo:** chốt cách tiêu thụ bản ghi hàng số và ý nghĩa số lượng trước, sau đó dùng tình huống món cuối/hai người mua để hỏi giữ hàng và ngoại lệ thanh toán. Vòng 1C đã hỏi một lần/dùng chung và số lượng 2; chờ trả lời. Chưa thiết kế schema kho bí mật hoặc code cấp phát.
 
 ## 5. Quy tắc chuyển sang kế hoạch triển khai
 
