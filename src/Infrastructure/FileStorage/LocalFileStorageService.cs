@@ -19,9 +19,15 @@ public sealed class LocalFileStorageService : IFileStorageService
         _root = Path.GetFullPath(root);
     }
 
-    public async Task<string> UploadAsync<T>(Microsoft.AspNetCore.Http.IFormFile? file, FileType supportedFileType,
+    public Task<string> UploadAsync<T>(Microsoft.AspNetCore.Http.IFormFile? file, FileType supportedFileType,
         CancellationToken cancellationToken = default)
-        where T : class
+        where T : class => UploadCoreAsync(file, supportedFileType, typeof(T).Name, null, cancellationToken);
+
+    internal Task<string> UploadCommerceAsync(Microsoft.AspNetCore.Http.IFormFile file, string storageKey, CancellationToken ct) =>
+        UploadCoreAsync(file, FileType.Image, "Commerce", storageKey, ct);
+
+    private async Task<string> UploadCoreAsync(Microsoft.AspNetCore.Http.IFormFile? file, FileType supportedFileType,
+        string folder, string? storageKey, CancellationToken cancellationToken)
     {
         if (file is null || file.Length == 0)
         {
@@ -44,7 +50,7 @@ public sealed class LocalFileStorageService : IFileStorageService
             throw new FluentValidation.ValidationException("Image content does not match its extension.");
         }
 
-        string relative = $"Files/Images/{typeof(T).Name}/{Guid.NewGuid():N}{extension}";
+        string relative = storageKey ?? $"Files/Images/{folder}/{Guid.NewGuid():N}{extension}";
         string target = Resolve(relative, allowAbsolute: false);
         EnsureNoLinks(target, allowMissing: true);
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
@@ -104,10 +110,8 @@ public sealed class LocalFileStorageService : IFileStorageService
 
         string target = Resolve(path, allowAbsolute: true);
         EnsureNoLinks(target, allowMissing: true);
-        if (File.Exists(target))
-        {
-            File.Delete(target);
-        }
+        try { File.Delete(target); }
+        catch (DirectoryNotFoundException) { /* Missing storage object is already removed. */ }
     }
 
     private string Resolve(string path, bool allowAbsolute)

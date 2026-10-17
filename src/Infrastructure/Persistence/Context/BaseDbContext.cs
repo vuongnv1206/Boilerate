@@ -52,6 +52,7 @@ public abstract class BaseDbContext : IdentityDbContext<
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.ApplyConfigurationsFromAssembly(GetType().Assembly);
+        Boilerate.Infrastructure.Persistence.Configuration.CommerceModel.Configure(modelBuilder, Database.IsNpgsql());
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -77,6 +78,12 @@ public abstract class BaseDbContext : IdentityDbContext<
             throw new NotSupportedException("Deferred change acceptance is not supported by the audited context. Use SaveChangesAsync(cancellationToken).");
         }
 
+        ChangeTracker.DetectChanges();
+        if (ChangeTracker.Entries<Boilerate.Domain.Inventory.StockMovement>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Stock movements are append-only; use a compensating movement.");
+        if (ChangeTracker.Entries<Boilerate.Domain.Catalog.Product>().Any(e => e.State == EntityState.Deleted) ||
+            ChangeTracker.Entries<Boilerate.Domain.Catalog.ProductVariant>().Any(e => e.State == EntityState.Deleted))
+            throw new InvalidOperationException("Archive products/SKUs instead of deleting commerce history.");
         var ownsTransaction = Database.CurrentTransaction is null;
         var externalTransaction = Database.CurrentTransaction;
         if (_externalTransactionId.HasValue && _externalTransactionId != externalTransaction?.TransactionId)

@@ -96,7 +96,10 @@ public sealed class WarningProviderRegressionTests
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var category = new Category("Filter tests", null);
         db.Categories.Add(category);
-        db.Products.AddRange(new Product("Null", null, 1.23m, category.Id, null), new Product("Match", "Needle", 2, category.Id, null));
+        var type = new ProductType("FILTER", "Filter"); db.ProductTypes.Add(type);
+        var first = new Product(type.Id,"Null","null"); first.AddVariant("NULL",123,null,new Dictionary<Guid,Guid>(),200);
+        var second = new Product(type.Id,"Match","match","Needle"); second.AddVariant("MATCH",200,null,new Dictionary<Guid,Guid>(),200);
+        db.Products.AddRange(first,second);
         await db.SaveChangesAsync();
         async Task<List<Product>> Search(string field, string operation, object? value)
         {
@@ -106,7 +109,8 @@ public sealed class WarningProviderRegressionTests
 
         Assert.Equal("Match", Assert.Single(await Search("Description", "contains", "needle")).Name);
         Assert.Equal("Null", Assert.Single(await Search("Description", "eq", null)).Name);
-        Assert.Equal("Null", Assert.Single(await Search("Price", "eq", "1.23")).Name);
+        var numericSpec = new EntitiesByBaseFilterSpec<ProductVariant>(new BaseFilter { AdvancedFilter = new() { Field = "Price", Operator = "eq", Value = "123" } });
+        Assert.Single(await db.ProductVariants.WithSpecification(numericSpec).ToListAsync());
         Assert.Equal(2, (await Search("CreatedOn", "gt", "2000-01-01T07:00:00+07:00")).Count);
         Assert.Equal("Null", Assert.Single(await Search("Description", "neq", "needle")).Name);
     }
@@ -158,7 +162,9 @@ public sealed class WarningProviderRegressionTests
         await using var db = new ApplicationDbContext(options, new CurrentUser(), new NewtonSoftService(), publisher);
         var category = new Category("Event tests", null);
         db.Categories.Add(category);
-        var product = new Product("Committed", null, 1, category.Id, null);
+        var type = new ProductType("EVENTS","Events"); db.ProductTypes.Add(type);
+        var product = new Product(type.Id,"Committed","committed");
+        product.AddVariant("COMMITTED",1,null,new Dictionary<Guid,Guid>(),200);
         db.Products.Add(product);
         product.DomainEvents.Add(EntityCreatedEvent.WithEntity(product));
         publisher.PublishAsync(Arg.Any<IEvent>()).Returns(async _ =>

@@ -47,7 +47,10 @@ public sealed class TemplateRuntimeSmokeTests
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var category = new Category("Retained category", "Survives module toggle/restart");
             db.Categories.Add(category); // EF assigns the Guid before it becomes the product foreign key.
-            var product = new Product("Retained product", null, 123.45m, category.Id, null);
+            var type = new ProductType("RETAINED","Retained"); db.ProductTypes.Add(type);
+            var product = new Product(type.Id,"Retained product","retained-product");
+            product.SetCategories(new[] { category.Id });
+            product.AddVariant("RETAINED",123,null,new Dictionary<Guid,Guid>(),200);
             db.Products.Add(product);
             var role = new ApplicationRole("RestartProbe"); db.Roles.Add(role);
             var pair = await db.ActionInFunctions.FirstAsync();
@@ -94,8 +97,8 @@ public sealed class TemplateRuntimeSmokeTests
                 using var scope = fixture.Scope();
                 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 Assert.Equal(grants, await GrantSnapshot(db));
-                var retained = await db.Products.SingleAsync(p => p.Id == retainedProductId);
-                Assert.Equal(123.45m, retained.Price);
+                var retained = await db.Products.Include(p => p.Variants).SingleAsync(p => p.Id == retainedProductId);
+                Assert.Equal(123m, retained.Variants.Single().Price);
                 Assert.Equal("Retained product", retained.Name);
                 Assert.False(db.Database.HasPendingModelChanges());
             }

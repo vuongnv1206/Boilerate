@@ -407,8 +407,9 @@ public static class SpecificationBuilderExtensions
     private static HashSet<string> AllowedFields(Type type) => new((type.Name switch
     {
         "ApplicationUser" => "Id,UserName,Email,FirstName,LastName,PhoneNumber,IsActive,EmailConfirmed",
-        "Product" => "Id,Name,Description,Price,CategoryId,Category.Name,CreatedOn,DeletedOn",
-        "Category" => "Id,Name,Description,CreatedOn,DeletedOn",
+        "Product" => "Id,Name,Description,Slug,ProductTypeId,Status,CreatedOn",
+        "ProductVariant" => "Id,ProductId,Sku,Price,CompareAtPrice,IsActive",
+        "Category" => "Id,Name,Slug,Description,ParentId,SortOrder,IsActive,CreatedOn",
         "Trail" => "Id,DateTime,UserId,TableName,Type",
         _ => "Id"
     }).Split(','), StringComparer.Ordinal);

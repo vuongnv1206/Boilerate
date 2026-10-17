@@ -13,5 +13,9 @@ public static class AppAction
     public const string Import = nameof(Import);
     public const string Export = nameof(Export);
     public const string Clean = nameof(Clean);
+    public const string Publish = nameof(Publish);
+    public const string Adjust = nameof(Adjust);
+    public const string Initialize = nameof(Initialize);
+    public const string Replay = nameof(Replay);
     public const string Send = nameof(Send);
 }

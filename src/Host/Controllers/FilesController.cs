@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Boilerate.Host.Controllers;
 
 [Authorize]
-public sealed class FilesController(ApplicationDbContext db, IUserService users, IConfiguration config, IFileStorageService storage) : ControllerBase
+public sealed class FilesController(ApplicationDbContext db, IUserService users, IFileStorageService storage) : ControllerBase
 {
     [HttpGet("/files/{**path}")]
     public async Task<IActionResult> Get(string path, CancellationToken ct)
@@ -27,12 +27,6 @@ public sealed class FilesController(ApplicationDbContext db, IUserService users,
         if (storedPath is null && await users.HasPermissionAsync(userId, "Permissions.User.View", ct))
         {
             storedPath = await db.Users.Where(u => u.ImageUrl == relative).Select(u => u.ImageUrl).FirstOrDefaultAsync(ct);
-        }
-
-        if (storedPath is null && config.GetValue<bool>("Modules:Catalog:Enabled") &&
-            await users.HasPermissionAsync(userId, "Permissions.Product.View", ct))
-        {
-            storedPath = await db.Products.Where(p => p.ImagePath == relative).Select(p => p.ImagePath).FirstOrDefaultAsync(ct);
         }
 
         if (storedPath is null)

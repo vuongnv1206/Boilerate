@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
 using System.Diagnostics;
-using Boilerate.Application.Catalog.Products;
 using Boilerate.Application.Common.Caching;
 using Boilerate.Application.Common.FileStorage;
 using Boilerate.Application.Common.Persistence;
@@ -248,11 +247,11 @@ public sealed class WarningSecurityRegressionTests
         Assert.Throws<FluentValidation.ValidationException>(() => new EntitiesByBaseFilterSpec<Product>(new BaseFilter { AdvancedFilter = empty }));
         var recursive = new Filter { Logic = FilterLogic.AND, Filters = new() }; recursive.Filters.Add(recursive);
         Assert.Throws<FluentValidation.ValidationException>(() => new EntitiesByBaseFilterSpec<Product>(new BaseFilter { AdvancedFilter = recursive }));
-        Assert.Throws<FluentValidation.ValidationException>(() => new EntitiesByBaseFilterSpec<Product>(new BaseFilter
+        Assert.Throws<FluentValidation.ValidationException>(() => new EntitiesByBaseFilterSpec<Boilerate.Domain.Catalog.ProductVariant>(new BaseFilter
             { AdvancedFilter = new() { Field = "Price", Operator = "eq", Value = "not-a-price" } }));
-        Assert.Throws<FluentValidation.ValidationException>(() => new EntitiesByBaseFilterSpec<Product>(new BaseFilter
+        Assert.Throws<FluentValidation.ValidationException>(() => new EntitiesByBaseFilterSpec<Boilerate.Domain.Catalog.ProductVariant>(new BaseFilter
             { AdvancedFilter = new() { Field = "Price", Operator = "contains", Value = 12 } }));
-        var products = new[] { new Product("Null", null, 1, Guid.NewGuid(), null), new Product("Match", "Needle", 2, Guid.NewGuid(), null) };
+        var products = new[] { new Product(Guid.NewGuid(), "Null", "null"), new Product(Guid.NewGuid(), "Match", "match", "Needle") };
         var filter = new EntitiesByBaseFilterSpec<Product>(new BaseFilter { AdvancedFilter = new() { Field = "Description", Operator = "contains", Value = "needle" } });
         Assert.Equal("Match", Assert.Single(filter.Evaluate(products)).Name);
     }
@@ -319,26 +318,6 @@ public sealed class WarningSecurityRegressionTests
             // Remove only the link itself; the target remains available for the assertions above.
             Directory.Delete(link);
         }
-    }
-
-    [Fact]
-    public async Task FailedProductSaveDoesNotDeleteItsCurrentImage()
-    {
-        var repository = Substitute.For<IRepositoryWithEvents<Product>>();
-        var fileStore = Substitute.For<IFileStorageService>();
-        var product = new Product("Original", null, 1, Guid.NewGuid(), "Files/Images/Product/old.png");
-        repository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult<Product?>(product));
-        repository.UpdateAsync(product, Arg.Any<CancellationToken>()).Returns(Task.FromException(new IOException("Simulated database failure")));
-        var handler = new UpdateProductRequestHandler(repository, fileStore, Substitute.For<ICacheService>(), NullLogger<UpdateProductRequestHandler>.Instance);
-        await Assert.ThrowsAsync<IOException>(() => handler.Handle(new UpdateProductRequest
-        {
-            Id = product.Id,
-            Name = "Changed",
-            CategoryId = product.CategoryId,
-            Price = 2,
-            DeleteCurrentImage = true
-        }, default));
-        fileStore.DidNotReceive().Remove(Arg.Any<string>());
     }
 
     [Theory]

@@ -11,7 +11,7 @@ public sealed class FreshBaselineMigrationTests
 {
     [Theory, Trait("Category", "ProviderIntegration")]
     [InlineData("mssql"), InlineData("postgresql")]
-    public async Task FreshDatabaseUsesOneBaselineWithoutLegacyTokenOrReadState(string provider)
+    public async Task FreshDatabaseUsesFoundationAndCommerceWithoutLegacyTokenOrReadState(string provider)
     {
         await using var fixture = new FoundationDatabase(provider);
         await fixture.CreateAsync(migrate: false);
@@ -20,8 +20,10 @@ public sealed class FreshBaselineMigrationTests
 
         await db.Database.MigrateAsync();
 
-        var migration = Assert.Single(await db.Database.GetAppliedMigrationsAsync());
-        Assert.EndsWith("_InitialFoundation", migration, StringComparison.Ordinal);
+        var migrations = (await db.Database.GetAppliedMigrationsAsync()).ToArray();
+        Assert.Equal(2,migrations.Length);
+        Assert.EndsWith("_InitialFoundation",migrations[0],StringComparison.Ordinal);
+        Assert.EndsWith("_CommerceCatalog",migrations[1],StringComparison.Ordinal);
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
         Assert.False(db.Database.HasPendingModelChanges());
         Assert.Empty(await db.Users.ToListAsync());

@@ -1,3 +1,4 @@
+using Boilerate.Infrastructure.Commerce;
 using Boilerate.Infrastructure.Auth;
 using Boilerate.Infrastructure.BackgroundJobs;
 using Boilerate.Infrastructure.Caching;
@@ -26,6 +27,7 @@ public static class Startup
     {
         return services
             .AddPersistence()
+            .AddCommerce(config)
             .AddIdentity(config)
             .AddAuth(config)
             .AddCaching(config)

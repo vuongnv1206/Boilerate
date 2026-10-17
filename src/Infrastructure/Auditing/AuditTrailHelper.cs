@@ -21,7 +21,8 @@ public static class AuditTrailHelper
     {
         var trailEntries = new List<AuditTrail>();
 
-        foreach (var entry in changeTracker.Entries<IAuditableEntity>())
+        foreach (var entry in changeTracker.Entries().Where(e => e.Entity is IAuditableEntity ||
+            (e.Entity.GetType().Namespace == "Boilerate.Domain.Catalog" && e.Entity is not Boilerate.Domain.Catalog.CommerceEntity)))
         {
             if (entry.State is EntityState.Detached or EntityState.Unchanged)
                 continue;
@@ -52,7 +53,7 @@ public static class AuditTrailHelper
                 }
 
                 // Skip navigation/foreign keys nếu muốn gọn log
-                if (property.Metadata.IsForeignKey()) continue;
+                if (property.Metadata.IsForeignKey() && entry.Entity.GetType().Namespace is not ("Boilerate.Domain.Catalog" or "Boilerate.Domain.Inventory" or "Boilerate.Domain.Media")) continue;
 
                 switch (entry.State)
                 {

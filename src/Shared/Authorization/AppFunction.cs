@@ -20,5 +20,9 @@ public static class AppFunction
     public const string Products = nameof(Products);
     public const string Category = nameof(Category);
     public const string Categories = nameof(Categories);
+    public const string ProductType = nameof(ProductType);
+    public const string Price = nameof(Price);
+    public const string Inventory = nameof(Inventory);
+    public const string Outbox = nameof(Outbox);
     public const string Notifications = nameof(Notifications);
 }
