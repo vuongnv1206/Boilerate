@@ -10,6 +10,8 @@ Product thuộc đúng một ProductType và có 0–N Category qua bảng nối
 
 Tiến độ từng bước của mốc đầu nằm tại [hồ sơ Catalog v1](features/catalog-v1.md).
 
+Theo yêu cầu mới ngày 2026-10-18, ưu tiên làm việc hiện tại là [phỏng vấn và chốt kế hoạch nghiệp vụ](features/business-discovery.md). Chưa bắt đầu code checkout; các điều kiện nghiệm thu runtime/adapter trước vận hành thật vẫn còn hiệu lực.
+
 ## Các mốc và điều kiện hoàn tất
 
 | Mốc | Đầu ra | Trạng thái hiện tại | Điều kiện còn lại |
@@ -21,7 +23,7 @@ Tiến độ từng bước của mốc đầu nằm tại [hồ sơ Catalog v1]
 | 4. Catalog/giá/publication | ProductType/typed fields, Category N–N, options/SKU, giá, Draft/Published/Archived | Đã triển khai; có kiểm thử domain/API/database | Duy trì kiểm chứng hai provider khi mở rộng; xem giới hạn trong API docs |
 | 5. Inventory/public API | Balance MAIN, movement bất biến/idempotency, typed filters, Published-only/media | Đã triển khai; có kiểm thử concurrency và quyền | Chưa có reservation; bổ sung cùng checkout ở mốc sau |
 | 6. Hoàn thiện và nghiệm thu mốc đầu | Review/regression, template đổi tên, module flag, OpenAPI, vận hành/backup | Review/template đã kiểm; native recovery DB+media+keys/outbox local đạt 2/2, Catalog compatibility 2/2 | Đóng runtime/adapter; diễn tập deployment restore/RPO/RTO và session invalidation ở môi trường triển khai |
-| 7. Ordering/checkout | Cart, checkout, Order/OrderItem snapshot, reservation/idempotency | **Chưa triển khai; chưa tạo bảng** | Chốt hợp đồng và luồng giữ/nhả hàng, thiết kế rồi mới tạo migrations |
+| 7. Ordering/checkout | Cart, checkout, Order/OrderItem snapshot, reservation/idempotency | **Đang làm rõ nghiệp vụ; chưa triển khai/chưa tạo bảng** | Phỏng vấn hành trình mua và ngoại lệ; chốt luồng giữ/nhả hàng, thiết kế rồi mới tạo migrations |
 | 8. Payment | Attempts/refunds, webhook bền vững và deduplication, đối soát | **Chưa triển khai; chưa chọn provider** | Chốt provider và state machine; kiểm thử sandbox/thật theo phạm vi cho phép |
 | 9. Shipping | Shipment/ShipmentItem có số lượng, giao từng phần, trạng thái riêng | **Chưa triển khai; chưa chọn provider** | Chốt carrier, callback/idempotency và cách đồng bộ với Order |
 
@@ -29,10 +31,10 @@ Các mốc 2–6 có phần triển khai song song. Tồn tại code ở mốc s
 
 ## Việc ưu tiên tiếp theo
 
-1. **Nghiệm thu runtime:** chạy Linux CI và container non-root trên SQL Server/PostgreSQL theo [runbook](operations-runbook.md); kiểm operator CLI, volume media/Data Protection keys, health và thay container. Local proxy đã đạt, nhưng chưa chứng minh cấu hình proxy của một deployment cụ thể.
-2. **Vận hành và khôi phục:** [native recovery drill local](verification/2026-10-18-operations.md) đã đạt trên hai DB. Tiếp tục diễn tập trên storage/DB của môi trường staging, ghi RPO/RTO, quyền operator và chính sách vô hiệu hóa session khi restore snapshot cũ.
-3. **Adapter đang bật:** nghiệm thu riêng các adapter cần dùng thực tế. SMTP/cloud storage/Redis/OAuth/Hangfire ngoài process chỉ được xác nhận khi có cấu hình và bằng chứng chạy tương ứng.
-4. **Checkout:** viết hồ sơ tính năng theo [mẫu](templates/feature-plan.md), chốt reservation, giá snapshot và ranh giới Order/Payment/Shipment trước khi triển khai.
+1. **Kế hoạch nghiệp vụ — đang ưu tiên:** phỏng vấn từng vòng từ sản phẩm thực tế, khách và luồng mua đến giá, nhận đơn/giữ hàng, thu tiền, giao hàng/hậu mãi và MVP. Ghi quyết định được xác nhận riêng với đề xuất; chưa mặc định chính sách checkout.
+2. **Thiết kế lát triển khai:** khi nghiệp vụ đủ rõ, viết hồ sơ theo [mẫu](templates/feature-plan.md), chốt reservation, giá snapshot và ranh giới Order/Payment/Shipment, cardinality/constraints và acceptance scenarios trước code.
+3. **Nghiệm thu runtime trước vận hành thật:** chạy Linux CI và container non-root trên SQL Server/PostgreSQL theo [runbook](operations-runbook.md); kiểm operator CLI, volume media/Data Protection keys, health và thay container. Local proxy đã đạt, nhưng chưa chứng minh cấu hình proxy của deployment cụ thể.
+4. **Vận hành/adapter trước vận hành thật:** [native recovery drill local](verification/2026-10-18-operations.md) đã đạt trên hai DB; tiếp tục staging restore/RPO/RTO/session policy và smoke các adapter được bật bằng cấu hình thật.
 
 Docker daemon chưa hoạt động là giới hạn của lần nghiệm thu hiện tại; cần kiểm tra lại điều kiện đó khi tiếp tục, không coi đây là trạng thái cố định của dự án.
 

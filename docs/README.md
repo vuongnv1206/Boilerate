@@ -1,5 +1,7 @@
 # Tài liệu phát triển
 
+Ưu tiên làm việc hiện tại: [phỏng vấn và lập kế hoạch nghiệp vụ](features/business-discovery.md). Các gate vận hành còn mở vẫn được theo dõi trong roadmap.
+
 Tài liệu được cập nhật cùng phần code liên quan. Mỗi tính năng có kế hoạch, các bước thực hiện, bằng chứng kiểm chứng và lịch sử thay đổi để người tiếp theo biết dự án đang ở đâu, vì sao chọn thiết kế đó và còn thiếu gì.
 
 ## Đọc theo thứ tự

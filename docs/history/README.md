@@ -1,5 +1,7 @@
 # Lịch sử phát triển
 
+- 2026-10-18: [Chuyển trọng tâm sang kế hoạch nghiệp vụ](2026-10-18-05-business-discovery.md).
+
 - 2026-10-18: [Lập kế hoạch nghiệm thu vận hành](2026-10-18-01-operations-plan.md).
 - 2026-10-18: [Gate runtime và trusted proxy](2026-10-18-02-runtime-gates.md).
 - 2026-10-18: [Native recovery và runner](2026-10-18-03-recovery-runner.md).
