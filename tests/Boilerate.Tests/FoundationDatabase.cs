@@ -23,7 +23,8 @@ internal sealed class FoundationDatabase : IAsyncDisposable
     private readonly string _adminConnection;
     private bool _created;
 
-    public FoundationDatabase(string provider, bool catalog = false, bool notifications = false)
+    public FoundationDatabase(string provider, bool catalog = false, bool notifications = false,
+        IReadOnlyDictionary<string, string?>? configOverrides = null)
     {
         _provider = provider;
         string connection;
@@ -43,7 +44,7 @@ internal sealed class FoundationDatabase : IAsyncDisposable
             var pg = new NpgsqlConnectionStringBuilder(configured) { Database = "postgres" };
             _adminConnection = pg.ConnectionString; pg.Database = Name; connection = pg.ConnectionString;
         }
-        Configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        var configuration = new Dictionary<string, string?>
         {
             ["DatabaseSettings:DBProvider"] = provider, ["DatabaseSettings:ConnectionString"] = connection,
             ["SecuritySettings:JwtSettings:Key"] = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)),
@@ -54,7 +55,18 @@ internal sealed class FoundationDatabase : IAsyncDisposable
             ["CacheSettings:UseDistributedCache"] = "false", ["HangfireStorageSettings:Enabled"] = "false",
             ["BlobStorageSettings:Enabled"] = "false", ["BlobStorageSettings:Provider"] = "Azure",
             ["Modules:Catalog:Enabled"] = catalog.ToString(), ["Modules:Notifications:Enabled"] = notifications.ToString()
-        }).Build();
+        };
+        if (configOverrides is not null)
+        {
+            // Keep database ownership local to this fixture; recovery may override runtime settings only.
+            foreach (var pair in configOverrides)
+            {
+                if (pair.Key.StartsWith("DatabaseSettings:", StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("Test configuration cannot replace the fixture database.");
+                configuration[pair.Key] = pair.Value;
+            }
+        }
+        Configuration = new ConfigurationBuilder().AddInMemoryCollection(configuration).Build();
         var services = new ServiceCollection(); ConfigureServices(services);
         Services = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
     }

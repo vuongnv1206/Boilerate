@@ -56,9 +56,8 @@ jobs:
       - name: Build production Linux container
         run: docker build -t boilerate-ci .
       - name: Run production container on both databases
-        env:
-          BOILERATE_CONTAINER_IMAGE: boilerate-ci
-        run: dotnet test Boilerate.sln -c Release --no-build --filter "Runtime=Container" --logger "trx;LogFileName=containers.trx"
+        shell: pwsh
+        run: ./scripts/verify-operations.ps1 -Stage Container -ContainerImage boilerate-ci -SkipBuild
       - name: Audit resolved packages
         shell: pwsh
         run: |
@@ -78,4 +77,5 @@ jobs:
             artifacts/verification/**/cli-*.log
             artifacts/pdf-qa
             artifacts/audit.json
+            artifacts/operations/**
             **/TestResults/*.trx

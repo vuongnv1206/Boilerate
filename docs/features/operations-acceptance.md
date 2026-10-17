@@ -12,9 +12,9 @@ Tiêu chí:
 
 - [x] Header giả từ peer không được tin bị bỏ qua; proxy đã khai báo được phép forward đúng một hop (5/5 local tests gồm cả key ring).
 - [ ] Image chạy operator/bootstrap/preflight tách HTTP; non-root, live/ready, media/key/session còn dùng được sau remove/recreate container trên cùng volume.
-- [ ] Native DB backup được restore vào database test mới; dữ liệu, media, key ring và outbox phục hồi đúng recovery point trên cả hai provider.
-- [ ] Worker sau restore không xóa ảnh còn được tham chiếu hoặc file ở installation nguồn.
-- [ ] Runner/báo cáo ghi đúng pass/fail/skip/blocked; không coi Docker không sẵn sàng hoặc test bị skip là nghiệm thu đạt.
+- [x] Native DB backup được restore vào database test mới; dữ liệu, media, key ring và outbox phục hồi đúng recovery point trên cả hai provider (2/2 local).
+- [x] Worker sau restore không xóa ảnh còn được tham chiếu hoặc file ở installation nguồn (2/2 local).
+- [x] Runner/báo cáo ghi đúng pass/fail/skip/blocked; không coi Docker không sẵn sàng hoặc test bị skip là nghiệm thu đạt.
 
 ## 2. Thiết kế
 
@@ -32,8 +32,8 @@ Không đổi entity, cardinality, PK/FK/index hay migration. Giữ [database de
 |---|---|---|---|
 | 1 | Đối chiếu roadmap và kiểm tra môi trường | Ghi rõ phần code/local verified và phần chưa nghiệm thu | Đã đối chiếu; Docker engine tiếp tục timeout |
 | 2 | Tăng độ chặt gate container và proxy regression | Operator CLI, recreate volume và trusted/untrusted forwarding | Local proxy/key gate 5/5; container gate code có, chưa chạy image |
-| 3 | Native recovery drill trên DB mới | Backup/restore DB+media+keys, kiểm dữ liệu/outbox qua hai DB | Đã viết code; chờ build/chạy |
-| 4 | Runner và kiểm chứng thực tế | Lệnh tái chạy, kết quả thật và giới hạn | Runner đã viết; đang kiểm chứng |
+| 3 | Native recovery drill trên DB mới | Backup/restore DB+media+keys, kiểm dữ liệu/outbox qua hai DB | Đạt local 2/2; session/HTTP nằm ngoài drill này |
+| 4 | Runner và kiểm chứng thực tế | Lệnh tái chạy, kết quả thật và giới hạn | Local 5/5, Recovery 2/2; Container blocked/0 ca |
 | 5 | Docs/history/roadmap và commit nhỏ | Bằng chứng tracked; không đánh dấu container đạt nếu chưa chạy | Chưa bắt đầu |
 
 ## 4. Nhật ký
@@ -54,8 +54,12 @@ Không đổi entity, cardinality, PK/FK/index hay migration. Giữ [database de
 
 Release build đạt 0 errors; còn warnings analyzer/style. `verify-operations.ps1 -Stage Local -SkipBuild` đạt 5/5, không skip. `-Stage Container` trên Windows ghi blocked/0 ca vì gate cần Linux host; các probe engine riêng cũng timeout. Đây là hai điều kiện chưa đáp ứng, không phải container acceptance passed. Native recovery đang chạy, sẽ ghi kết quả sau khi hoàn tất.
 
+### 2026-10-18 — Bước 3–4: native recovery đạt
+
+`verify-operations.ps1 -Stage Recovery -SkipBuild` chạy native SQL Server LocalDB và PostgreSQL 16: 2 passed, 0 failed, 0 skipped. Đã xác nhận recovery point, media/key hashes/unprotect, outbox lease reclaim và source isolation. Review helper bổ sung cleanup partial SQL backup và map SSL mode đúng dạng libpq trước build/lượt này. Không có test failure trong hai lượt gate đã chạy. Container chưa chạy; kết quả không xác nhận production recovery hoặc session invalidation. Regression Catalog mặc định sau thay đổi fixture đạt 2/2 trên hai provider; chi tiết tại [verification](../verification/2026-10-18-operations.md).
+
 ## 5. Kiểm chứng và công việc còn lại
 
-Chưa có kết quả chạy mới cho các bước 2–4 tại thời điểm lập kế hoạch. Sẽ bổ sung lệnh/môi trường/pass/fail/skip và raw artifact path sau từng bước. Các kết quả 70/70 và 9/9 của ngày trước không thay thế nghiệm thu mới.
+Kết quả mới nằm tại [verification ngày 2026-10-18](../verification/2026-10-18-operations.md). Local proxy/key gate 5/5 và native Recovery 2/2 đã đạt. Container/Linux/CI và production adapters vẫn chưa nghiệm thu. Các kết quả 70/70 và 9/9 của ngày trước không thay thế các gate mới này.
 
 Lịch sử commit sẽ được ghi bằng hash thực tế sau khi commit; không ghi hash dự đoán.
