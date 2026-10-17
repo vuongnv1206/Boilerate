@@ -19,11 +19,13 @@ Theo yêu cầu mới, ưu tiên lập kế hoạch nghiệp vụ trước. Bắ
 
 | Nguồn | Trạng thái | Nội dung |
 |---|---|---|
-| Phạm vi đã duyệt trước đây | Baseline hiện hành | Một shop, hàng vật lý, VND nguyên đồng, kho MAIN không âm |
+| Phạm vi đã duyệt trước đây | Baseline của code Catalog v1 hiện có | Một shop, hàng vật lý, VND nguyên đồng, kho MAIN không âm. Mục tiêu nhiều shop vừa được nêu cần làm rõ; chưa suy ra baseline này là giới hạn của nền tảng tương lai |
 | Catalog đã triển khai | Hợp đồng hiện hành | ProductType → Product 1–N; Product ↔ Category N–N; SKU giữ giá/tồn, custom field khác option |
 | Hướng mốc sau đã duyệt | Chưa triển khai | OrderItem snapshot; Order/Payment/Shipment có trạng thái riêng; quan hệ tương lai trong database docs |
 | Yêu cầu ngày 2026-10-18 | Đã rõ | Tạm ưu tiên kế hoạch nghiệp vụ; hỏi sâu theo tình huống, phát triển tài liệu song song |
-| Ví dụ sản phẩm, khách, luồng mua và chính sách ngoại lệ | **Chưa có câu trả lời trong vòng này** | Chưa tự chọn COD/online, tài khoản bắt buộc, thời điểm giữ hàng hoặc tự xác nhận đơn |
+| Trả lời vòng 1 ngày 2026-10-18 | Đã xác nhận hướng sản phẩm | Quần áo, điện thoại, laptop và PC tự build; có nhu cầu sản phẩm cấu hình phức tạp |
+| Trả lời vòng 1 ngày 2026-10-18 | Đã xác nhận mục tiêu phát triển | Nền tảng e-commerce có khả năng mở rộng cho nhiều shop; chưa chốt bộ phần mềm triển khai riêng, SaaS hay marketplace, cũng chưa chốt mô hình nào bắt buộc ở bản đầu |
+| Đơn vị bán, lựa chọn cụ thể, nguồn hàng, khách, luồng mua và chính sách ngoại lệ | **Còn mở** | Chưa tự chọn COD/online, tài khoản bắt buộc, thời điểm giữ hàng hoặc tự xác nhận đơn; chưa coi PC build chỉ là một tổ hợp SKU |
 
 Baseline không cần hỏi lại nếu tình huống thực tế vẫn phù hợp. Nếu ví dụ mới cho thấy cần thay đổi, ghi rõ tác động và xin quyết định về phạm vi trước khi sửa thiết kế. Không tự nới phạm vi chỉ vì có thể triển khai được.
 
@@ -33,7 +35,8 @@ Hỏi từng vòng, chọn câu tiếp theo dựa trên trả lời; bảng này
 
 | Vòng | Trọng tâm | Đầu ra cần chốt | Trạng thái |
 |---|---|---|---|
-| 1 | Ba sản phẩm thực tế: đơn vị bán, lựa chọn của khách, có sẵn/chuẩn bị theo yêu cầu | Mô hình mặt hàng và tình huống khó nhất | Đã hỏi; chờ trả lời |
+| 1 | Ba sản phẩm thực tế: đơn vị bán, lựa chọn của khách, có sẵn/chuẩn bị theo yêu cầu | Mô hình mặt hàng và tình huống khó nhất | Đã nhận 4 nhóm sản phẩm và mục tiêu nhiều shop; chi tiết cách bán còn mở |
+| 1A | Ý nghĩa nhiều shop: cài đặt riêng, SaaS cửa hàng độc lập hay sàn chung | Chốt mô hình sử dụng bắt buộc ở bản đầu trước khi thiết kế ownership | Đã hỏi; chờ lựa chọn |
 | 2 | Khách lẻ/sỉ, tài khoản, cách mua, địa bàn/kênh bán và nhu cầu shop xác nhận | Một hành trình mua chính và người tham gia | Chưa hỏi |
 | 3 | Giá cam kết, giỏ hàng/checkout, phí và khuyến mãi | Giá nào áp dụng khi có thay đổi; tổng tiền được xác nhận lúc nào | Chưa hỏi |
 | 4 | Nhận đơn, tồn/giữ hàng, thời hạn, hủy/sửa và cạnh tranh mua món cuối | Khi nào shop cam kết hàng; khi nào nhả; xử lý hết giữ hàng | Chưa hỏi |
@@ -50,6 +53,16 @@ Các tình huống dùng để kiểm tra giả định khi phù hợp: số lư
 Đã hỏi: chọn 3 sản phẩm muốn bán ở đợt đầu, gồm món khó quản lý nhất; mỗi món bán theo đơn vị nào, khách phải chọn gì và shop có sẵn hay cần chuẩn bị/làm theo yêu cầu.
 
 Chưa nhận câu trả lời tại thời điểm tạo bản ghi. Mỗi vòng sau sẽ ghi riêng: **đã xác nhận / còn mở / đề xuất** cùng tình huống làm căn cứ; không tự điền chính sách thay người dùng.
+
+### 2026-10-18 — Vòng 1: nhận câu trả lời, mở nhánh nhiều shop
+
+**Đã xác nhận:** người dùng muốn hỗ trợ quần áo, điện thoại, laptop và PC tự build/cấu hình phức tạp; mục tiêu là nền tảng e-commerce mở rộng cho nhiều shop.
+
+**Còn mở:** "nhiều shop" là một bộ phần mềm cài riêng từng shop, dịch vụ SaaS có cửa hàng độc lập, hay marketplace chung cho nhiều người bán; mô hình nào phải có ở MVP. Đơn vị bán/chi tiết lựa chọn/có sẵn hay lắp theo đơn chưa được trả lời cụ thể. Chưa chốt khách hàng dùng tài khoản chung, giỏ xuyên shop, chủ sở hữu catalog, thu tiền hoặc trách nhiệm bảo hành.
+
+**Đề xuất thứ tự làm rõ:** chốt mô hình shop trước; tiếp đó hỏi PC build là cấu hình cố định, chọn linh kiện mua ngay hay shop kiểm tra/báo giá; sau đó làm rõ ownership sản phẩm/giá/kho và luồng mua chính. Các nhánh này là câu hỏi, chưa được duyệt thành tính năng.
+
+Vòng 1A đã hỏi ba cách sử dụng A/B/C và yêu cầu chọn mô hình cần ở bản đầu. Chưa chọn tenant/database/marketplace architecture thay người dùng. Catalog v1 hiện có vẫn là implementation cho một shop, chưa được coi là đã hỗ trợ nền tảng nhiều shop hoặc nghiệp vụ build PC.
 
 ## 5. Quy tắc chuyển sang kế hoạch triển khai
 
