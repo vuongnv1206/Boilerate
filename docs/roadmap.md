@@ -52,4 +52,4 @@ Docker daemon chưa hoạt động là giới hạn của lần nghiệm thu hi�
 
 Mỗi tính năng tạo hồ sơ trong `docs/features/` theo [quy trình](development-workflow.md), cập nhật bước đang làm và bằng chứng ngay khi có. [Nhật ký](history/README.md) lưu quyết định, kết quả và commit thực tế. Tài liệu hợp đồng hiện hành giữ mô tả cuối cùng; nhật ký giữ lý do và trình tự thay đổi.
 
-Các lần kiểm chứng commerce trước đây được tóm tắt tại [review ngày 2026-10-17](commerce-review.md); bằng chứng chi tiết cục bộ tại `artifacts/commerce-review/report.md` khi còn trong workspace. Lần kiểm chứng mới phải ghi kết quả riêng, không thay thế âm thầm kết quả cũ.
+Các lần kiểm chứng commerce trước đây được lưu tại [báo cáo kiểm chứng](verification/2026-10-17-commerce.md) và [review ngày 2026-10-17](commerce-review.md); raw evidence cục bộ tại `artifacts/commerce-review/report.md` khi còn trong workspace. Lần kiểm chứng mới phải ghi kết quả riêng, không thay thế âm thầm kết quả cũ.

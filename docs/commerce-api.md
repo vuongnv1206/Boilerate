@@ -117,4 +117,4 @@ Backup database, media và Data Protection key ring cùng cửa sổ vận hành
 - Linux: `docker build -t boilerate-ci .`, đặt `BOILERATE_CONTAINER_IMAGE=boilerate-ci`, chạy tests filter `Runtime=Container`; test dùng database/volume/container ngẫu nhiên rồi cleanup.
 - `pwsh scripts/verify-template.ps1`: pack, rename, restore/build/tests và CLI migrate/bootstrap/module matrix.
 
-Lịch sử nghiệm thu mới ở `artifacts/commerce-review/report.md`; CI được cấu hình không đồng nghĩa CI đã chạy thành công.
+Kết quả được version trong [báo cáo kiểm chứng](verification/2026-10-17-commerce.md), tiến độ theo [feature plan](features/catalog-v1.md) và [lịch sử](history/README.md). Raw logs cục bộ ở `artifacts/commerce-review/report.md`; CI được cấu hình không đồng nghĩa CI đã chạy thành công.

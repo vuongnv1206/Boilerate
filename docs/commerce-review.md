@@ -12,7 +12,7 @@ Phạm vi: Domain và quan hệ database Catalog/Inventory, application/API, ph�
 
 ## Kiểm chứng và giới hạn
 
-Kết quả chạy sau sửa được ghi tại `artifacts/commerce-review/report.md` và các TRX được dẫn trong báo cáo đó. Các ca integration tạo database test riêng, áp dụng migrations thật và dọn sau khi chạy trên SQL Server LocalDB/PostgreSQL.
+Kết quả chạy sau sửa được version tại [báo cáo kiểm chứng](verification/2026-10-17-commerce.md); lịch sử và commit tại [nhật ký](history/README.md). Raw logs/TRX cục bộ được dẫn trong báo cáo, không commit vào template. Các ca integration tạo database test riêng, áp dụng migrations thật và dọn sau khi chạy trên SQL Server LocalDB/PostgreSQL.
 
 Đã rà lại FK ghép, unique default/SKU/tổ hợp, cập nhật schema, quy tắc publish và thứ tự khóa. Chưa phát hiện thêm lỗi có thể tái hiện trong phạm vi đó. Media attach/cleanup dùng chung khóa asset; retry/crash và lease trùng tiếp tục dựa vào storage key bất biến và thao tác xóa idempotent.
 
