@@ -1,6 +1,6 @@
 # Nghiệm thu vận hành Catalog v1
 
-Ngày bắt đầu/cập nhật: 2026-10-18 (Asia/Saigon). Trạng thái: đang triển khai. Mốc roadmap: runtime và hoàn thiện nghiệm thu mốc đầu.
+Ngày bắt đầu/cập nhật: 2026-10-18 (Asia/Saigon). Trạng thái: các gate local đã kiểm chứng; chờ nghiệm thu Linux/container/CI. Mốc roadmap: runtime và hoàn thiện nghiệm thu mốc đầu.
 
 ## 1. Mục tiêu và phạm vi
 
@@ -34,7 +34,7 @@ Không đổi entity, cardinality, PK/FK/index hay migration. Giữ [database de
 | 2 | Tăng độ chặt gate container và proxy regression | Operator CLI, recreate volume và trusted/untrusted forwarding | Local proxy/key gate 5/5; container gate code có, chưa chạy image |
 | 3 | Native recovery drill trên DB mới | Backup/restore DB+media+keys, kiểm dữ liệu/outbox qua hai DB | Đạt local 2/2; session/HTTP nằm ngoài drill này |
 | 4 | Runner và kiểm chứng thực tế | Lệnh tái chạy, kết quả thật và giới hạn | Local 5/5, Recovery 2/2; Container blocked/0 ca |
-| 5 | Docs/history/roadmap và commit nhỏ | Bằng chứng tracked; không đánh dấu container đạt nếu chưa chạy | Chưa bắt đầu |
+| 5 | Docs/history/roadmap và commit nhỏ | Bằng chứng tracked; không đánh dấu container đạt nếu chưa chạy | Đã cập nhật; container criterion vẫn mở |
 
 ## 4. Nhật ký
 
@@ -62,4 +62,4 @@ Release build đạt 0 errors; còn warnings analyzer/style. `verify-operations.
 
 Kết quả mới nằm tại [verification ngày 2026-10-18](../verification/2026-10-18-operations.md). Local proxy/key gate 5/5 và native Recovery 2/2 đã đạt. Container/Linux/CI và production adapters vẫn chưa nghiệm thu. Các kết quả 70/70 và 9/9 của ngày trước không thay thế các gate mới này.
 
-Lịch sử commit sẽ được ghi bằng hash thực tế sau khi commit; không ghi hash dự đoán.
+Commit đã có: `5692394` (runtime/proxy gate), `08ddfdd` (native recovery/runner). Phần tổng hợp docs tiếp theo tra trong [history](../history/README.md); không tự chép hash commit chưa tồn tại vào source.

@@ -3,6 +3,7 @@
 - 2026-10-18: [Lập kế hoạch nghiệm thu vận hành](2026-10-18-01-operations-plan.md).
 - 2026-10-18: [Gate runtime và trusted proxy](2026-10-18-02-runtime-gates.md).
 - 2026-10-18: [Native recovery và runner](2026-10-18-03-recovery-runner.md).
+- 2026-10-18: [Tổng hợp kết quả và bước còn lại](2026-10-18-04-operations-results.md) — các commit `5692394`, `08ddfdd` và commit docs tổng hợp tra bằng `git log -- docs/history/`.
 
 Mỗi bước ghi mục tiêu, thay đổi, quyết định, kiểm chứng và bước tiếp theo. Không đưa raw logs hoặc secrets vào lịch sử. Các mục ngày 2026-10-17 dưới đây là bản ghi hồi cứu cho đợt code đã triển khai trước khi áp dụng quy ước docs song song; số thứ tự là cách phân nhóm commit, không phải giờ thực hiện lịch sử được suy đoán.
 

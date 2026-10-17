@@ -1,5 +1,7 @@
 # Catalog v1 — kế hoạch và tiến độ
 
+Cập nhật vận hành gần nhất: 2026-10-18; xem [operations acceptance](operations-acceptance.md).
+
 ## Mục tiêu và giới hạn
 
 Một shop bán hàng vật lý, VND nguyên đồng, một kho MAIN không âm. Quản trị sản phẩm linh hoạt bằng ProductType/schema, options/SKU và category. Giữ modular monolith, DDD tại Product/ProductType/InventoryItem; handler điều phối use case, quyền và persistence.
@@ -28,9 +30,9 @@ Chi tiết đầy đủ: [ERD và từ điển database](../commerce-database.md
 | 5 | Media lifecycle, outbox worker, retry/dead-letter/replay | Đã triển khai và kiểm thử rollback/restart/lease/concurrent cleanup ở môi trường local |
 | 6 | API public, bộ lọc typed và ACL chuyên biệt | Đã kiểm thử Draft không lộ, cập nhật Published có hiệu lực, quyền giá/publish/kho và so sánh số trên hai DB |
 | 7 | Review transaction/event, lỗi production và filter bounds | Đã sửa và kiểm thử hồi quy; xem [review](../commerce-review.md) |
-| 8 | Runtime non-root, key ring/media volume, proxy/CORS, Linux CI gate | Code/config và kiểm thử local đã có; **chưa nghiệm thu container/Linux/CI thực tế** do Docker engine không sẵn sàng |
+| 8 | Runtime non-root, key ring/media volume, proxy/CORS, Linux CI gate | Local key/proxy gate 5/5; operator/recreate image gate đã viết; **chưa nghiệm thu container/Linux/CI thực tế** |
 | 9 | Template đóng gói/đổi tên và tài liệu | Đã kiểm tra package không mang log/TRX/runtime data; template tên mới chạy bộ ca review 9/9 |
-| 10 | Nghiệm thu vận hành và adapter được bật | **Chưa hoàn thành**: Linux/container, backup/restore thực tế và smoke adapter thật; theo [roadmap](../roadmap.md) |
+| 10 | Nghiệm thu vận hành và adapter được bật | Native backup/restore DB+media+keys/outbox local đạt 2/2; **còn Linux/container, deployment restore và adapter thật**, theo [roadmap](../roadmap.md) |
 
 ## Bằng chứng và phần còn lại
 

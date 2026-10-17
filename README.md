@@ -156,3 +156,5 @@ pwsh scripts/verify-template.ps1
 ```
 
 CI Linux dùng SQL/PG services + template tên mới + build/run container non-root qua hai provider; Windows kiểm tra runtime/PDF/email/Excel. Compose cung cấp DB dev với passwords từ env. Template exclude artifacts/logs/Files/bin/obj/secrets, chỉ đóng gói local không publish. SMTP/cloud/Redis/OAuth credentials thật và Linux deployment vẫn cần smoke riêng; build thành công không phải bằng chứng end-to-end adapters.
+
+[Runbook vận hành](docs/operations-runbook.md) có runner `scripts/verify-operations.ps1` theo stage Local/Recovery/Container, lưu summary/TRX và từ chối pass khi ca bị skip hoặc thiếu provider. Local key/proxy 5/5 và native backup/restore SQL Server/PostgreSQL 2/2 đã đạt; xem [bằng chứng 2026-10-18](docs/verification/2026-10-18-operations.md). Container/CI thực tế vẫn chưa nghiệm thu.

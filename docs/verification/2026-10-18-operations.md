@@ -35,6 +35,8 @@ Recovery sử dụng BACKUP COPY_ONLY/CHECKSUM + VERIFYONLY + RESTORE/MOVE của
 
 Container vẫn chưa nghiệm thu; CLI/bootstrap/preflight/recreate trong production image là code gate đã chuẩn bị, chưa phải bằng chứng image chạy thực tế. CI đã chuyển qua runner để không pass khi không có ca chạy hoặc thiếu một provider; chưa có run CI mới được dispatch từ lượt local này.
 
+Kiểm tài liệu cuối đợt: 27 file Markdown, 100 liên kết tương đối hợp lệ và `git diff --check` đạt. Summary đối chiếu TRX/docs tại artifacts/operations/documentation-check.json. Commit code đã có: `5692394`, `08ddfdd`; commit tổng hợp tài liệu tra trong [history](../history/README.md).
+
 ## Phạm vi không được suy diễn
 
 Local recovery kiểm dữ liệu/native DB backup/media/key/outbox và recovery point; không xác nhận production RPO/RTO, session policy đã được thực thi trong production, native backup của remote server có volume khác, hoặc adapter ngoài. Hiện không có Ordering/Payment/Shipping mới trong đợt này và không đổi schema/API thương mại.
