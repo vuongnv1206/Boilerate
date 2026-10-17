@@ -1,4 +1,4 @@
-param([string]$Configuration = 'Release')
+param([string]$Configuration = 'Release', [string]$TestFilter = '')
 $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrWhiteSpace($env:BOILERATE_TEST_POSTGRES)) {
     throw 'Set BOILERATE_TEST_POSTGRES to an isolated PostgreSQL test server before verification.'
@@ -33,8 +33,10 @@ try {
         Invoke-Dotnet -Arguments @('restore', 'RenamedBackend.sln', '--locked-mode', '--verbosity', 'quiet')
         Invoke-Dotnet -Arguments @('build', 'RenamedBackend.sln', '-c', $Configuration, '--no-restore', '--verbosity', 'quiet')
         $env:BOILERATE_TEMPLATE_ROOT = $generated
-        Invoke-Dotnet -Arguments @('test', 'RenamedBackend.sln', '-c', $Configuration, '--no-build', '--logger', 'trx;LogFileName=renamed.trx')
-        "Renamed template passed restore/build/test and CLI provider/Catalog matrix." | Set-Content (Join-Path $output 'result.txt')
+        $testArguments = @('test', 'RenamedBackend.sln', '-c', $Configuration, '--no-build', '--logger', 'trx;LogFileName=renamed.trx')
+        if ($TestFilter) { $testArguments += @('--filter', $TestFilter) }
+        Invoke-Dotnet -Arguments $testArguments
+        "Renamed template passed restore/build/test. Test filter: $TestFilter (empty means full suite)." | Set-Content (Join-Path $output 'result.txt')
     } finally { Pop-Location }
 } finally {
     $env:BOILERATE_TEMPLATE_ROOT = $previousTemplateRoot

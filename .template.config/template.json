@@ -9,6 +9,6 @@
   "preferNameDirectory": true,
   "tags": { "language": "C#", "type": "solution" },
   "sources": [{
-    "exclude": ["**/[Bb]in/**", "**/[Oo]bj/**", "**/[Ll]ogs/**", "**/Files/**", "**/__pycache__/**", "**/*.pyc", "artifacts/**", "**/*.user", "**/*.env", "**/*.pfx", "**/.vs/**", "**/*.nupkg"]
+    "exclude": ["**/[Bb]in/**", "**/[Oo]bj/**", "**/[Ll]ogs/**", "**/Files/**", "**/TestResults/**", "**/*.trx", "**/__pycache__/**", "**/*.pyc", "artifacts/**", "**/*.user", "**/*.env", "**/*.pfx", "**/.vs/**", "**/*.nupkg"]
   }]
 }
