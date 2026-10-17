@@ -27,6 +27,9 @@ Theo yêu cầu mới, ưu tiên lập kế hoạch nghiệp vụ trước. Bắ
 | Trả lời vòng 1A ngày 2026-10-18 | **Đã chọn A** | Một shop tương ứng một phần mềm được triển khai/vận hành riêng. Không yêu cầu multi-tenant; không đưa SaaS/marketplace vào kế hoạch hiện tại |
 | Trả lời vòng 1B ngày 2026-10-18 | **Đã chốt luồng giao hàng số** | Sau thanh toán thành công tự lấy mã/link/thông tin tài khoản từ kho hàng số, gán cho đơn, hiển thị trong Đơn hàng của tôi và gửi email thông báo |
 | Trả lời vòng 1B ngày 2026-10-18 | Phần loại khỏi scope | Không cần trình học trực tuyến/LMS hoặc API cấp quyền bên thứ ba cho luồng giao hàng số. Payment provider/cách xác nhận thanh toán vẫn chưa chốt |
+| Trả lời vòng 1C ngày 2026-10-18 | Đã chốt kịch bản cấp phát | Mã và tài khoản có sẵn là Unique, mua 2 nhận hai bản ghi khác nhau; link là Shared, mua 2 vẫn hiển thị cùng link; gói gia hạn là Extension cho cùng tài khoản |
+| Trả lời vòng 1D ngày 2026-10-18 | Đã chốt cách thực hiện gia hạn | Nhân viên thực hiện ở dịch vụ ngoài; thanh toán độc lập với kết quả gia hạn. Lưu hạn thực tế đã xác minh, lịch sử/thời điểm hoàn tất/bằng chứng nếu có; chống xử lý đồng thời và thực hiện trùng |
+| Trả lời vòng 1E ngày 2026-10-18 | Đã chốt ngoại lệ kết quả chưa rõ | `PendingVerification`: không được gia hạn lại cho đến khi xác định được kết quả lần trước. Người được quyền xác minh/bàn giao vẫn còn mở |
 | Đơn vị bán, lựa chọn cụ thể, nguồn hàng, khách, luồng mua và chính sách ngoại lệ | **Còn mở** | Chưa tự chọn COD/online, tài khoản bắt buộc, thời điểm giữ hàng hoặc tự xác nhận đơn; chưa coi PC build chỉ là một tổ hợp SKU |
 
 Baseline không cần hỏi lại nếu tình huống thực tế vẫn phù hợp. Nếu ví dụ mới cho thấy cần thay đổi, ghi rõ tác động và xin quyết định về phạm vi trước khi sửa thiết kế. Không tự nới phạm vi chỉ vì có thể triển khai được.
@@ -40,7 +43,9 @@ Hỏi từng vòng, chọn câu tiếp theo dựa trên trả lời; bảng này
 | 1 | Ba sản phẩm thực tế: đơn vị bán, lựa chọn của khách, có sẵn/chuẩn bị theo yêu cầu | Mô hình mặt hàng và tình huống khó nhất | Đã nhận 4 nhóm sản phẩm và mục tiêu nhiều shop; chi tiết cách bán còn mở |
 | 1A | Ý nghĩa nhiều shop: cài đặt riêng, SaaS cửa hàng độc lập hay sàn chung | Chốt mô hình sử dụng bắt buộc ở bản đầu trước khi thiết kế ownership | Đã chọn A: một shop/một phần mềm, không multi-tenant |
 | 1B | Khóa học và tài khoản: sản phẩm thực tế, cách bàn giao/cấp quyền và khả năng học trên site | Xác định nghiệp vụ hàng số và giới hạn mốc đầu | Đã chốt giao từ kho sau thanh toán, My Orders/email; không LMS/API cấp quyền |
-| 1C | Bản ghi kho hàng số dùng một lần hay dùng chung; ý nghĩa số lượng mua | Quy tắc tiêu thụ/cấp phát hàng số | Đã hỏi; chờ trả lời |
+| 1C | Bản ghi kho hàng số dùng một lần hay dùng chung; ý nghĩa số lượng mua | Quy tắc tiêu thụ/cấp phát hàng số | Đã chốt Unique/Shared/Extension; giá và quyền của Shared còn mở |
+| 1D | Ai thực hiện gia hạn và nguồn hạn thực tế | Tách nhận tiền với hoàn tất; lịch sử và chống xử lý trùng | Đã chốt nhân viên thực hiện, chỉ lưu kết quả đã xác minh |
+| 1E | Mất kết nối sau khi đã thao tác gia hạn | Cách xử lý kết quả không xác định | Đã chốt PendingVerification và cấm làm lại khi chưa biết kết quả; quyền xác minh còn mở |
 | 2 | Khách lẻ/sỉ, tài khoản, cách mua, địa bàn/kênh bán và nhu cầu shop xác nhận | Một hành trình mua chính và người tham gia | Chưa hỏi |
 | 3 | Giá cam kết, giỏ hàng/checkout, phí và khuyến mãi | Giá nào áp dụng khi có thay đổi; tổng tiền được xác nhận lúc nào | Chưa hỏi |
 | 4 | Nhận đơn, tồn/giữ hàng, thời hạn, hủy/sửa và cạnh tranh mua món cuối | Khi nào shop cam kết hàng; khi nào nhả; xử lý hết giữ hàng | Chưa hỏi |
@@ -85,6 +90,16 @@ Vòng 1B đã hỏi các trường hợp trên, chờ câu trả lời. Thiết 
 **Còn mở:** nguồn xác nhận thanh toán thành công; nội dung email; khách có bắt buộc đăng nhập không; mỗi bản ghi là độc quyền một đơn hay tái dùng; mua số lượng 2 nghĩa là hai nội dung hay gia hạn; giữ hàng trước thanh toán, trường hợp đã thu tiền nhưng chưa cấp được và gửi lại thông báo. Không suy diễn email phải chứa toàn bộ thông tin tài khoản, hoặc yêu cầu này đã loại bỏ payment gateway.
 
 **Đề xuất thứ tự tiếp theo:** chốt cách tiêu thụ bản ghi hàng số và ý nghĩa số lượng trước, sau đó dùng tình huống món cuối/hai người mua để hỏi giữ hàng và ngoại lệ thanh toán. Vòng 1C đã hỏi một lần/dùng chung và số lượng 2; chờ trả lời. Chưa thiết kế schema kho bí mật hoặc code cấp phát.
+
+### 2026-10-18 — Vòng 1C–1E: cấp phát và gia hạn
+
+**Đã xác nhận:** bảng Unique/Shared/Extension và số lượng 2 được lưu tại [quy tắc giao hàng số](../business/digital-fulfillment.md). Mã kích hoạt/tài khoản cấp một lần; link có thể dùng chung; gia hạn cùng tài khoản theo kết quả thực tế do dịch vụ ngoài quyết định.
+
+Gia hạn do nhân viên xử lý, phải lưu lịch sử, thời điểm hoàn tất, hạn mới và bằng chứng nếu có. Thanh toán thành công không đồng nghĩa gia hạn thành công. Cần ngăn hai nhân viên cùng làm một yêu cầu và thực hiện trùng khi thử lại.
+
+**Đã xác nhận ngoại lệ:** nếu không biết thao tác bên ngoài đã thành công chưa, giữ `PendingVerification`, không được gia hạn lại trước khi đối chiếu. Câu hỏi về ai được xác minh/bàn giao chưa được trả lời; giữ mở cho vòng vận hành/quyền, không mặc định chỉ quản lý.
+
+**Còn mở:** giữ hàng Unique, giá/quyền của Shared, tài khoản đích, kết quả gia hạn không khớp hoặc thất bại, hoàn tiền, quyền truy cập nội dung. Chưa chọn công thức tự tính hạn hoặc thiết kế schema thay cho quy tắc đã được xác nhận.
 
 ## 5. Quy tắc chuyển sang kế hoạch triển khai
 

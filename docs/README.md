@@ -17,6 +17,7 @@ Tài liệu được cập nhật cùng phần code liên quan. Mỗi tính năn
 9. [Kiểm chứng Catalog v1](verification/2026-10-17-commerce.md): kết quả từng lượt, phạm vi source và phần chưa nghiệm thu.
 10. [Nghiệm thu vận hành Catalog](features/operations-acceptance.md): bước đang triển khai trước checkout.
 11. [Runbook vận hành/phục hồi](operations-runbook.md) và [kiểm chứng ngày 2026-10-18](verification/2026-10-18-operations.md).
+12. [Phỏng vấn nghiệp vụ](features/business-discovery.md) và [quy tắc giao hàng số/gia hạn](business/digital-fulfillment.md): các quyết định cho bước lập kế hoạch, chưa phải chức năng đã triển khai.
 
 Hướng dẫn dựng installation mới, cấu hình và các lệnh operator nằm tại [README dự án](../README.md). [plan.md](../plan.md) là bản tóm tắt phạm vi hiện tại; lộ trình chi tiết được theo dõi tại đây.
 
@@ -26,6 +27,7 @@ Hướng dẫn dựng installation mới, cấu hình và các lệnh operator n
 |---|---|
 | `docs/roadmap.md` | Các mốc xuyên suốt dự án, phụ thuộc và điều kiện nghiệm thu |
 | `docs/features/<ma-tinh-nang>.md` | Kế hoạch và tiến độ từng bước của một tính năng, theo mẫu |
+| `docs/business/` | Quy tắc nghiệp vụ đã xác nhận và quyết định còn mở; trạng thái triển khai được ghi riêng |
 | [docs/history/](history/README.md) | Nhật ký triển khai/review theo ngày, quyết định và liên kết commit |
 | `docs/*-database.md`, `docs/*-api.md` | Hợp đồng hiện hành để lập trình và tích hợp |
 | `docs/verification/` | Báo cáo tóm tắt kiểm chứng được version trong Git, kèm lệnh và môi trường |
