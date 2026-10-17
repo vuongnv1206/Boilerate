@@ -13,7 +13,8 @@ public sealed record FieldInput(Guid FieldDefinitionId, ProductFieldType FieldTy
 }
 public sealed record MediaInput(Guid MediaAssetId, int SortOrder, string? AltText);
 public sealed record ProductContent(string Name, string Slug, string? Description, List<Guid> CategoryIds, List<FieldInput> Fields, List<MediaInput> Media);
-public sealed record CreateProduct(Guid ProductTypeId, string ProductTypeVersion, ProductContent Content, List<OptionInput> Options, List<VariantInput> Variants) : IRequest<ProductDto>;
+public sealed record CreateProduct(Guid ProductTypeId, string ProductTypeVersion, ProductContent Content, List<OptionInput> Options, List<VariantInput> Variants,
+    ProductFulfillmentKind FulfillmentKind = ProductFulfillmentKind.Physical) : IRequest<ProductDto>;
 public sealed record EditProduct(Guid Id, string Version, string ProductTypeVersion, ProductContent Content) : IRequest<ProductDto>;
 public sealed record ChangeProductStatus(Guid Id, string Version, ProductStatus Status) : IRequest<ProductDto>;
 public sealed record AddVariant(Guid ProductId, string Version, VariantInput Variant) : IRequest<ProductDto>;
@@ -35,12 +36,13 @@ public sealed record ReplayOutbox(Guid MessageId) : IRequest<bool>;
 public sealed record VariantDto(Guid Id, string Sku, string CombinationKey, decimal? Price, decimal? CompareAtPrice, string Currency, bool IsDefault, bool IsActive, Guid? ImageMediaId, bool InStock, IReadOnlyCollection<VariantSelectionDto> Selections);
 public sealed record ProductDto(Guid Id, Guid ProductTypeId, string Name, string Slug, string? Description, ProductStatus Status, string Version,
     IReadOnlyCollection<Guid> CategoryIds, IReadOnlyCollection<OptionDto> Options, IReadOnlyCollection<VariantDto> Variants,
-    IReadOnlyCollection<FieldValueDto> Fields, IReadOnlyCollection<MediaInput> Media);
+    IReadOnlyCollection<FieldValueDto> Fields, IReadOnlyCollection<MediaInput> Media, ProductFulfillmentKind FulfillmentKind = ProductFulfillmentKind.Physical);
 public sealed record VariantSelectionDto(Guid OptionId, Guid OptionValueId);
 public sealed record OptionDto(Guid Id, string Code, string Name, int SortOrder, IReadOnlyCollection<OptionValueDto> Values);
 public sealed record OptionValueDto(Guid Id, string Code, string Label, int SortOrder);
 public sealed record FieldValueDto(Guid FieldDefinitionId, ProductFieldType FieldType, string Label, string? TextValue, decimal? NumberValue, bool? BooleanValue, DateOnly? DateValue, Guid? ChoiceId, string? ChoiceLabel);
-public sealed record ProductSummary(Guid Id, string Name, string Slug, ProductStatus Status, decimal? FromPrice, bool InStock);
+public sealed record ProductSummary(Guid Id, string Name, string Slug, ProductStatus Status, decimal? FromPrice, bool InStock,
+    ProductFulfillmentKind FulfillmentKind = ProductFulfillmentKind.Physical);
 public sealed record Page<T>(List<T> Items, int Total, int PageNumber, int PageSize);
 public sealed record InventoryDto(Guid Id, Guid VariantId, Guid LocationId, int OnHand, string Version);
 public sealed record MovementDto(Guid Id, Guid InventoryItemId, Guid OperationId, int Delta, int QuantityAfter, string Reason, Guid ActorId, DateTime CreatedAt);
@@ -107,6 +109,11 @@ public interface ICommerceService
     Task<ProductType> TypeAsync(Guid id, CancellationToken ct);
     Task<Page<InventoryDto>> InventoryAsync(int page, int size, CancellationToken ct);
     Task<Page<MovementDto>> MovementsAsync(Guid itemId, int page, int size, CancellationToken ct);
+    Task<List<DigitalStockDto>> ImportDigitalAsync(ImportDigitalStock request, CancellationToken ct);
+    Task<DigitalStockDto> SaveSharedAsync(SaveSharedDigitalContent request, CancellationToken ct);
+    Task<DigitalStockDto> SetDigitalStockAvailabilityAsync(SetDigitalStockAvailability request, CancellationToken ct);
+    Task<Page<DigitalStockDto>> DigitalStockAsync(Guid variantId, int page, int size, CancellationToken ct);
+    Task<DigitalSecretDto> RevealDigitalStockAsync(Guid id, CancellationToken ct);
 }
 public interface ICommerceMediaService
 {

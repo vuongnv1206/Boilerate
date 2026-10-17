@@ -84,6 +84,8 @@ public abstract class BaseDbContext : IdentityDbContext<
         if (ChangeTracker.Entries<Boilerate.Domain.Catalog.Product>().Any(e => e.State == EntityState.Deleted) ||
             ChangeTracker.Entries<Boilerate.Domain.Catalog.ProductVariant>().Any(e => e.State == EntityState.Deleted))
             throw new InvalidOperationException("Archive products/SKUs instead of deleting commerce history.");
+        if (ChangeTracker.Entries<Boilerate.Domain.DigitalInventory.DigitalStockItem>().Any(e => e.State == EntityState.Deleted))
+            throw new InvalidOperationException("Disable digital stock items instead of deleting commerce history.");
         var ownsTransaction = Database.CurrentTransaction is null;
         var externalTransaction = Database.CurrentTransaction;
         if (_externalTransactionId.HasValue && _externalTransactionId != externalTransaction?.TransactionId)

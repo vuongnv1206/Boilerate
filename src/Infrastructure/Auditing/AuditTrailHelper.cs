@@ -36,6 +36,12 @@ public static class AuditTrailHelper
 
             foreach (var property in entry.Properties)
             {
+                // Digital stock contents remain secret even in their encrypted representation.
+                // The entity version and metadata retain the audit history for content changes.
+                if (entry.Entity is Boilerate.Domain.DigitalInventory.DigitalStockItem &&
+                    property.Metadata.Name == nameof(Boilerate.Domain.DigitalInventory.DigitalStockItem.ProtectedContent))
+                    continue;
+
                 // Nếu property có giá trị tạm thời (sẽ được DB sinh ra sau khi Save)
                 if (property.IsTemporary)
                 {
@@ -53,7 +59,7 @@ public static class AuditTrailHelper
                 }
 
                 // Skip navigation/foreign keys nếu muốn gọn log
-                if (property.Metadata.IsForeignKey() && entry.Entity.GetType().Namespace is not ("Boilerate.Domain.Catalog" or "Boilerate.Domain.Inventory" or "Boilerate.Domain.Media")) continue;
+                if (property.Metadata.IsForeignKey() && entry.Entity.GetType().Namespace is not ("Boilerate.Domain.Catalog" or "Boilerate.Domain.Inventory" or "Boilerate.Domain.Media" or "Boilerate.Domain.DigitalInventory")) continue;
 
                 switch (entry.State)
                 {

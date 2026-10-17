@@ -5,10 +5,10 @@ Thiết kế quan hệ, khóa và kiểu cột: [commerce-database.md](commerce-
 ## Khởi tạo
 
 1. Cấu hình provider/connection/JWT secret của installation mới theo README.
-2. Apply cả InitialFoundation và CommerceCatalog bằng EF CLI của provider đã chọn; Host không tự migrate.
+2. Apply toàn bộ migrations InitialFoundation, CommerceCatalog và DigitalInventory bằng EF CLI của provider đã chọn; Host không tự migrate. Installation đã ở CommerceCatalog chỉ apply migration còn thiếu.
 3. Bootstrap admin, hoặc chạy `--register-capabilities` rồi `--grant-admin-capabilities` có chủ đích với Catalog bật. Restart không tự cấp quyền mới.
 4. Login, gọi POST `/api/inventory/initialize` một lần; gọi lại trả cùng kho MAIN. Quyền `Inventory.Initialize`.
-5. Tạo ProductType/schema, Category, upload media; sau đó tạo Product/SKU. Tồn ban đầu bằng 0, nhập kho bằng adjustment riêng.
+5. Tạo ProductType/schema, Category, upload media; sau đó tạo Product/SKU và chọn cách giao. Physical có balance ban đầu bằng 0, nhập kho bằng adjustment riêng; hàng số dùng API kho số bên dưới, không cần MAIN để tạo SKU số.
 
 Giá chỉ nhận VND nguyên đồng. Mọi mã SKU được giữ duy nhất toàn shop, kể cả SKU inactive và Product archived. ProductTypeId không đổi. Product names được phép trùng; slug duy nhất trong từng namespace Product/Category.
 
@@ -19,7 +19,7 @@ Giá chỉ nhận VND nguyên đồng. Mọi mã SKU được giữ duy nhất t
 | GET/POST `/api/product-types`, GET/PUT `/{id}` | List, create, schema detail, edit schema | ProductType.View/Create/Update |
 | GET/POST `/api/categories`, PUT/DELETE `/{id}` | Cây danh mục; DELETE có query version | Category.View/Create/Update/Delete |
 | POST `/api/products/search`, GET `/api/products/{id}` | Đọc quản trị gồm mọi trạng thái | Product.View |
-| POST `/api/products` | Tạo Draft + SKU + balance MAIN=0 nguyên tử | Product.Create; thêm Price.Update khi gửi giá |
+| POST `/api/products` | Tạo Draft + SKU, thêm MAIN=0 nếu Physical | Product.Create; thêm Price.Update khi gửi giá |
 | PUT `/api/products/{id}` | Thay nội dung/categoryIds/fields/gallery | Product.Update |
 | POST `/api/products/{id}/status` | Draft=1, Published=2, Archived=3 | Product.Publish |
 | POST `/api/products/variants/preview` | Preview tổ hợp option, chưa ghi DB | Product.View |
@@ -30,6 +30,11 @@ Giá chỉ nhận VND nguyên đồng. Mọi mã SKU được giữ duy nhất t
 | GET `/api/inventory?page=1&size=20` | Balance, version theo SKU/kho | Inventory.View |
 | POST `/api/inventory/{id}/adjustments` | Điều chỉnh có operationId | Inventory.Adjust |
 | GET `/api/inventory/{id}/movements` | Lịch sử bất biến, phân trang | Inventory.View |
+| GET `/api/digital-inventory/variants/{variantId}?page=1&size=20` | Metadata kho số; không có nội dung | DigitalInventory.View |
+| POST `/api/digital-inventory/variants/{variantId}/items` | Nhập lô Unique nguyên tử, 1–100 dòng | DigitalInventory.Import |
+| PUT `/api/digital-inventory/variants/{variantId}/shared-content` | Upsert một nội dung Shared/SKU | DigitalInventory.Update |
+| PUT `/api/digital-inventory/variants/{variantId}/items/{id}/availability` | Bật/tắt Available/Disabled | DigitalInventory.Update |
+| POST `/api/digital-inventory/items/{id}/reveal` | Xem nội dung; audit Read theo actor/item, no-store | DigitalInventory.Reveal |
 | POST `/api/media` | Multipart `file`, JPEG/PNG <=5MiB | Product.Update |
 | GET `/api/media/{id}` | Xem media quản trị | Product.View |
 | GET `/api/outbox?state=4&page=1&size=20` | Vận hành pending/processing/completed/dead-letter | Outbox.View |
@@ -78,13 +83,31 @@ PUT Product nhận `{id,version,productTypeVersion,content}`. `categoryIds`, `fi
 
 POST status nhận `{id,version,status}`. Không có hard delete/trash/restore cho Product/SKU.
 
+### Cách giao và kho hàng số
+
+CreateProduct thêm `fulfillmentKind`: 1 Physical (mặc định), 2 DigitalUnique, 3 DigitalShared, 4 ManualExtension. Cách giao ở Product, độc lập ProductType; SKU kế thừa. Product detail/summary trả lại kind. Kind không sửa qua EditProduct hoặc payload SKU trong lát này. ManualExtension mới có cấu hình/catalog availability; chưa có yêu cầu gia hạn/PendingVerification hoặc đơn thanh toán.
+
+Unique import:
+
+```json
+{"productId":"<product-id>","variantId":"<sku-id>","version":"<product-version>","items":[{"reference":"BATCH-01-ITEM-01","content":"<private-code-or-account-content>"}]}
+```
+
+Reference là nhãn quản lý ASCII không chứa credential, chuẩn hóa uppercase, unique trong SKU. Nội dung giữ nguyên khoảng trắng/ký tự, tối đa 8000 byte UTF-8; không sửa nội dung Unique sau nhập. Duplicate trong lô/đã có hoặc version cũ trả 409 và rollback toàn bộ. Mất response thì tải metadata; không gửi lô mới bằng nhãn khác để thử lại mù quáng.
+
+Shared PUT nhận `{productId,variantId,version,content,isActive}`; tạo/cập nhật cùng một dòng `SHARED`. Availability PUT nhận `{productId,variantId,stockItemId,version,isAvailable}`. Cả hai dùng **version của Product**. Mọi response metadata gồm id/owner/kind/reference/state/version và `productVersion` mới; dùng productVersion cho write kế tiếp. State 1 Available, 2 Disabled. Không có API xóa kho, đánh dấu đã bán hoặc giao cho khách ở lát này.
+
+List/response import/update không trả plaintext hay ciphertext. Reveal trả `{id,content}` sau kiểm quyền riêng và lưu audit; các response kho số no-store. Quyền kiểm cả ở service nên Product.Update hoặc DigitalInventory.View không thay thế được Import/Update/Reveal. Không nhét secret vào custom fields, description hoặc reference công khai; nhập qua kho số.
+
+Public InStock dùng balance Physical, dòng Unique Available, nội dung Shared Available, hoặc nhận yêu cầu ManualExtension; luôn xét SKU active. Nội dung Shared/Unique không có trong public Product. Publish vẫn cho sản phẩm hết hàng; quản lý kho không tự publish Draft.
+
 ### Tồn kho
 
 ```json
 {"inventoryItemId":"<balance-id>","version":"<balance-version>","operationId":"<new-guid>","delta":10,"reason":"Nhập lô đầu"}
 ```
 
-Gửi lại đúng operationId/target/delta/reason trả movement cũ kể cả version đã cũ; khác nội dung trả 409. Giảm kho dùng delta âm; DB balance không âm. Không chỉnh quantity qua Product form, không sửa/xóa movement.
+Gửi lại đúng operationId/target/delta/reason trả movement cũ kể cả version đã cũ; khác nội dung trả 409. Giảm kho dùng delta âm; DB balance không âm. Không chỉnh quantity qua Product form, không sửa/xóa movement. Endpoint adjustment chỉ dùng cho Physical; hàng số đọc từ DigitalInventory.
 
 ### Trường tùy chỉnh và search
 

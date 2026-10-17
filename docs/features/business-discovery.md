@@ -1,12 +1,12 @@
 # Kế hoạch nghiệp vụ shop — phỏng vấn và chốt phạm vi
 
-Ngày bắt đầu/cập nhật: 2026-10-18, Asia/Saigon. Trạng thái: **kết thúc vòng hỏi sâu hiện tại theo chỉ dẫn shop nhỏ; chuyển sang [kế hoạch MVP gọn](shop-mvp.md)**. Chưa bắt đầu code nghiệp vụ mới.
+Ngày bắt đầu/cập nhật: 2026-10-18, Asia/Saigon. Trạng thái: **kết thúc vòng hỏi sâu hiện tại theo chỉ dẫn shop nhỏ; chuyển sang [MVP](shop-mvp.md)**. Đang triển khai [cách giao và kho số](digital-inventory.md). Mục tiêu mới nhất là phần mềm cho một shop thích ứng với mặt hàng muốn bán, không phải quản lý nhiều shop.
 
 ## 1. Mục tiêu và phạm vi
 
 Theo yêu cầu mới, ưu tiên lập kế hoạch nghiệp vụ trước. Mục tiêu là quản trị sản phẩm linh hoạt như trải nghiệm Webflow: shop tự cấu hình loại/trường/options/SKU và chọn cách bán/giao đã hỗ trợ. Dùng ví dụ sản phẩm và đơn mua để làm rõ giới hạn/ngoại lệ rồi mới chia lát triển khai; không biến mỗi ví dụ thành tính năng bắt buộc. Các điều kiện nghiệm thu runtime trong [roadmap](../roadmap.md) vẫn được giữ, chưa được đánh dấu hoàn tất.
 
-Đợt này chỉ ghi quyết định và lập kế hoạch; vòng hỏi sâu đã dừng theo chỉ dẫn mới nhất. Chưa sửa code, database, migration hoặc API thương mại; chưa chọn provider thanh toán/vận chuyển.
+Giai đoạn phỏng vấn chỉ ghi quyết định và lập kế hoạch; vòng hỏi sâu đã dừng theo chỉ dẫn mới nhất. Người dùng sau đó đã yêu cầu code bước cách giao/kho số, được theo dõi trong hồ sơ riêng. Chưa chọn provider thanh toán/vận chuyển hoặc bắt đầu Order/Payment.
 
 Đầu ra cần có:
 
@@ -19,7 +19,7 @@ Theo yêu cầu mới, ưu tiên lập kế hoạch nghiệp vụ trước. Mụ
 
 | Nguồn | Trạng thái | Nội dung |
 |---|---|---|
-| Phạm vi đã duyệt trước đây | Baseline của code Catalog v1 hiện có | Một shop, hàng vật lý, VND nguyên đồng, kho MAIN không âm. Hướng mới là dùng lại phần mềm cho các installation riêng và cấu hình sản phẩm linh hoạt; baseline chưa đáp ứng toàn bộ mục tiêu đó |
+| Phạm vi đã duyệt trước đây | Baseline Catalog v1 | Một shop, hàng vật lý, VND nguyên đồng, kho MAIN không âm. Hướng mới là một phần mềm thích ứng với sản phẩm muốn bán trong shop đó; không phải quản lý nhiều shop |
 | Catalog đã triển khai | Hợp đồng hiện hành | ProductType → Product 1–N; Product ↔ Category N–N; SKU giữ giá/tồn, custom field khác option |
 | Hướng mốc sau đã duyệt | Chưa triển khai | OrderItem snapshot; Order/Payment/Shipment có trạng thái riêng; quan hệ tương lai trong database docs |
 | Yêu cầu ngày 2026-10-18 | Đã rõ | Tạm ưu tiên kế hoạch nghiệp vụ; hỏi sâu theo tình huống, phát triển tài liệu song song |
@@ -37,6 +37,7 @@ Theo yêu cầu mới, ưu tiên lập kế hoạch nghiệp vụ trước. Mụ
 | Trả lời thời hạn ngày 2026-10-18 | **Đã chọn B: 30 phút** | Đơn trả trước giữ 30 phút kể từ tạo thành công; shop cấu hình được |
 | Trả lời trả muộn ngày 2026-10-18 | **Đã chọn A** | Khách thực sự trả sau hạn: tự thử giữ lại toàn bộ; đủ thì tiếp tục, thiếu thì chờ nhân viên xử lý/hoàn tiền. Chưa quyết định thông báo về muộn cho lần trả đúng hạn |
 | Chỉ dẫn mới nhất ngày 2026-10-18 | **Shop nhỏ, đủ nghiệp vụ thông thường** | Dừng hỏi quá sâu; gom kế hoạch thành các lát bán hàng/quản trị hoàn chỉnh; chi tiết còn mở xử lý khi đến bước liên quan |
+| Làm rõ trong lúc triển khai ngày 2026-10-18 | **Một shop, quản trị sản phẩm như Webflow** | Mục tiêu là phần mềm thích ứng với mặt hàng chủ shop muốn bán; thay thế cách hiểu trước đây rằng cần nền tảng cho nhiều shop/installation |
 | Chi tiết khách và vận hành đơn | **Còn mở, theo bước MVP** | Tài khoản bắt buộc, giữ hàng COD, thông báo thanh toán về muộn, xác nhận đơn và hủy/hoàn. Giữ từ lúc tạo đơn/thời hạn trả trước/trả tiền sau hạn đã chốt ở trên |
 
 Baseline không cần hỏi lại nếu tình huống thực tế vẫn phù hợp. Nếu ví dụ mới cho thấy cần thay đổi, ghi rõ tác động và xin quyết định về phạm vi trước khi sửa thiết kế. Không tự nới phạm vi chỉ vì có thể triển khai được.
@@ -131,6 +132,8 @@ Người dùng ban đầu chọn cấu hình PC tạo sẵn, sau đó làm rõ P
 
 ## 5. Quy tắc chuyển sang kế hoạch triển khai
 
+Làm rõ mới nhất: phần mềm phục vụ một shop có sản phẩm linh hoạt, quản trị tham khảo Webflow; không xây hệ thống quản lý nhiều shop. Nhật ký các vòng trước giữ nguyên như lịch sử theo thời điểm, không còn dùng cách diễn đạt nhiều installation làm mục tiêu phát triển.
+
 Hành trình chính đủ để lập kế hoạch MVP. Thiết kế use cases/state transitions, database cardinality/ownership/FK/constraints, API/quyền, transaction/idempotency và acceptance scenarios theo từng lát. Các câu trả lời còn mở được giữ trong bước liên quan, không buộc phải phỏng vấn toàn bộ trước khi thiết kế lát đầu. Không tự coi đề xuất chính sách là quyết định đã xác nhận.
 
-Kiểm chứng hiện tại là đối chiếu docs/phạm vi; chưa có code/test nghiệp vụ mới. Các kết quả kiểm thử Catalog và vận hành trước đây không xác nhận những chính sách đang được hỏi ở đây.
+Tài liệu phỏng vấn ghi nguồn quyết định, không phải bằng chứng triển khai. Code/kiểm chứng bước kho số được theo dõi trong [hồ sơ tính năng](digital-inventory.md); kết quả Catalog/vận hành trước đây không tự xác nhận các nghiệp vụ mới.

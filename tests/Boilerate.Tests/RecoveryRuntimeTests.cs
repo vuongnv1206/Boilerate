@@ -187,7 +187,8 @@ public sealed class RecoveryRuntimeTests
         var users = Substitute.For<IUserService>();
         users.HasPermissionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
         return new(scope.ServiceProvider.GetRequiredService<ApplicationDbContext>(), scope.ServiceProvider.GetRequiredService<CommerceUnitOfWork>(),
-            scope.ServiceProvider.GetRequiredService<ICurrentUser>(), users, Options.Create(new CommerceSettings()));
+            scope.ServiceProvider.GetRequiredService<ICurrentUser>(), users, Options.Create(new CommerceSettings()),
+            scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
     }
 
     private static async Task<Guid> Upload(IServiceScope scope)

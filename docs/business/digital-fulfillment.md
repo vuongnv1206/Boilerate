@@ -2,6 +2,8 @@
 
 Cập nhật: 2026-10-18, Asia/Saigon. Nguồn: câu trả lời của người dùng trong [phỏng vấn nghiệp vụ](../features/business-discovery.md). Đây là quy tắc đã xác nhận cho các kịch bản được nêu, **chưa phải luồng đã triển khai hoặc danh sách bắt buộc của MVP**.
 
+Trạng thái code mới nhất: đã có [cấu hình cách giao và quản lý kho số](../features/digital-inventory.md), gồm mã hóa/quyền/audit. Cấp phát sau thanh toán, Đơn hàng của tôi/email và xử lý yêu cầu gia hạn chưa được triển khai; không đồng nhất kho số với luồng bán hàng hoàn chỉnh.
+
 ## Nội dung khách nhận và số lượng
 
 | Ví dụ sản phẩm | Cách cấp phát | Khi khách mua số lượng 2 |

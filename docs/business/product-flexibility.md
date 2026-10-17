@@ -8,7 +8,7 @@ Người dùng đã chọn A: chủ shop tự tạo loại sản phẩm, bộ tr
 
 Quần áo, điện thoại, laptop, PC, khóa học và tài khoản là các ví dụ để kiểm tra độ linh hoạt, chưa phải cam kết triển khai tất cả nghiệp vụ đặc thù vào MVP. Đặc biệt, PC chỉ là ví dụ; câu trả lời ban đầu chọn cấu hình tạo sẵn không còn được dùng để yêu cầu xây nghiệp vụ PC, BOM hoặc tồn linh kiện ở bản đầu.
 
-Mỗi shop dùng một installation riêng; không yêu cầu multi-tenant. Trọng tâm đã chọn là quản trị sản phẩm. Chưa đưa trình tạo quy tắc/quy trình tùy ý hoặc kéo thả storefront vào phạm vi ưu tiên này.
+Người dùng làm rõ mục tiêu mới nhất: **một phần mềm phục vụ một shop, thích ứng khi chủ shop muốn bán mặt hàng khác**, không phải xây nền tảng quản lý nhiều shop hoặc phát triển mô hình nhiều installation. Webflow là mẫu tham khảo cách quản trị sản phẩm. Chưa đưa trình tạo quy tắc/quy trình tùy ý hoặc kéo thả storefront vào phạm vi ưu tiên này.
 
 ### Cách phân tách đề xuất cho kế hoạch
 
@@ -38,7 +38,7 @@ Giữ hàng và trả tiền muộn đã chốt ở mục cam kết hàng bên d
 |---|---|
 | ProductType–Product 1–N; Product–Category N–N; typed fields, options/SKU, giá SKU | Đã triển khai trong Catalog v1; xem [database hiện hành](../commerce-database.md) |
 | Tự cấu hình loại/trường/options qua các khả năng Catalog hiện có | Có nền tảng backend; trải nghiệm quản trị tổng thể và độ đầy đủ theo yêu cầu mới chưa được nghiệm thu |
-| Chọn cách bán/giao vật lý/Unique/Shared/Extension | Đã chốt hướng nghiệp vụ; chưa có implementation đầy đủ |
+| Chọn cách bán/giao vật lý/Unique/Shared/Extension | Đã có [cấu hình và kho số](../features/digital-inventory.md); giao theo đơn/thanh toán/gia hạn còn ở mốc sau |
 | Giỏ/đơn chung vật lý + số; trả trước toàn bộ khi có hàng số | Đã chốt quy tắc; chưa có bảng Order/Payment/fulfillment hoặc luồng checkout |
 | Rule/workflow builder tùy ý, page builder, PC build/trừ tồn linh kiện | Chưa đưa vào MVP |
 

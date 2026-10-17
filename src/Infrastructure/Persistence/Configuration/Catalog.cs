@@ -1,4 +1,5 @@
 using Boilerate.Domain.Catalog;
+using Boilerate.Domain.DigitalInventory;
 using Boilerate.Domain.Inventory;
 using Boilerate.Domain.Media;
 using Boilerate.Domain.Messaging;
@@ -9,7 +10,7 @@ internal static class CommerceModel
 {
     internal static void Configure(ModelBuilder m, bool postgres)
     {
-        var audited = new[] { typeof(Product), typeof(Category), typeof(ProductType), typeof(InventoryLocation), typeof(InventoryItem), typeof(MediaAsset) };
+        var audited = new[] { typeof(Product), typeof(Category), typeof(ProductType), typeof(InventoryLocation), typeof(InventoryItem), typeof(MediaAsset), typeof(DigitalStockItem) };
         foreach (var type in audited)
         {
             var b = m.Entity(type);
@@ -20,7 +21,12 @@ internal static class CommerceModel
         foreach (var type in audited.Concat(new[] { typeof(ProductVariant), typeof(ProductOption), typeof(ProductOptionValue), typeof(ProductFieldDefinition), typeof(ProductFieldChoice), typeof(StockMovement) }))
             m.Entity(type).Property<Guid>("Id").ValueGeneratedNever();
         var p = m.Entity<Product>();
-        p.ToTable("Products", "Catalog", t => t.HasCheckConstraint("CK_Product_Status", "\"Status\" IN (1,2,3)"));
+        p.ToTable("Products", "Catalog", t =>
+        {
+            t.HasCheckConstraint("CK_Product_Status", "\"Status\" IN (1,2,3)");
+            t.HasCheckConstraint("CK_Product_FulfillmentKind", "\"FulfillmentKind\" IN (1,2,3,4)");
+        });
+        p.Property(x => x.FulfillmentKind).HasDefaultValue(ProductFulfillmentKind.Physical);
         p.Property(x => x.Name).HasMaxLength(256);
         p.Property(x => x.Description).HasMaxLength(20000);
         p.Property(x => x.Slug).HasMaxLength(200);
@@ -28,6 +34,7 @@ internal static class CommerceModel
         p.HasIndex(x => x.NormalizedSlug).IsUnique();
         p.HasIndex(x => new { x.Status, x.ProductTypeId });
         p.HasAlternateKey(x => new { x.Id, x.ProductTypeId });
+        p.HasAlternateKey(x => new { x.Id, x.FulfillmentKind });
         p.HasOne<ProductType>().WithMany().HasForeignKey(x => x.ProductTypeId).OnDelete(DeleteBehavior.Restrict);
         var c = m.Entity<Category>();
         c.ToTable("Categories", "Catalog", t => t.HasCheckConstraint("CK_Category_Parent", "\"ParentId\" IS NULL OR \"ParentId\" <> \"Id\""));
@@ -151,6 +158,19 @@ internal static class CommerceModel
         move.HasIndex(x => x.OperationId).IsUnique();
         move.HasIndex(x => new { x.InventoryItemId, x.CreatedAt, x.Id });
         move.HasOne<InventoryItem>().WithMany().HasForeignKey(x => x.InventoryItemId).OnDelete(DeleteBehavior.Restrict);
+        var digital = m.Entity<DigitalStockItem>();
+        digital.ToTable("DigitalStockItems", "DigitalInventory", t =>
+        {
+            t.HasCheckConstraint("CK_DigitalStockItem_FulfillmentKind", "\"FulfillmentKind\" IN (2,3)");
+            t.HasCheckConstraint("CK_DigitalStockItem_State", "\"State\" IN (1,2)");
+        });
+        digital.Property(x => x.Reference).HasMaxLength(100).IsUnicode(false).IsRequired();
+        digital.Property(x => x.ProtectedContent).HasMaxLength(16000).IsRequired();
+        digital.HasIndex(x => new { x.VariantId, x.Reference }).IsUnique();
+        digital.HasIndex(x => x.VariantId).IsUnique().HasFilter(postgres ? "\"FulfillmentKind\" = 3" : "[FulfillmentKind] = 3");
+        digital.HasIndex(x => new { x.ProductId, x.VariantId, x.State });
+        digital.HasOne<ProductVariant>().WithMany().HasForeignKey(x => new { x.ProductId, x.VariantId }).HasPrincipalKey(x => new { x.ProductId, x.Id }).OnDelete(DeleteBehavior.Restrict);
+        digital.HasOne<Product>().WithMany().HasForeignKey(x => new { x.ProductId, x.FulfillmentKind }).HasPrincipalKey(x => new { x.Id, x.FulfillmentKind }).OnDelete(DeleteBehavior.Restrict);
         var msg = m.Entity<OutboxMessage>();
         msg.ToTable("OutboxMessages", "Messaging");
         msg.HasKey(x => x.MessageId);

@@ -23,6 +23,7 @@ public static class AppFunction
     public const string ProductType = nameof(ProductType);
     public const string Price = nameof(Price);
     public const string Inventory = nameof(Inventory);
+    public const string DigitalInventory = nameof(DigitalInventory);
     public const string Outbox = nameof(Outbox);
     public const string Notifications = nameof(Notifications);
 }

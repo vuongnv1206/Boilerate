@@ -8,7 +8,7 @@ Code và tài liệu được phát triển song song theo [quy trình](docs/dev
 
 ## Cấu trúc và context
 
-Domain giữ entity/sự kiện; Application giữ use case/DTO/validation/interfaces; Infrastructure triển khai persistence/Identity/adapters; Host compose HTTP/SignalR. Migrators.MSSQL và Migrators.PostgreSQL dùng chung model, mỗi provider có baseline InitialFoundation và migration CommerceCatalog riêng. Tests giữ regression và integration trên database thật.
+Domain giữ entity/sự kiện; Application giữ use case/DTO/validation/interfaces; Infrastructure triển khai persistence/Identity/adapters; Host compose HTTP/SignalR. Migrators.MSSQL và Migrators.PostgreSQL dùng chung model, mỗi provider có baseline InitialFoundation, CommerceCatalog và DigitalInventory riêng. Tests giữ regression và integration trên database thật.
 
 `ICurrentUser` đọc actor; initializer internal nằm trong Infrastructure, dùng tại middleware/ranh giới thực thi. Hai interface cùng instance scoped. `SetCurrentUserId` phục vụ attribution, không tạo authentication; job chưa tự truyền actor. Hub đọc `Context.User`. Claims role trong JWT là thông tin phiên; quyền hiện tại lấy từ DB. Async validators dùng chung DbContext chạy tuần tự.
 
@@ -134,7 +134,9 @@ Invoice/report: PDFsharp + PDFsharp-MigraDoc **6.2.4**, Noto Sans regular/bold e
 
 MessagePack pin 2.5.303 vá [GHSA-qhrr-8q5h-9q3h](https://github.com/advisories/GHSA-qhrr-8q5h-9q3h) ở dependency SignalR Redis. Central versions/lock files giữ reproducible restore. Roslyn transitive cần cho Razor; server SignalR không chứng minh cần Client. QuestPDF/Skia/demo endpoints đã gỡ với regression PDF/email/Excel. Pkcs pin 10.0.13 xử lý advisories cũ; không nâng major hàng loạt.
 
-Catalog mặc định tắt và đã thay contract mẫu bằng ProductType/schema, Product–Category N–N, SKU/options, giá VND, tồn kho MAIN, media và transactional outbox. Xem [database design/ERD](docs/commerce-database.md) và [API/vận hành](docs/commerce-api.md). CommerceCatalog là migration thứ hai cho mỗi provider, chỉ áp dụng khi Catalog cũ rỗng; không có ETL tự động. Ordering/Payment/Shipping thuộc mốc tiếp theo.
+Mục tiêu là **một phần mềm cho một shop, thích ứng với mặt hàng muốn bán**, tham khảo trải nghiệm quản trị sản phẩm Webflow. Chủ shop tự cấu hình loại/bộ trường/options/SKU và chọn cách giao đã hỗ trợ; không xây nền tảng quản lý nhiều shop.
+
+Catalog mặc định tắt và đã thay contract mẫu bằng ProductType/schema, Product–Category N–N, SKU/options, giá VND, tồn kho MAIN, media và transactional outbox. [Cách giao/kho số](docs/features/digital-inventory.md) bổ sung Physical/Unique/Shared/ManualExtension, nội dung mã hóa và quyền xem riêng. Xem [database design/ERD](docs/commerce-database.md) và [API/vận hành](docs/commerce-api.md). CommerceCatalog là migration thứ hai, chỉ áp dụng khi Catalog cũ rỗng; DigitalInventory là migration thứ ba additive trên baseline đó; không có ETL tự động. Ordering/Payment/giao theo đơn thuộc mốc tiếp theo.
 
 [Rà soát commerce ngày 2026-10-17](docs/commerce-review.md) ghi lại các bản sửa transaction/event, lọc số và phản hồi lỗi. CommerceUnitOfWork tự hoàn tất batch event sau commit/dispose hoặc hủy sau rollback/dispose; từ chối khởi chạy khi context còn thay đổi/event chưa lưu.
 

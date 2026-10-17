@@ -1,7 +1,7 @@
 # Shop MVP — hoàn chỉnh luồng bán hàng cho một shop nhỏ
 
 Ngày bắt đầu/cập nhật: 2026-10-18, Asia/Saigon.
-Trạng thái: **đang triển khai bước 1 — [cách giao và kho hàng số](digital-inventory.md)** theo yêu cầu tiếp tục code ngày 2026-10-18. Các bước Order/Payment/fulfillment theo đơn chưa bắt đầu.
+Trạng thái: **bước 1 đã triển khai/kiểm chứng local — [cách giao và kho hàng số](digital-inventory.md)**; tiếp theo bước 2 Cart/Order/reservation. Các bước Order/Payment/fulfillment theo đơn chưa bắt đầu, MVP toàn bộ chưa hoàn tất.
 Mốc roadmap: [Ordering, Payment và Fulfillment](../roadmap.md).
 
 ## 1. Mục tiêu và phạm vi
@@ -10,12 +10,12 @@ Theo chỉ dẫn mới nhất: shop e-commerce nhỏ, đủ nghiệp vụ thông
 
 | Trong MVP đề xuất | Để sau |
 |---|---|
-| Một shop/installation; cấu hình loại sản phẩm, trường, options/SKU bằng Catalog hiện có | Multi-tenant, marketplace |
+| Một phần mềm cho một shop, thích ứng với mặt hàng muốn bán; cấu hình loại/trường/options/SKU bằng Catalog | Nền tảng quản lý nhiều shop, multi-tenant, marketplace |
 | Chọn cách giao đã được hỗ trợ: vật lý, Unique, Shared, Extension do nhân viên làm | Rule/workflow builder tùy ý; trình kéo thả storefront; PC build/BOM/kiểm tương thích |
 | Giỏ → checkout → đơn → nhận tiền → giao từng món → xem đơn và quản trị | Khuyến mãi phức tạp, loyalty, nhiều kho, đồng bộ ERP |
 | Quản lý giao vật lý, hủy/hoàn và lịch sử thao tác đơn giản | Tự động đối soát/hoàn tiền/vận chuyển với nhiều nhà cung cấp |
 
-Quần áo/PC/khóa học là ví dụ dữ liệu và cách bán; không xây module riêng cho từng tên mặt hàng. Đây là kế hoạch backend/admin API; chưa yêu cầu dựng frontend builder.
+Quần áo/PC/khóa học là ví dụ dữ liệu và cách bán; không xây module riêng cho từng tên mặt hàng. Webflow là mẫu tham khảo trải nghiệm quản trị sản phẩm. Đây là kế hoạch backend/admin API; chưa yêu cầu dựng frontend builder. Làm rõ mới nhất của người dùng thay thế cách hiểu trước đây rằng mục tiêu là phục vụ nhiều shop qua nhiều installation.
 
 ## 2. Quyết định và đề xuất
 
@@ -40,7 +40,7 @@ Trước khi code mỗi lát, bổ sung thiết kế tối thiểu theo [mẫu f
 
 | Bước | Công việc | Kết quả có thể kiểm chứng | Trạng thái |
 |---|---|---|---|
-| 1 | Chọn cách giao và kho hàng số | Dùng Catalog hiện có; cấu hình hành vi được hỗ trợ, nhập/quản lý mã/link/tài khoản; bảo vệ nội dung; thiết kế DB/API trước code | Đang triển khai theo [hồ sơ](digital-inventory.md) |
+| 1 | Chọn cách giao và kho hàng số | Dùng Catalog hiện có; cấu hình hành vi được hỗ trợ, nhập/quản lý mã/link/tài khoản; bảo vệ nội dung; thiết kế DB/API trước code | Đã triển khai/kiểm chứng local theo [hồ sơ](digital-inventory.md); deployment chưa nghiệm thu |
 | 2 | Giỏ, checkout, đơn và giữ hàng | Tổng tiền/địa chỉ/phí ship được xác định trước khi trả; snapshot; đơn chung; đơn trả trước giữ 30 phút/cấu hình, hết hạn/nhả; khách xem đơn | Chưa triển khai, phụ thuộc 1 |
 | 3 | Nhận tiền và giao hàng số | Một phương thức trả trước được chọn khi tới bước này; COD vật lý; xác nhận tiền không trùng; giao Unique/Shared qua My Orders; email thông báo; Extension thành việc cho nhân viên | Chưa triển khai, phụ thuộc 2 |
 | 4 | Quản trị đơn và giao vật lý | Xem/tìm đơn; cập nhật xử lý/vận chuyển; hủy/ghi nhận hoàn tiền; gia hạn có lịch sử/bằng chứng và PendingVerification | Chưa triển khai, phụ thuộc 2–3 |
@@ -65,6 +65,8 @@ Các dòng trên là mục tiêu kiểm chứng, chưa phải kết quả test. 
 
 2026-10-18: lập kế hoạch gọn theo chỉ dẫn shop nhỏ; chuyển từ hỏi sâu ngoại lệ sang các bước triển khai. Bổ sung quyết định giữ hàng 30 phút và trả muộn. Chỉ thay đổi docs; chưa chạy build/test nghiệp vụ, chưa có migration hoặc endpoint mới. Lịch sử: [bản ghi bước này](../history/2026-10-18-11-small-shop-mvp.md).
 
+2026-10-18: code bước 1 hoàn tất, Domain 10/10, provider 16/16 và regression 184/184 (có ca trùng giữa các lượt) đạt; xem [báo cáo](../verification/2026-10-18-digital-inventory.md). Mục tiêu được làm rõ là một phần mềm cho một shop thích ứng sản phẩm, quản trị tham khảo Webflow; không xây nền tảng nhiều shop. Bước 2–5 chưa hoàn tất.
+
 Catalog và vận hành đã kiểm chứng trước đó có [báo cáo riêng](../verification/2026-10-17-commerce.md); chúng không xác nhận MVP Order/Payment/fulfillment. Linux/Docker/CI thật và adapter vẫn là các gate mở trong roadmap.
 
 ## 6. Lịch sử commit
@@ -75,7 +77,7 @@ Các quyết định nền đã được lưu tại `2cd1120` (cấp phát/gia h
 
 | Chi tiết còn mở | Xử lý tại bước |
 |---|---|
-| Cách giao cấu hình ở Product/SKU; bảo vệ kho số; có cho bán đồng thời nhiều cách giao trong cùng Product không | 1 |
+| Cách giao đã chọn ở Product, mọi SKU kế thừa; một mode/Product trong lát kho số; bảo vệ nội dung bằng mã hóa/quyền riêng. Thay mode sau tạo hoặc nhiều mode/Product để sau nếu có nhu cầu | [1: đã có thiết kế/code](digital-inventory.md) |
 | Thông tin khách/đăng nhập, phí ship, giữ hàng COD, giá snapshot và hủy trước trả tiền | 2 |
 | Provider/nguồn xác nhận, thông báo về muộn, quyền xác nhận tiền và nội dung email | 3 |
 | Hủy/hoàn từng phần, quyền xác minh gia hạn/bàn giao, chính sách hàng đã giao | 4 |

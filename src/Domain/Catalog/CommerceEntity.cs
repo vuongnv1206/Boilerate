@@ -60,6 +60,10 @@ public enum ProductStatus
 {
     Draft = 1, Published = 2, Archived = 3
 }
+public enum ProductFulfillmentKind
+{
+    Physical = 1, DigitalUnique = 2, DigitalShared = 3, ManualExtension = 4
+}
 public enum ProductFieldType
 {
     Text = 1, Number = 2, Boolean = 3, Date = 4, Choice = 5

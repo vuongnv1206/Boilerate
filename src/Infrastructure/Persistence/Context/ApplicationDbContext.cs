@@ -26,6 +26,7 @@ public class ApplicationDbContext : BaseDbContext
 
     public DbSet<ProductType> ProductTypes => Set<ProductType>();
     public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
+    public DbSet<Boilerate.Domain.DigitalInventory.DigitalStockItem> DigitalStockItems => Set<Boilerate.Domain.DigitalInventory.DigitalStockItem>();
     public DbSet<Boilerate.Domain.Inventory.InventoryItem> InventoryItems => Set<Boilerate.Domain.Inventory.InventoryItem>();
     public DbSet<Boilerate.Domain.Inventory.StockMovement> StockMovements => Set<Boilerate.Domain.Inventory.StockMovement>();
     public DbSet<Boilerate.Domain.Media.MediaAsset> MediaAssets => Set<Boilerate.Domain.Media.MediaAsset>();

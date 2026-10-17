@@ -148,6 +148,11 @@ namespace Boilerate.Migrators.MSSQL.Migrations
                         .HasMaxLength(20000)
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("FulfillmentKind")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
                     b.Property<Guid>("LastModifiedBy")
                         .HasColumnType("uniqueidentifier");
 
@@ -192,6 +197,8 @@ namespace Boilerate.Migrators.MSSQL.Migrations
 
                     b.ToTable("Products", "Catalog", t =>
                         {
+                            t.HasCheckConstraint("CK_Product_FulfillmentKind", "\"FulfillmentKind\" IN (1,2,3,4)");
+
                             t.HasCheckConstraint("CK_Product_Status", "\"Status\" IN (1,2,3)");
                         });
                 });
@@ -562,6 +569,73 @@ namespace Boilerate.Migrators.MSSQL.Migrations
                     b.HasIndex("ProductId", "VariantId");
 
                     b.ToTable("VariantOptionValues", "Catalog");
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.DigitalInventory.DigitalStockItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("FulfillmentKind")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("LastModifiedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("LastModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ProtectedContent")
+                        .IsRequired()
+                        .HasMaxLength(16000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<int>("State")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VariantId")
+                        .IsUnique()
+                        .HasFilter("[FulfillmentKind] = 3");
+
+                    b.HasIndex("ProductId", "FulfillmentKind");
+
+                    b.HasIndex("VariantId", "Reference")
+                        .IsUnique();
+
+                    b.HasIndex("ProductId", "VariantId", "State");
+
+                    b.ToTable("DigitalStockItems", "DigitalInventory", t =>
+                        {
+                            t.HasCheckConstraint("CK_DigitalStockItem_FulfillmentKind", "\"FulfillmentKind\" IN (2,3)");
+
+                            t.HasCheckConstraint("CK_DigitalStockItem_State", "\"State\" IN (1,2)");
+                        });
                 });
 
             modelBuilder.Entity("Boilerate.Domain.Identity.Action", b =>
@@ -1508,6 +1582,23 @@ namespace Boilerate.Migrators.MSSQL.Migrations
 
                     b.HasOne("Boilerate.Domain.Catalog.ProductVariant", null)
                         .WithMany("Selections")
+                        .HasForeignKey("ProductId", "VariantId")
+                        .HasPrincipalKey("ProductId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.DigitalInventory.DigitalStockItem", b =>
+                {
+                    b.HasOne("Boilerate.Domain.Catalog.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId", "FulfillmentKind")
+                        .HasPrincipalKey("Id", "FulfillmentKind")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Boilerate.Domain.Catalog.ProductVariant", null)
+                        .WithMany()
                         .HasForeignKey("ProductId", "VariantId")
                         .HasPrincipalKey("ProductId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)

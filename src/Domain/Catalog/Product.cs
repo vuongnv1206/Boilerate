@@ -21,6 +21,7 @@ public sealed class Product : CommerceEntity, IAggregateRoot
         get; private set;
     }
     public ProductStatus Status { get; private set; } = ProductStatus.Draft;
+    public ProductFulfillmentKind FulfillmentKind { get; private set; } = ProductFulfillmentKind.Physical;
     public IReadOnlyCollection<ProductVariant> Variants => _variants;
     public IReadOnlyCollection<ProductOption> Options => _options;
     public IReadOnlyCollection<ProductCategory> Categories => _categories;
@@ -29,11 +30,14 @@ public sealed class Product : CommerceEntity, IAggregateRoot
     private Product()
     {
     }
-    public Product(Guid productTypeId, string name, string slug, string? description = null)
+    public Product(Guid productTypeId, string name, string slug, string? description = null, ProductFulfillmentKind fulfillmentKind = ProductFulfillmentKind.Physical)
     {
         if (productTypeId == Guid.Empty)
             throw new DomainException("ProductTypeId is required.");
+        if (!Enum.IsDefined(fulfillmentKind))
+            throw new DomainException("Invalid product fulfillment kind.");
         ProductTypeId = productTypeId;
+        FulfillmentKind = fulfillmentKind;
         Edit(name, slug, description);
     }
     public void Edit(string name, string slug, string? description)

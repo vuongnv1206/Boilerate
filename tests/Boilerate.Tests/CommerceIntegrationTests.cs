@@ -32,7 +32,8 @@ public sealed class CommerceIntegrationTests
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var users = Substitute.For<IUserService>();
         users.HasPermissionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(price);
-        return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<ICurrentUser>(), users, Options.Create(new CommerceSettings()));
+        return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<ICurrentUser>(), users, Options.Create(new CommerceSettings()),
+            scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>());
     }
     private static ProductContent Content(string slug, params Guid[] categories) => new("Product " + slug, slug, null, categories.ToList(), [], []);
     private static CreateProduct Simple(ProductType type, string slug, decimal? price = 100, params Guid[] categories) =>

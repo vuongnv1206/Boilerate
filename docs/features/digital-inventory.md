@@ -1,10 +1,10 @@
 # Cách giao sản phẩm và kho hàng số
 
-Ngày bắt đầu/cập nhật: 2026-10-18, Asia/Saigon. Trạng thái: đang triển khai bước 1 của [Shop MVP](shop-mvp.md).
+Ngày bắt đầu/cập nhật: 2026-10-18, Asia/Saigon. Trạng thái: **đã triển khai và kiểm chứng local**, bước 1 của [Shop MVP](shop-mvp.md). Chưa nghiệm thu deployment thật.
 
 ## 1. Mục tiêu và phạm vi
 
-Shop chọn cách giao được hỗ trợ khi tạo Product, sau đó quản lý mã/tài khoản Unique hoặc nội dung Shared theo SKU. Dùng lại ProductType, fields, categories, options/SKU hiện có; không tạo module theo tên mặt hàng.
+Mục tiêu là một phần mềm cho một shop thích ứng với các mặt hàng muốn bán; Webflow là tham khảo trải nghiệm quản trị sản phẩm. Shop chọn cách giao được hỗ trợ khi tạo Product, sau đó quản lý mã/tài khoản Unique hoặc nội dung Shared theo SKU. Dùng lại ProductType, fields, categories, options/SKU hiện có; không tạo module theo tên mặt hàng hoặc mô hình quản lý nhiều shop.
 
 Trong lát này: cách giao Physical/DigitalUnique/DigitalShared/ManualExtension; nhập kho Unique, lưu nội dung Shared, bật/tắt bản ghi, danh sách metadata và xem nội dung bằng quyền riêng. Hoãn: giỏ/đơn/reservation, bán/cấp phát sau thanh toán, email, yêu cầu gia hạn/PendingVerification và provider. Chưa có endpoint bán hoặc đánh dấu đã giao hàng số.
 
@@ -26,7 +26,7 @@ Chọn cách giao ở **Product**, toàn bộ SKU kế thừa. `ProductType` ch�
 | Bảng/cột | Kiểu và khóa | Constraints/index/concurrency |
 |---|---|---|
 | Catalog.Products.FulfillmentKind | int NOT NULL default 1; 1 Physical, 2 DigitalUnique, 3 DigitalShared, 4 ManualExtension | CHECK IN (1,2,3,4); AK (Id,FulfillmentKind); Product.Version hiện có |
-| DigitalInventory.DigitalStockItems | Id Guid PK; ProductId/VariantId Guid; FulfillmentKind int; Reference varchar/nvarchar(100); ProtectedContent string(16000); State int; audit attribution và Version(32) từ CommerceEntity | Kind IN (2,3); State Available=1/Disabled=2; UQ (VariantId,Reference); filtered UQ VariantId WHERE Kind=3; index (ProductId,VariantId,State); Version concurrency |
+| DigitalInventory.DigitalStockItems | Id Guid PK; ProductId/VariantId Guid; FulfillmentKind int; Reference ASCII(100); ProtectedContent nvarchar(max) SQL Server / varchar(16000) PostgreSQL, domain giới hạn 16000 ký tự; State int; audit attribution và Version(32) từ CommerceEntity | Kind IN (2,3); State Available=1/Disabled=2; UQ (VariantId,Reference); filtered UQ VariantId WHERE Kind=3; indexes (ProductId,VariantId,State), (ProductId,FulfillmentKind); Version concurrency |
 
 `Reference` là nhãn quản lý ASCII chuẩn hóa uppercase, unique trong SKU; không dùng credential làm nhãn. Unique content bất biến; nhập lại reference trả conflict, không tạo dòng thứ hai. Shared dùng reference cố định `SHARED`, cập nhật nội dung cùng dòng. Không suy ra Shared có hai quyền sử dụng hoặc giá miễn phí khi tăng số lượng.
 
@@ -63,23 +63,27 @@ Chọn cấp Product thay vì ghi đè mode theo SKU và một bảng kho số t
 | Bước | Công việc | Trạng thái |
 |---|---|---|
 | 1 | Thiết kế phạm vi, cardinality, constraints, API/quyền | Đã ghi; đang triển khai theo thiết kế này |
-| 2 | Domain, EF mappings, audit protection và migrations hai DB | Đang triển khai |
-| 3 | Service/handlers/controllers, ACL/bootstrap và public availability | Đang triển khai |
-| 4 | Domain/API/provider regression và kiểm migration trên hai DB | Chưa chạy |
-| 5 | Cập nhật hợp đồng, báo cáo verification/history và commit nhỏ | Theo từng bước |
+| 2 | Domain, EF mappings, audit protection và migrations hai DB | Đã triển khai; fresh/upgrade và constraints đạt trên hai DB |
+| 3 | Service/handlers/controllers, ACL/bootstrap và public availability | Đã triển khai; kiểm service/HTTP hai DB đạt |
+| 4 | Domain/API/provider regression và kiểm migration trên hai DB | Domain 10/10, provider 16/16 và regression 184/184 đạt; không cộng các lượt trùng ca |
+| 5 | Cập nhật hợp đồng, báo cáo verification/history và commit nhỏ | Đã cập nhật hợp đồng/verification/history, commit theo bước |
 
 ## 4. Nhật ký triển khai
 
 2026-10-18: bắt đầu từ `8f98dbe`, user yêu cầu tiếp tục code. Ghi thiết kế trước substantive implementation; đã đọc docs index/roadmap/MVP, review model/UoW/ACL/audit hiện hành. Chưa có kết quả test mới ở bước lập hồ sơ.
 
+2026-10-18: triển khai domain, API, encryption/audit, public availability và migration additive hai DB. Build tích hợp đạt sau cập nhật các helper tạo CommerceService. Domain 10/10 và provider 16/16 đạt, gồm upgrade có dữ liệu và import đồng thời. Người dùng làm rõ mục tiêu một shop thích ứng sản phẩm, tham khảo quản trị Webflow; đã đồng bộ tài liệu và không bổ sung mô hình quản lý nhiều shop.
+
+2026-10-18: regression ngoài Container/Recovery/Template smoke đạt 184/184, 0 failed/0 skipped. Cập nhật database/API/runbook/MVP/roadmap và [history triển khai](../history/2026-10-18-13-digital-inventory-implementation.md). Chưa chạy deployment/adapter thật trong lát này.
+
 ## 5. Kiểm chứng và nghiệm thu
 
-Chưa chạy kiểm thử cho tính năng này tại thời điểm tạo hồ sơ. Kết quả thực tế bổ sung vào [báo cáo](../verification/2026-10-18-digital-inventory.md) khi chạy; Linux/Docker/deployment vẫn cần gate riêng, build hoặc test local không xác nhận nghiệm thu thật.
+Đã chạy build, 10 domain cases, 16 provider cases trên SQL Server LocalDB/PostgreSQL 16 và regression 184 cases, đều đạt. Regression chứa lại các ca đã chạy riêng. Kết quả/lệnh ở [báo cáo](../verification/2026-10-18-digital-inventory.md). Linux/Docker/deployment vẫn cần gate riêng; Container/Recovery/Template smoke không chạy lại trong đợt này.
 
 ## 6. Lịch sử commit
 
-Hash thực tế tra bằng `git log -- docs/features/digital-inventory.md`; bổ sung sau khi commit tồn tại.
+`cd12a21`: thiết kế/phạm vi trước code. Commit triển khai tra bằng `git log -- docs/features/digital-inventory.md` sau khi tồn tại.
 
 ## 7. Công việc còn lại
 
-Hoàn tất bước 2–5; sau đó chuyển sang Cart/Order/reservation theo MVP. Bước này chưa triển khai giao hàng số sau nhận tiền hoặc gia hạn; không tự mở rộng sang tích hợp bên thứ ba.
+Tiếp theo Cart/Order/reservation theo MVP. Bước này chưa triển khai giao hàng số sau nhận tiền hoặc gia hạn; không tự mở rộng sang tích hợp bên thứ ba. Nghiệm thu runtime/deployment và adapter thật vẫn cần trước khi vận hành shop.

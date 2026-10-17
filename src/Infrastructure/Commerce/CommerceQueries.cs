@@ -3,17 +3,25 @@ using Boilerate.Application.Common.Exceptions;
 using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Common.Exceptions;
 using Boilerate.Domain.Inventory;
+using Boilerate.Domain.DigitalInventory;
 using Microsoft.EntityFrameworkCore;
 namespace Boilerate.Infrastructure.Commerce;
 
 public sealed partial class CommerceService
 {
+    private IQueryable<ProductVariant> StockedVariants(IQueryable<ProductVariant> variants) => variants.Where(v =>
+        db.Products.Any(p => p.Id == v.ProductId &&
+            ((p.FulfillmentKind == ProductFulfillmentKind.Physical && db.InventoryItems.Any(i => i.VariantId == v.Id && i.OnHand > 0)) ||
+             ((p.FulfillmentKind == ProductFulfillmentKind.DigitalUnique || p.FulfillmentKind == ProductFulfillmentKind.DigitalShared) &&
+                db.DigitalStockItems.Any(i => i.VariantId == v.Id && i.State == DigitalStockState.Available)) ||
+             p.FulfillmentKind == ProductFulfillmentKind.ManualExtension)));
+
     public async Task<ProductDto> GetAsync(Guid id, bool publishedOnly, CancellationToken ct)
     {
         var p = await ProductGraph().AsNoTracking().SingleOrDefaultAsync(p => p.Id == id && (!publishedOnly || p.Status == ProductStatus.Published), ct)
             ?? throw new NotFoundException("Product not found.");
         var ids = p.Variants.Select(v => v.Id).ToArray();
-        var stocked = await db.InventoryItems.Where(i => ids.Contains(i.VariantId) && i.OnHand > 0).Select(i => i.VariantId).ToListAsync(ct);
+        var stocked = await StockedVariants(db.ProductVariants.Where(v => ids.Contains(v.Id) && v.IsActive)).Select(v => v.Id).ToListAsync(ct);
         var fields = p.FieldValues.ToArray();
         var categories = p.Categories.Select(c => c.CategoryId).ToArray();
         if (publishedOnly)
@@ -35,7 +43,7 @@ public sealed partial class CommerceService
                 return new FieldValueDto(f.FieldDefinitionId,f.FieldType,definition.Label,f.TextValue,f.NumberValue,f.BooleanValue,f.DateValue,f.ChoiceId,
                     definition.Choices.SingleOrDefault(c => c.Id == f.ChoiceId)?.Label);
             }).ToArray(),
-            p.Media.OrderBy(m => m.SortOrder).ThenBy(m => m.MediaAssetId).Select(m => new MediaInput(m.MediaAssetId,m.SortOrder,m.AltText)).ToArray());
+            p.Media.OrderBy(m => m.SortOrder).ThenBy(m => m.MediaAssetId).Select(m => new MediaInput(m.MediaAssetId,m.SortOrder,m.AltText)).ToArray(), p.FulfillmentKind);
     }
     public async Task<ProductDto> GetBySlugAsync(string slug, CancellationToken ct)
     {
@@ -83,7 +91,7 @@ public sealed partial class CommerceService
             q = q.Where(p => variants.Any(v => v.ProductId == p.Id));
             if (r.InStock.HasValue)
             {
-                var stockedVariants = variants.Where(v => db.InventoryItems.Any(i => i.VariantId == v.Id && i.OnHand > 0));
+                var stockedVariants = StockedVariants(variants);
                 q = r.InStock.Value ? q.Where(p => stockedVariants.Any(v => v.ProductId == p.Id)) : q.Where(p => !stockedVariants.Any(v => v.ProductId == p.Id));
             }
         }
@@ -141,9 +149,10 @@ public sealed partial class CommerceService
             q = q.Where(p => values.Any(v => v.ProductId == p.Id));
         }
         int total = await q.CountAsync(ct);
+        var availableVariantIds = StockedVariants(db.ProductVariants.Where(v => v.IsActive)).Select(v => v.Id);
         var items = await q.OrderBy(p => p.Id).Skip((r.PageNumber - 1) * r.PageSize).Take(r.PageSize)
             .Select(p => new ProductSummary(p.Id, p.Name, p.Slug, p.Status, p.Variants.Where(v => v.IsActive).Min(v => v.Price),
-                p.Variants.Any(v => v.IsActive && db.InventoryItems.Any(i => i.VariantId == v.Id && i.OnHand > 0)))).ToListAsync(ct);
+                p.Variants.Any(v => v.IsActive && availableVariantIds.Contains(v.Id)), p.FulfillmentKind)).ToListAsync(ct);
         return new(items, total, r.PageNumber, r.PageSize);
     }
     public Task<List<Category>> CategoriesAsync(bool publicOnly, CancellationToken ct) => db.Categories.AsNoTracking().Where(c => !publicOnly || c.IsActive).OrderBy(c => c.SortOrder).ThenBy(c => c.Id).ToListAsync(ct);

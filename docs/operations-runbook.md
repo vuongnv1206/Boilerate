@@ -2,6 +2,8 @@
 
 Phạm vi: installation test cô lập. Kế hoạch và trạng thái tại [operations acceptance](features/operations-acceptance.md). Không coi runbook là bằng chứng một môi trường đã chạy đạt.
 
+Kho số dùng Data Protection để mã hóa nội dung: luôn cấu hình key ring bền vững và backup **database + keys** cùng recovery set. Giữ ApplicationName/purpose nhất quán sau restore; mất key hoặc xóa key cũ làm nội dung không giải mã được. Giới hạn quyền đọc backup/key volume; không đưa chúng vào Git hoặc artifacts công khai. [Lát kho số](features/digital-inventory.md) chưa bổ sung cấp phát/gia hạn theo đơn; nghiệm thu dữ liệu kho số phục hồi trên deployment thật vẫn cần chạy riêng.
+
 ## 1. Các gate độc lập
 
 Chạy PowerShell 7.2+ tại root repo. `scripts/verify-operations.ps1` tạo thư mục ngẫu nhiên `artifacts/operations/<time>-<id>`, ghi `summary.json`, log restore/build/test và TRX. Summary chỉ được ghi `passed` khi có ca thực sự chạy đạt, không có fail/skip; Recovery/Container phải có ca passed cho cả SQL Server/PostgreSQL. `blocked` và exit code khác 0 nghĩa là điều kiện môi trường chưa đáp ứng.

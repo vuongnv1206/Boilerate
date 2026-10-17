@@ -10,10 +10,11 @@ using Boilerate.Domain.Messaging;
 using Boilerate.Infrastructure.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.DataProtection;
 namespace Boilerate.Infrastructure.Commerce;
 
 public sealed partial class CommerceService(ApplicationDbContext db, CommerceUnitOfWork work, ICurrentUser actor,
-    IUserService users, IOptions<CommerceSettings> settings) : ICommerceService
+    IUserService users, IOptions<CommerceSettings> settings, IDataProtectionProvider protection) : ICommerceService
 {
     private int MaxOptions => settings.Value.MaximumOptions;
     private int MaxVariants => settings.Value.MaximumVariants;
@@ -63,7 +64,7 @@ public sealed partial class CommerceService(ApplicationDbContext db, CommerceUni
             Version(r.ProductTypeVersion, type.Version);
             if (!type.IsActive)
                 throw new ConflictException("Product type is inactive.");
-            var product = new Product(type.Id, r.Content.Name, r.Content.Slug, r.Content.Description);
+            var product = new Product(type.Id, r.Content.Name, r.Content.Slug, r.Content.Description, r.FulfillmentKind);
             foreach (var input in r.Options)
             {
                 var option = product.AddOption(input.Code, input.Name, MaxOptions);
@@ -77,9 +78,12 @@ public sealed partial class CommerceService(ApplicationDbContext db, CommerceUni
             await ApplyContent(product, type, r.Content, ct);
             product.Validate(type);
             db.Products.Add(product);
-            var location = await MainLocation(ct);
-            foreach (var variant in product.Variants)
-                db.InventoryItems.Add(new InventoryItem(variant.Id, location.Id));
+            if (product.FulfillmentKind == ProductFulfillmentKind.Physical)
+            {
+                var location = await MainLocation(ct);
+                foreach (var variant in product.Variants)
+                    db.InventoryItems.Add(new InventoryItem(variant.Id, location.Id));
+            }
             return product.Id;
         }, ct);
         return await GetAsync(id, false, ct);
@@ -152,8 +156,11 @@ public sealed partial class CommerceService(ApplicationDbContext db, CommerceUni
         {
             var (p, t) = await LockedProduct(r.ProductId, r.Version, ct);
             var v = p.AddVariant(r.Variant.Sku, r.Variant.Price, r.Variant.CompareAtPrice, ResolveSelection(p, r.Variant.Options), MaxVariants);
-            var location = await MainLocation(ct);
-            db.InventoryItems.Add(new InventoryItem(v.Id, location.Id));
+            if (p.FulfillmentKind == ProductFulfillmentKind.Physical)
+            {
+                var location = await MainLocation(ct);
+                db.InventoryItems.Add(new InventoryItem(v.Id, location.Id));
+            }
             p.Validate(t);
             return true;
         }, ct);
@@ -331,6 +338,9 @@ public sealed partial class CommerceService(ApplicationDbContext db, CommerceUni
                 if (prior is not null)
                     return Replay(prior);
                 var item = await db.InventoryItems.SingleAsync(i => i.Id == r.InventoryItemId, ct);
+                if (!await db.ProductVariants.AnyAsync(v => v.Id == item.VariantId &&
+                    db.Products.Any(p => p.Id == v.ProductId && p.FulfillmentKind == ProductFulfillmentKind.Physical), ct))
+                    throw new ConflictException("Only physical SKUs use warehouse adjustments.");
                 Version(r.Version, item.Version);
                 var movement = item.Adjust(r.OperationId, r.Delta, r.Reason, actor.GetUserId());
                 db.StockMovements.Add(movement);

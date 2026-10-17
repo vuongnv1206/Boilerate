@@ -17,5 +17,6 @@ public static class AppAction
     public const string Adjust = nameof(Adjust);
     public const string Initialize = nameof(Initialize);
     public const string Replay = nameof(Replay);
+    public const string Reveal = nameof(Reveal);
     public const string Send = nameof(Send);
 }

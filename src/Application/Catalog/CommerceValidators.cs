@@ -38,6 +38,7 @@ public sealed class CreateProductValidator : AbstractValidator<CreateProduct>
     public CreateProductValidator()
     {
         RuleFor(x => x.ProductTypeId).NotEmpty();
+        RuleFor(x => x.FulfillmentKind).IsInEnum();
         RuleFor(x => x.ProductTypeVersion).NotEmpty();
         RuleFor(x => x.Content).NotNull().SetValidator(new ProductContentValidator());
         RuleFor(x => x.Options).NotNull().Must(x => x is null || x.Count <= 10);

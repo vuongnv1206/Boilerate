@@ -19,5 +19,7 @@ public enum TrailType : byte
     /// <summary>
     /// Entity was deleted (DELETE or soft delete operation)
     /// </summary>
-    Delete = 3
+    Delete = 3,
+
+    Read = 4
 }
