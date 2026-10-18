@@ -1,7 +1,10 @@
 using System.Text.Json;
+using System.Text.Encodings.Web;
+using Boilerate.Application.Common.Mailing;
 using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Media;
 using Boilerate.Domain.Messaging;
+using Boilerate.Domain.Ordering;
 using Boilerate.Infrastructure.FileStorage;
 using Boilerate.Infrastructure.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +13,12 @@ using Microsoft.Extensions.Options;
 namespace Boilerate.Infrastructure.Commerce;
 
 public sealed class OutboxProcessor(ApplicationDbContext db, CommerceUnitOfWork work, LocalFileStorageService storage,
-    IOptions<CommerceSettings> settings, ILogger<OutboxProcessor> logger)
+    IOptions<CommerceSettings> settings, ILogger<OutboxProcessor> logger, IMailService mail)
 {
     public async Task<bool> RunOneAsync(CancellationToken ct)
     {
+        if (db.Database.CurrentTransaction is not null)
+            throw new InvalidOperationException("Run outbox consumers outside a database transaction.");
         var now = DateTime.UtcNow;
         var id = await db.OutboxMessages.AsNoTracking().Where(m => (m.State == OutboxState.Pending && m.NextAttemptAt <= now) ||
             (m.State == OutboxState.Processing && m.LeaseUntil <= now)).OrderBy(m => m.NextAttemptAt).ThenBy(m => m.MessageId)
@@ -30,10 +35,23 @@ public sealed class OutboxProcessor(ApplicationDbContext db, CommerceUnitOfWork 
         var message = await db.OutboxMessages.AsNoTracking().SingleAsync(m => m.MessageId == id, ct);
         try
         {
-            if (message.Type != "MediaCleanupRequested" || message.SchemaVersion != 1)
+            if (message.SchemaVersion != 1)
                 throw new InvalidOperationException("Unsupported message schema.");
-            var payload = JsonSerializer.Deserialize<MediaCleanupRequested>(message.Payload) ?? throw new InvalidOperationException("Invalid message payload.");
-            await CleanupAsync(payload.MediaId, ct);
+            switch (message.Type)
+            {
+                case "MediaCleanupRequested":
+                    var cleanup = JsonSerializer.Deserialize<MediaCleanupRequested>(message.Payload)
+                        ?? throw new InvalidOperationException("Invalid media cleanup payload.");
+                    await CleanupAsync(cleanup.MediaId, ct);
+                    break;
+                case "DigitalDeliveryReady":
+                    var delivery = JsonSerializer.Deserialize<DigitalDeliveryReady>(message.Payload)
+                        ?? throw new InvalidOperationException("Invalid digital delivery notification payload.");
+                    await NotifyDigitalDeliveryAsync(delivery.OrderId, message.MessageId, ct);
+                    break;
+                default:
+                    throw new InvalidOperationException("Unsupported message type.");
+            }
             await db.OutboxMessages.Where(m => m.MessageId == id && m.LeaseToken == token && m.State == OutboxState.Processing)
                 .ExecuteUpdateAsync(s => s.SetProperty(m => m.State, OutboxState.Completed).SetProperty(m => m.LeaseToken, (Guid?)null)
                     .SetProperty(m => m.LeaseUntil, (DateTime?)null).SetProperty(m => m.LastError, (string?)null), ct);
@@ -50,6 +68,25 @@ public sealed class OutboxProcessor(ApplicationDbContext db, CommerceUnitOfWork 
             logger.LogWarning("Outbox {MessageId} failed with {ErrorType}; state {State}", id, ex.GetType().Name, state);
         }
         return true;
+    }
+
+    private async Task NotifyDigitalDeliveryAsync(Guid orderId, Guid messageId, CancellationToken ct)
+    {
+        // Read only delivery existence and order contact metadata. Secrets never enter mail requests.
+        var order = await db.Orders.AsNoTracking().Where(o => o.Id == orderId && o.PaymentStatus == OrderPaymentStatus.Paid)
+            .Select(o => new { o.Number, o.Email }).SingleOrDefaultAsync(ct);
+        if (order is null || !await db.DigitalDeliveries.AnyAsync(d => d.OrderId == orderId, ct))
+            throw new InvalidOperationException("A paid order with delivered digital content is required for this notification.");
+        var number = HtmlEncoder.Default.Encode(order.Number);
+        var request = new MailRequest([order.Email], $"Đơn hàng {order.Number}: hàng số đã sẵn sàng",
+            $"<p>Nội dung hàng số của đơn hàng <strong>{number}</strong> đã sẵn sàng.</p>" +
+            "<p>Vui lòng đăng nhập và xem mục <strong>Đơn hàng của tôi</strong> để nhận nội dung.</p>",
+            headers: new Dictionary<string, string>
+            {
+                // Stable across retries; SMTP delivery is still at-least-once, not deduplicated by this header.
+                ["Message-Id"] = $"<outbox.{messageId:N}@boilerate.invalid>"
+            });
+        await mail.SendAsync(request, ct);
     }
     public async Task CleanupAsync(Guid mediaId, CancellationToken ct)
     {

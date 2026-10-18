@@ -6,7 +6,7 @@ Ngày bắt đầu/cập nhật: 2026-10-18, Asia/Saigon. Trạng thái: **đã 
 
 Mục tiêu là một phần mềm cho một shop thích ứng với các mặt hàng muốn bán; Webflow là tham khảo trải nghiệm quản trị sản phẩm. Shop chọn cách giao được hỗ trợ khi tạo Product, sau đó quản lý mã/tài khoản Unique hoặc nội dung Shared theo SKU. Dùng lại ProductType, fields, categories, options/SKU hiện có; không tạo module theo tên mặt hàng hoặc mô hình quản lý nhiều shop.
 
-Trong lát này: cách giao Physical/DigitalUnique/DigitalShared/ManualExtension; nhập kho Unique, lưu nội dung Shared, bật/tắt bản ghi, danh sách metadata và xem nội dung bằng quyền riêng. Hoãn: giỏ/đơn/reservation, bán/cấp phát sau thanh toán, email, yêu cầu gia hạn/PendingVerification và provider. Chưa có endpoint bán hoặc đánh dấu đã giao hàng số.
+Trong lát kho số ban đầu: cách giao Physical/DigitalUnique/DigitalShared/ManualExtension; nhập kho Unique, lưu nội dung Shared, bật/tắt bản ghi, danh sách metadata và xem nội dung bằng quyền riêng. Cập nhật các lát tiếp nối: [Ordering](ordering-checkout.md) đã thêm reservation, [nhận tiền/giao số](payment-digital-delivery.md) thêm Delivered ownership và snapshot giao số/email outbox. Yêu cầu gia hạn/PendingVerification và gateway còn để sau; không coi chúng đã triển khai từ việc có kho số.
 
 Tiêu chí chấp nhận: tạo đúng cách giao; dữ liệu có chủ sở hữu và ràng buộc hai DB; import nguyên lô hoặc rollback; stale version/duplicate reference conflict; nội dung được mã hóa, không có trong public API/danh sách/audit; ACL kiểm ở API và service; availability phản ánh đúng nguồn kho và không cho điều chỉnh kho vật lý của hàng số.
 

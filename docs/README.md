@@ -22,7 +22,7 @@ Tài liệu được cập nhật cùng phần code liên quan. Mỗi tính năn
 14. [MVP shop nhỏ](features/shop-mvp.md): phạm vi gọn, thứ tự BE, tiêu chí nghiệm thu và các đề xuất cần xử lý khi tới bước liên quan.
 15. [Cách giao và kho hàng số](features/digital-inventory.md): thiết kế, bước triển khai và [kiểm chứng](verification/2026-10-18-digital-inventory.md).
 16. [Giỏ hàng, đơn hàng và giữ hàng](features/ordering-checkout.md): cardinality, transaction, API và kiểm chứng bước 2 MVP.
-17. [Nhận tiền và tự động giao hàng số](features/payment-digital-delivery.md): receipt chuyển khoản xác nhận thủ công, trạng thái độc lập, giao Unique/Shared và xử lý trả muộn; email là bước triển khai kế tiếp.
+17. [Nhận tiền và tự động giao hàng số](features/payment-digital-delivery.md): receipt chuyển khoản xác nhận thủ công, trạng thái độc lập, giao Unique/Shared, xử lý trả muộn và email outbox; bằng chứng local/deployment theo hồ sơ.
 
 Hướng dẫn dựng installation mới, cấu hình và các lệnh operator nằm tại [README dự án](../README.md). [plan.md](../plan.md) là bản tóm tắt phạm vi hiện tại; lộ trình chi tiết được theo dõi tại đây.
 

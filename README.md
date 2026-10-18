@@ -8,7 +8,7 @@ Code và tài liệu được phát triển song song theo [quy trình](docs/dev
 
 ## Cấu trúc và context
 
-Domain giữ entity/sự kiện; Application giữ use case/DTO/validation/interfaces; Infrastructure triển khai persistence/Identity/adapters; Host compose HTTP/SignalR. Migrators.MSSQL và Migrators.PostgreSQL dùng chung model, mỗi provider có InitialFoundation, CommerceCatalog, DigitalInventory và OrderingCheckout riêng. Tests giữ regression và integration trên database thật.
+Domain giữ entity/sự kiện; Application giữ use case/DTO/validation/interfaces; Infrastructure triển khai persistence/Identity/adapters; Host compose HTTP/SignalR. Migrators.MSSQL và Migrators.PostgreSQL dùng chung model, mỗi provider có InitialFoundation, CommerceCatalog, DigitalInventory, OrderingCheckout và PaymentDigitalDelivery riêng. Tests giữ regression và integration trên database thật.
 
 `ICurrentUser` đọc actor; initializer internal nằm trong Infrastructure, dùng tại middleware/ranh giới thực thi. Hai interface cùng instance scoped. `SetCurrentUserId` phục vụ attribution, không tạo authentication; job chưa tự truyền actor. Hub đọc `Context.User`. Claims role trong JWT là thông tin phiên; quyền hiện tại lấy từ DB. Async validators dùng chung DbContext chạy tuần tự.
 
@@ -136,7 +136,7 @@ MessagePack pin 2.5.303 vá [GHSA-qhrr-8q5h-9q3h](https://github.com/advisories/
 
 Mục tiêu là **một phần mềm cho một shop, thích ứng với mặt hàng muốn bán**, tham khảo trải nghiệm quản trị sản phẩm Webflow. Chủ shop tự cấu hình loại/bộ trường/options/SKU và chọn cách giao đã hỗ trợ; không xây nền tảng quản lý nhiều shop.
 
-Catalog mặc định tắt và đã thay contract mẫu bằng ProductType/schema, Product–Category N–N, SKU/options, giá VND, tồn kho MAIN, media và transactional outbox. [Cách giao/kho số](docs/features/digital-inventory.md) bổ sung Physical/Unique/Shared/ManualExtension, nội dung mã hóa và quyền xem riêng. [Ordering](docs/features/ordering-checkout.md) bổ sung giỏ, snapshot đơn, giữ hàng, hủy/hết hạn cho khách đăng nhập. Xem [database design/ERD](docs/commerce-database.md) và [API/vận hành](docs/commerce-api.md). CommerceCatalog chỉ áp dụng khi Catalog cũ rỗng; DigitalInventory/OrderingCheckout additive trên baseline đó; không có ETL tự động. Payment và giao theo đơn thuộc mốc tiếp theo.
+Catalog mặc định tắt và đã thay contract mẫu bằng ProductType/schema, Product–Category N–N, SKU/options, giá VND, tồn kho MAIN, media và transactional outbox. [Cách giao/kho số](docs/features/digital-inventory.md) bổ sung Physical/Unique/Shared/ManualExtension, nội dung mã hóa và quyền xem riêng. [Ordering](docs/features/ordering-checkout.md) bổ sung giỏ, snapshot đơn, giữ hàng, hủy/hết hạn cho khách đăng nhập. Xem [database design/ERD](docs/commerce-database.md) và [API/vận hành](docs/commerce-api.md). CommerceCatalog chỉ áp dụng khi Catalog cũ rỗng; DigitalInventory/OrderingCheckout/PaymentDigitalDelivery additive trên baseline đó; không có ETL tự động. [Nhận tiền/giao số](docs/features/payment-digital-delivery.md) đã có xác nhận chuyển khoản do nhân viên kiểm tra, tự giao Unique/Shared và email outbox; gateway/webhook, hoàn tiền, vận chuyển và thao tác gia hạn thuộc mốc tiếp theo. SMTP/gateway/deployment thật cần nghiệm thu riêng.
 
 [Rà soát commerce ngày 2026-10-17](docs/commerce-review.md) ghi lại các bản sửa transaction/event, lọc số và phản hồi lỗi. CommerceUnitOfWork tự hoàn tất batch event sau commit/dispose hoặc hủy sau rollback/dispose; từ chối khởi chạy khi context còn thay đổi/event chưa lưu.
 

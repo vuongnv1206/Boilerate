@@ -94,4 +94,4 @@ Source trước bước: `31a0109`; `dfcc92f` ghi thiết kế trước commit c
 
 ## 7. Còn lại
 
-Bước tiếp theo Payment: nhận tiền/retry/webhook, trả muộn thử giữ lại toàn bộ hoặc chờ xử lý, delivery Unique/Shared, email; Extension/PendingVerification và vận chuyển/hủy-hoàn sau nhận tiền theo các bước MVP. Chưa có các use case này trong code; deployment/runtime còn gate riêng.
+Cập nhật lát tiếp nối: [nhận tiền/giao số](payment-digital-delivery.md) đã bổ sung receipt xác nhận chuyển khoản, trả muộn giữ lại toàn bộ hoặc chờ xử lý, retry fulfillment, delivery Unique/Shared và email outbox. Gateway/webhook, Extension/PendingVerification và vận chuyển/hủy-hoàn sau nhận tiền vẫn thuộc các mốc sau; deployment/runtime còn gate riêng. Các kết quả kiểm chứng Ordering ở hồ sơ này giữ nguyên phạm vi ban đầu.

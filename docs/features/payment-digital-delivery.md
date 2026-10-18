@@ -1,6 +1,6 @@
 # Nhận tiền và tự động giao hàng số
 
-Ngày bắt đầu/cập nhật: 2026-10-18 (Asia/Saigon). Trạng thái: **đang triển khai**.
+Ngày bắt đầu/cập nhật: 2026-10-18 (Asia/Saigon). Trạng thái: **đã triển khai/kiểm chứng local; chờ nghiệm thu runtime/adapter thật**.
 Mốc: bước 3 [Shop MVP](shop-mvp.md), [roadmap](../roadmap.md).
 
 ## 1. Mục tiêu và phạm vi
@@ -14,12 +14,12 @@ Nhân viên xác nhận khoản chuyển khoản thực tế đã nhận đủ c
 
 Tiêu chí chấp nhận:
 
-- [ ] Xác nhận đúng tiền với version/quyền; sai tiền, reference dùng lại hoặc operation đổi nội dung bị từ chối.
-- [ ] Unique qty2 nhận hai nội dung, Shared qty2 nhận một nội dung; sửa link kho sau đó không đổi nội dung đã giao.
-- [ ] Retry/cạnh tranh không thu hoặc cấp lần hai; hủy/expiry không nhả mã đã giao.
-- [ ] Trả muộn giữ lại đủ toàn bộ thì giao; thiếu một món thì ghi nhận đã trả, chờ xử lý và không giữ/cấp một phần mới; staff retry sau bổ sung hàng.
-- [ ] Khách chỉ đọc nội dung đơn của mình đã trả; ciphertext không lọt audit/outbox/email; đọc bí mật có audit, HTTP no-store.
-- [ ] Email bền vững qua outbox, lỗi SMTP không đảo kết quả nhận tiền/giao số; kiểm chứng hai DB, phân biệt adapter thật.
+- [x] Xác nhận đúng tiền với version/quyền; sai tiền, reference dùng lại hoặc operation đổi nội dung bị từ chối.
+- [x] Unique qty2 nhận hai nội dung, Shared qty2 nhận một nội dung; sửa link kho sau đó không đổi nội dung đã giao.
+- [x] Retry/cạnh tranh không thu hoặc cấp lần hai; hủy/expiry không nhả mã đã giao.
+- [x] Trả muộn giữ lại đủ toàn bộ thì giao; thiếu một món thì ghi nhận đã trả, chờ xử lý và không giữ/cấp một phần mới; staff retry sau bổ sung hàng.
+- [x] Khách chỉ đọc nội dung đơn của mình đã trả; ciphertext không lọt audit/outbox/email; đọc bí mật có audit, HTTP no-store.
+- [x] Email bền vững qua outbox, lỗi SMTP không đảo kết quả nhận tiền/giao số; kiểm chứng hai DB, phân biệt adapter thật (SMTP mock, chưa nghiệm thu thật).
 
 ## 2. Thiết kế
 
@@ -68,11 +68,11 @@ Email: `DigitalDeliveryReady` outbox v1, payload chỉ OrderId; worker tải ema
 
 | Bước | Công việc | Đầu ra | Trạng thái |
 |---|---|---|---|
-| 1 | Chốt hồ sơ/quan hệ/nguồn nhận tiền | Tài liệu này, history, roadmap | Đã ghi thiết kế, chưa kiểm chứng code |
+| 1 | Chốt hồ sơ/quan hệ/nguồn nhận tiền | Tài liệu này, history, roadmap | Hoàn tất hồ sơ trước code |
 | 2 | Domain, persistence, API nhận tiền + giao số | Hai migrations; idempotency, late payment, ACL, owner reveal | Đã triển khai/kiểm chứng local48/48 core |
-| 3 | Email outbox | Consumer retry được, email không mang secret | Chưa triển khai |
-| 4 | Regression và review | Test domain/provider/race/rollback/HTTP/migration | Đang chạy Payment/core; regression toàn bộ sau email |
-| 5 | Đồng bộ docs vận hành/lịch sử và commit nhỏ | Bằng chứng thật + phần còn mở | Cập nhật theo từng bước |
+| 3 | Email outbox | Consumer retry được, email không mang secret | Đã triển khai/kiểm local8/8 email +2 producer rollback |
+| 4 | Regression và review | Test domain/provider/race/rollback/HTTP/migration | Regression276/276 đạt; UTC2/2, chưa nghiệm thu runtime/adapter |
+| 5 | Đồng bộ docs vận hành/lịch sử và commit nhỏ | Bằng chứng thật + phần còn mở | Đã đồng bộ docs/history/runbook; commits theo lát |
 
 ## 4. Nhật ký triển khai
 
@@ -80,14 +80,18 @@ Email: `DigitalDeliveryReady` outbox v1, payload chỉ OrderId; worker tải ema
 
 2026-10-18 — Bước 2: code domain/receipt/delivery/ACL/API và hai migrations; build Release 0 lỗi. Review bổ sung kind composite FK và xử lý crypto giữ Paid+NeedsReview. Bộ Payment/domain/provider/migration đang chạy. [History](../history/2026-10-18-17-payment-delivery-implementation.md).
 
+2026-10-18 — Bước 3: sau core48/48 và commit `533b681`, nối producer email trong transaction và consumer ngoài transaction. Test SMTP mock/lease/retry/replay đang chờ chạy; chưa nghiệm thu SMTP thật. [History](../history/2026-10-18-18-digital-delivery-email.md).
+
+2026-10-18 — Bước 4–5: build cuối0 lỗi, regression276/276 đạt, gồm rollback sau EF flush trước commit và email retry/replay/lease. Đồng bộ docs và chia commit theo core/email; fix timestamp UTC phát hiện khi review được tách commit kế tiếp, cùng kết quả test đã ghi trong báo cáo.
+
 ## 5. Kiểm chứng và nghiệm thu
 
-Core local48/48 đạt sau sửa assertion, xem [báo cáo từng lượt](../verification/2026-10-18-payment-delivery.md). Email/regression cuối còn đang làm. Linux/Docker/CI, ngân hàng/gateway và SMTP thật chưa nghiệm thu. Hạn chế: chưa xử lý thanh toán một phần, khoản chuyển thừa/trùng thực tế, hoàn tiền, shipping hay thao tác gia hạn; nhân viên cần đối chiếu thực tế trước ghi nhận.
+Core local48/48 đạt sau sửa assertion; regression cuối276/276 đạt, xem [báo cáo từng lượt](../verification/2026-10-18-payment-delivery.md). Linux/Docker/CI, ngân hàng/gateway và SMTP thật chưa nghiệm thu. Hạn chế: chưa xử lý thanh toán một phần, khoản chuyển thừa/trùng thực tế, hoàn tiền, shipping hay thao tác gia hạn; nhân viên cần đối chiếu thực tế trước ghi nhận.
 
 ## 6. Lịch sử commit
 
-`5315fa4` — thiết kế nhận tiền và giao số trước code. Commit triển khai ghi khi tồn tại.
+`5315fa4` — thiết kế nhận tiền và giao số trước code. `533b681` — core nhận tiền/giao số và migrations. Commit email ghi khi tồn tại.
 
 ## 7. Còn lại
 
-Hoàn tất các bước 2–5; provider tự động, manual renewal workflow, refund/shipping và nghiệm thu deployment thuộc mốc tiếp theo, không được suy ra từ trạng thái Paid.
+Phần code/local của các bước đã hoàn tất. Provider tự động, manual renewal workflow, refund/shipping và nghiệm thu deployment/SMTP thật thuộc mốc tiếp theo, không được suy ra từ trạng thái Paid hoặc test mock.

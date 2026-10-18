@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Boilerate.Application.Catalog;
 using Boilerate.Application.Common.Exceptions;
 using Boilerate.Application.Common.Interfaces;
+using Boilerate.Application.Common.Mailing;
 using Boilerate.Application.Identity.Tokens;
 using Boilerate.Application.Identity.Users;
 using Boilerate.Domain.Catalog;
@@ -41,7 +42,8 @@ public sealed class CommerceIntegrationTests
     private static OutboxProcessor Processor(IServiceScope scope, int attempts = 8)
     {
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<LocalFileStorageService>(), Options.Create(new CommerceSettings { MaximumAttempts = attempts }), NullLogger<OutboxProcessor>.Instance);
+        return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<LocalFileStorageService>(), Options.Create(new CommerceSettings { MaximumAttempts = attempts }), NullLogger<OutboxProcessor>.Instance,
+            scope.ServiceProvider.GetRequiredService<IMailService>());
     }
     [Theory, Trait("Category", "ProviderIntegration")]
     [InlineData("mssql"), InlineData("postgresql")]

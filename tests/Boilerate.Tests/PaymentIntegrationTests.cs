@@ -1,7 +1,9 @@
+using System.Data.Common;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Boilerate.Application.Catalog;
+using Boilerate.Application.Common.Events;
 using Boilerate.Application.Common.Exceptions;
 using Boilerate.Application.Common.Interfaces;
 using Boilerate.Application.Identity.Tokens;
@@ -17,6 +19,7 @@ using Boilerate.Infrastructure.Persistence.Initialization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NSubstitute;
@@ -36,9 +39,10 @@ public sealed class PaymentIntegrationTests
             Options.Create(new CommerceSettings()), scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
     }
 
-    private static OrderingService Ordering(IServiceScope scope, TimeProvider? clock = null, string? deniedPermission = null)
+    private static OrderingService Ordering(IServiceScope scope, TimeProvider? clock = null, string? deniedPermission = null,
+        ApplicationDbContext? dbOverride = null)
     {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var db = dbOverride ?? scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var users = Substitute.For<IUserService>();
         users.HasPermissionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(call => (string)call[1] != deniedPermission);
@@ -77,6 +81,19 @@ public sealed class PaymentIntegrationTests
         private DateTimeOffset _now = start;
         public override DateTimeOffset GetUtcNow() => _now;
         public void Advance(TimeSpan duration) => _now += duration;
+    }
+
+    private sealed class CommitFailure : DbTransactionInterceptor
+    {
+        public InvalidOperationException Error { get; } = new("Injected failure after writes and before commit.");
+        public bool WasReached { get; private set; }
+
+        public override ValueTask<InterceptionResult> TransactionCommittingAsync(DbTransaction transaction,
+            TransactionEventData eventData, InterceptionResult result, CancellationToken cancellationToken = default)
+        {
+            WasReached = true;
+            throw Error;
+        }
     }
 
     [Theory, Trait("Category", "ProviderIntegration")]
@@ -459,6 +476,70 @@ public sealed class PaymentIntegrationTests
         Assert.Equal(OrderFulfillmentStatus.Completed, fulfilled.FulfillmentStatus);
         Assert.Equal("RollbackPaymentSecret", Assert.Single(await ordering.DigitalDeliveriesAsync(order.Id, default)).Content);
         Assert.Single(await db.PaymentReceipts.ToListAsync());
+    }
+
+    [Theory, Trait("Category", "ProviderIntegration")]
+    [InlineData("mssql"), InlineData("postgresql")]
+    public async Task CommitFailureRollsBackFlushedReceiptDeliveryStockAuditAndEmailThenSameOperationCanRetry(string provider)
+    {
+        await using var fixture = new FoundationDatabase(provider, true);
+        await fixture.CreateAsync();
+        using var scope = fixture.Scope(Guid.NewGuid());
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var catalog = Catalog(scope);
+        var ordering = Ordering(scope);
+        await catalog.InitializeAsync(default);
+        var type = await catalog.CreateTypeAsync(new("COMMITPAY", "Payment commit failure", []), default);
+        var product = await Published(catalog, type, "commit-payment-code", ProductFulfillmentKind.DigitalUnique);
+        await catalog.ImportDigitalAsync(new(product.Id, product.Variants.Single().Id, product.Version,
+            [new("ONLY", "CommitFailurePaymentSecret")]), default);
+        var order = await Checkout(ordering, (product.Variants.Single().Id, 1));
+        var request = Receipt(order, "COMMIT-FAILURE");
+        var stockBefore = await db.DigitalStockItems.AsNoTracking().SingleAsync();
+        var auditCount = await db.Trails.CountAsync();
+        var outboxCount = await db.OutboxMessages.CountAsync();
+        var failure = new CommitFailure();
+        var options = new DbContextOptionsBuilder<ApplicationDbContext>(scope.ServiceProvider.GetRequiredService<DbContextOptions<ApplicationDbContext>>())
+            .AddInterceptors(failure).Options;
+        await using (var failingDb = new ApplicationDbContext(options,
+            scope.ServiceProvider.GetRequiredService<ICurrentUser>(), scope.ServiceProvider.GetRequiredService<ISerializerService>(),
+            scope.ServiceProvider.GetRequiredService<IEventPublisher>()))
+        {
+            // This interceptor runs only after the real service and EF have flushed all writes.
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                Ordering(scope, dbOverride: failingDb).ConfirmPaymentAsync(order.Id, request, default));
+            Assert.Same(failure.Error, error);
+            Assert.True(failure.WasReached);
+            Assert.Empty(failingDb.ChangeTracker.Entries());
+        }
+        Assert.Empty(await db.PaymentReceipts.AsNoTracking().ToListAsync());
+        Assert.Empty(await db.DigitalDeliveries.AsNoTracking().ToListAsync());
+        Assert.Equal(outboxCount, await db.OutboxMessages.CountAsync());
+        Assert.Equal(auditCount, await db.Trails.CountAsync());
+        var afterFailure = await ordering.GetOrderAsync(order.Id, false, default);
+        Assert.Equal(order.Version, afterFailure.Version);
+        Assert.Equal(OrderStatus.PendingPayment, afterFailure.Status);
+        Assert.Equal(OrderPaymentStatus.Unpaid, afterFailure.PaymentStatus);
+        Assert.Equal(OrderFulfillmentStatus.Pending, afterFailure.FulfillmentStatus);
+        Assert.Null(afterFailure.PaidAtUtc);
+        var stockAfter = await db.DigitalStockItems.AsNoTracking().SingleAsync();
+        Assert.Equal(stockBefore.Version, stockAfter.Version);
+        Assert.Equal(DigitalStockState.Reserved, stockAfter.State);
+        Assert.Equal(stockBefore.ReservedForOrderItemId, stockAfter.ReservedForOrderItemId);
+        // The normal context has no failing interceptor; retry the exact request and operation.
+        var paid = await ordering.ConfirmPaymentAsync(order.Id, request, default);
+        Assert.Equal(OrderStatus.Completed, paid.Status);
+        Assert.Equal(OrderFulfillmentStatus.Completed, paid.FulfillmentStatus);
+        Assert.Single(await db.PaymentReceipts.AsNoTracking().ToListAsync());
+        Assert.Single(await db.DigitalDeliveries.AsNoTracking().ToListAsync());
+        Assert.Equal(outboxCount + 1, await db.OutboxMessages.CountAsync());
+        Assert.Equal("DigitalDeliveryReady", (await db.OutboxMessages.AsNoTracking().SingleAsync()).Type);
+        Assert.Equal("CommitFailurePaymentSecret", Assert.Single(await ordering.DigitalDeliveriesAsync(order.Id, default)).Content);
+        Assert.Equal(DigitalStockState.Delivered, (await db.DigitalStockItems.AsNoTracking().SingleAsync()).State);
+        Assert.Equal(paid.Version, (await ordering.ConfirmPaymentAsync(order.Id, request, default)).Version);
+        Assert.Single(await db.PaymentReceipts.ToListAsync());
+        Assert.Single(await db.DigitalDeliveries.ToListAsync());
+        Assert.Equal(outboxCount + 1, await db.OutboxMessages.CountAsync());
     }
 
     [Theory, Trait("Category", "ProviderIntegration")]

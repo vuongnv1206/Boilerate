@@ -9,6 +9,7 @@ using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Common.Exceptions;
 using Boilerate.Domain.DigitalInventory;
 using Boilerate.Domain.Inventory;
+using Boilerate.Domain.Messaging;
 using Boilerate.Domain.Ordering;
 using Boilerate.Domain.Payments;
 using Microsoft.AspNetCore.DataProtection;
@@ -190,6 +191,8 @@ public sealed partial class OrderingService
             }
         }
         db.DigitalDeliveries.AddRange(preparedDeliveries);
+        if (preparedDeliveries.Count > 0)
+            db.OutboxMessages.Add(OutboxMessage.DigitalDelivery(order.Id, actor.GetUserId()));
         order.CompleteFulfillment(order.Items.All(i => i.FulfillmentKind is ProductFulfillmentKind.DigitalUnique or ProductFulfillmentKind.DigitalShared));
     }
 

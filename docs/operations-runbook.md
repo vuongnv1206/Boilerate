@@ -14,11 +14,11 @@ Backup/restore phải giữ Orders, OrderItems, PaymentReceipts, DigitalDeliveri
 
 1. Đọc chi tiết đơn, đối chiếu số đơn, tổng/currency snapshot và khoản tiền thực nhận tại ngân hàng. Chỉ xác nhận đúng toàn bộ tổng VND; khoản thiếu/thừa cần xử lý riêng, chưa được hỗ trợ trong lát này.
 2. Gửi payment-confirmations với Version hiện tại, OperationId mới, reference ngân hàng duy nhất và ReceivedAtUtc thực tế. Nếu mất response, gửi lại chính payload/OperationId; không tạo mã mới hoặc gọi điều chỉnh kho để bù.
-3. Kiểm PaymentStatus và FulfillmentStatus riêng. Unique/Shared đủ hàng sẽ có snapshot trong Đơn hàng của tôi; Physical giữ reservation, ManualExtension chờ xử lý và không tự gia hạn. Core hiện chưa gửi email; notification outbox là bước kế tiếp.
+3. Kiểm PaymentStatus và FulfillmentStatus riêng. Unique/Shared đủ hàng sẽ có snapshot trong Đơn hàng của tôi; Physical giữ reservation, ManualExtension chờ xử lý và không tự gia hạn. Giao số commit cùng notification outbox; email chỉ hướng dẫn vào đơn, không gửi nội dung bí mật.
 4. Nếu Paid + NeedsReview, kiểm tồn từng SKU và audit metadata. `DigitalContentUnavailable` nghĩa là cần kiểm tra key ring/ciphertext; khôi phục đúng key, không ghi nội dung bí mật vào log. Hệ thống không giữ/cấp một phần mới khi thiếu hàng hoặc lỗi crypto; holds cũ vẫn còn và không bị expiry sau khi đã trả.
 5. Sau khi sửa nguyên nhân, đọc Version mới rồi gọi retry-fulfillment bằng quyền Order.Fulfill. Không ghi receipt thứ hai hoặc tự nhả Unique Delivered. Đơn Cancelled nhận tiền chỉ ghi Paid + NeedsReview, không tự giao hoặc cho retry; hoàn tiền/hủy sau nhận tiền thuộc mốc tiếp theo.
 
-Luồng xác nhận/giao số core không phụ thuộc SMTP hoặc worker email. Phân biệt code đã có, kiểm chứng local được ghi trong hồ sơ và nghiệm thu ngân hàng/SMTP/deployment thật; runbook này không xác nhận adapter đã đạt.
+Luồng xác nhận/giao số commit không phụ thuộc SMTP. Worker gửi thông báo DigitalDeliveryReady sau commit qua cấu hình SMTPEmailSettings hiện hữu (host/port/TLS/credential/from); không ghi secrets vào Git. Giữ Commerce worker bật để gửi/retry; khi email lỗi, khách vẫn đọc được nội dung đã giao trong đơn. Theo dõi backlog/oldestAge/deadLetters, sửa cấu hình rồi replay bằng Outbox.Replay; không xác nhận tiền/giao lại chỉ để gửi email. Crash sau gửi trước ack có thể lặp email, Message-Id ổn định không bảo đảm dedup. Phân biệt kiểm chứng mock local với nghiệm thu ngân hàng/SMTP/deployment thật; runbook này không xác nhận adapter đã đạt.
 
 ## 1. Các gate độc lập
 

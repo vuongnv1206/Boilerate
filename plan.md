@@ -5,8 +5,9 @@ Kế hoạch được quản lý song song với code trong [docs index](docs/RE
 - [Catalog v1: mục tiêu, thiết kế, thứ tự triển khai và trạng thái](docs/features/catalog-v1.md).
 - [MVP gọn cho một shop nhỏ](docs/features/shop-mvp.md).
 - [Giỏ hàng, đơn snapshot và giữ hàng](docs/features/ordering-checkout.md).
+- [Nhận tiền và tự động giao hàng số](docs/features/payment-digital-delivery.md).
 - [Lịch sử từng bước và commit](docs/history/README.md).
 - [Quy trình phát triển tài liệu cùng tính năng](docs/development-workflow.md).
 - [Bằng chứng kiểm chứng và giới hạn nghiệm thu](docs/verification/2026-10-17-commerce.md).
 
-Thiết kế database/API của Catalog đã được duyệt; Ordering, Payment và Shipping vẫn là các mốc tiếp theo. Không duy trì bản sao trạng thái ở file này để tránh lệch roadmap.
+Thiết kế database/API và trạng thái thực tế của từng lát được theo dõi ở các hồ sơ trên và roadmap. Không duy trì bản sao trạng thái ở file này để tránh lệch roadmap.

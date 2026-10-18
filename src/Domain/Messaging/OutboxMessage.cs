@@ -48,8 +48,22 @@ public sealed class OutboxMessage
             ActorId = actor,
             CorrelationId = correlation
         };
+
+    public static OutboxMessage DigitalDelivery(Guid orderId, Guid actor, string? correlation = null)
+    {
+        if (orderId == Guid.Empty)
+            throw new ArgumentException("An order ID is required for a digital delivery notification.", nameof(orderId));
+        return new()
+        {
+            Type = "DigitalDeliveryReady",
+            Payload = JsonSerializer.Serialize(new DigitalDeliveryReady(orderId)),
+            ActorId = actor,
+            CorrelationId = correlation
+        };
+    }
 }
 public sealed record MediaCleanupRequested(Guid MediaId);
+public sealed record DigitalDeliveryReady(Guid OrderId);
 // Stable rows serialize only topology/initialization operations; normal Product/stock writes have their own locks.
 public sealed class CommerceLock
 {

@@ -13,6 +13,7 @@
 - 2026-10-18: [Triển khai giỏ, đơn snapshot và giữ hàng](2026-10-18-15-ordering-checkout-implementation.md).
 - 2026-10-18: [Thiết kế nhận tiền và giao hàng số](2026-10-18-16-payment-delivery-design.md).
 - 2026-10-18: [Nhận tiền và tự động giao Unique/Shared](2026-10-18-17-payment-delivery-implementation.md).
+- 2026-10-18: [Email thông báo giao hàng số qua outbox](2026-10-18-18-digital-delivery-email.md).
 
 - 2026-10-18: [Lập kế hoạch nghiệm thu vận hành](2026-10-18-01-operations-plan.md).
 - 2026-10-18: [Gate runtime và trusted proxy](2026-10-18-02-runtime-gates.md).
