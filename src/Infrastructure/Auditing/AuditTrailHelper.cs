@@ -22,7 +22,7 @@ public static class AuditTrailHelper
         var trailEntries = new List<AuditTrail>();
 
         foreach (var entry in changeTracker.Entries().Where(e => e.Entity is IAuditableEntity ||
-            e.Entity is Boilerate.Domain.Ordering.CartItem or Boilerate.Domain.Ordering.OrderItem ||
+            e.Entity is Boilerate.Domain.Ordering.CartItem or Boilerate.Domain.Ordering.OrderItem or Boilerate.Domain.Shipping.ShipmentItem ||
             (e.Entity.GetType().Namespace == "Boilerate.Domain.Catalog" && e.Entity is not Boilerate.Domain.Catalog.CommerceEntity)))
         {
             if (entry.State is EntityState.Detached or EntityState.Unchanged)
@@ -68,7 +68,7 @@ public static class AuditTrailHelper
                 }
 
                 // Skip navigation/foreign keys nếu muốn gọn log
-                if (property.Metadata.IsForeignKey() && entry.Entity.GetType().Namespace is not ("Boilerate.Domain.Catalog" or "Boilerate.Domain.Inventory" or "Boilerate.Domain.Media" or "Boilerate.Domain.DigitalInventory" or "Boilerate.Domain.Ordering" or "Boilerate.Domain.Payments")) continue;
+                if (property.Metadata.IsForeignKey() && entry.Entity.GetType().Namespace is not ("Boilerate.Domain.Catalog" or "Boilerate.Domain.Inventory" or "Boilerate.Domain.Media" or "Boilerate.Domain.DigitalInventory" or "Boilerate.Domain.Ordering" or "Boilerate.Domain.Payments" or "Boilerate.Domain.Shipping")) continue;
 
                 switch (entry.State)
                 {

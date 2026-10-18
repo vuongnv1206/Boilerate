@@ -22,7 +22,7 @@ internal static class PaymentModel
         receipt.ToTable("PaymentReceipts", "Payments", t =>
         {
             t.HasCheckConstraint("CK_PaymentReceipt_Amount", "\"Amount\" >= 0 AND \"Amount\" = FLOOR(\"Amount\") AND \"Currency\" = 'VND'");
-            t.HasCheckConstraint("CK_PaymentReceipt_Source", "\"Source\" = 'ManualBankTransfer'");
+            t.HasCheckConstraint("CK_PaymentReceipt_Source", "\"Source\" IN ('ManualBankTransfer','ManualCOD')");
         });
         receipt.Property(x => x.Source).HasMaxLength(32).IsUnicode(false).IsRequired();
         receipt.Property(x => x.Reference).HasMaxLength(100).IsUnicode(false).IsRequired();

@@ -37,6 +37,7 @@ public sealed class Order : CommerceEntity, IAggregateRoot
     public OrderPaymentStatus PaymentStatus { get; private set; } = OrderPaymentStatus.Unpaid;
     public OrderFulfillmentStatus FulfillmentStatus { get; private set; } = OrderFulfillmentStatus.Pending;
     public DateTime? PaidAtUtc { get; private set; }
+    public bool PhysicalDispatchStarted { get; private set; }
     public string Currency { get; private set; } = "VND";
     public decimal Subtotal { get; private set; }
     public decimal ShippingAmount { get; private set; }
@@ -106,7 +107,7 @@ public sealed class Order : CommerceEntity, IAggregateRoot
 
     public void Cancel()
     {
-        if (PaymentStatus == OrderPaymentStatus.Paid || Status is not OrderStatus.PendingPayment and not OrderStatus.AwaitingProcessing)
+        if (PhysicalDispatchStarted || PaymentStatus == OrderPaymentStatus.Paid || Status is not OrderStatus.PendingPayment and not OrderStatus.AwaitingProcessing)
             throw new DomainException("Only pending orders can be cancelled.");
         Status = OrderStatus.Cancelled;
         Touch();
@@ -149,6 +150,18 @@ public sealed class Order : CommerceEntity, IAggregateRoot
         if (PaymentStatus != OrderPaymentStatus.Paid)
             throw new DomainException("Only paid orders can await fulfillment review.");
         FulfillmentStatus = OrderFulfillmentStatus.NeedsReview;
+        Touch();
+    }
+
+    public void RegisterPhysicalShipment(bool allItemsFulfilled)
+    {
+        if (!_items.Any(i => i.FulfillmentKind == ProductFulfillmentKind.Physical) ||
+            Status is OrderStatus.Cancelled or OrderStatus.Expired ||
+            (PaymentStatus != OrderPaymentStatus.Paid && PaymentMethod != OrderPaymentMethod.CashOnDelivery))
+            throw new DomainException("Physical shipping requires a valid paid or COD order containing physical items.");
+        PhysicalDispatchStarted = true;
+        FulfillmentStatus = allItemsFulfilled ? OrderFulfillmentStatus.Completed : OrderFulfillmentStatus.InProgress;
+        Status = allItemsFulfilled && PaymentStatus == OrderPaymentStatus.Paid ? OrderStatus.Completed : OrderStatus.AwaitingProcessing;
         Touch();
     }
 }

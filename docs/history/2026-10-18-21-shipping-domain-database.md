@@ -1,0 +1,8 @@
+# 2026-10-18 — Bước21: domain và database giao vật lý
+
+- Đã viết: Shipment/ShipmentItem, partial consume reservation, movement âm giữ tổng OnHand/Reserved, Order chặn hủy sau xuất, source ManualCOD cho receipt. Mappings PK/composite FK/unique/check/append-only và audit được bổ sung cùng model.
+- Thiết kế: [hồ sơ shipping](../features/physical-shipping.md). ShipmentItem giữ movement ID, không copy địa chỉ hoặc hàng số. Quy tắc tổng quantity theo đơn được kiểm tra dưới ordering gate; không dựa riêng check constraint.
+- Migration Down sẽ chặn cả lịch sử payment/delivery và active holds hiện hữu trước DDL, để chuỗi downgrade không gỡ migration mới rồi mới thất bại ở guard của migration cũ. Điều này có thể chặn rollback shipping ngay cả khi receipt không liên quan shipping; ưu tiên forward migration hoặc restore backup đầy đủ.
+- Kiểm chứng ban đầu: domain tests viết trước build/scaffold. Sau đó Host build0 lỗi/1690 warnings, test project build0 lỗi/2192 warnings; migrations scaffold đạt MSSQL20261018151738/PostgreSQL20261018151746. Bộ targeted62/62 đạt gồm domain23 và shipping migration4 trên hai DB; [báo cáo](../verification/2026-10-18-physical-shipping.md) ghi các ca khác và lệnh đầy đủ. Không suy ra nghiệm thu deployment/carrier.
+- File: Domain Shipping/Inventory/Ordering/Payments, Persistence Shipping/Ordering/Payments/context, AuditTrailHelper, domain/migration test files.
+- Tiếp theo: commit phần nền build được; hoàn tất use case/API/ACL/docs và regression trong commit riêng. Báo cáo targeted cũng chứa tests của API đang được chuẩn bị cho commit tiếp nối; không suy ra runtime acceptance từ source trong working tree.

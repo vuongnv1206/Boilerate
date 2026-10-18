@@ -48,7 +48,7 @@ Thứ tự khóa vẫn ordering gate → ProductTypes → Products → Inventory
 
 Shipment chỉ Dispatched/Delivered: endpoint tạo là xuất giao thật, không phải nháp. Không được sửa/xóa lịch sử hoặc đổi số lượng đã xuất. DeliveryOperationId là mã retry riêng; lặp operation đúng shipment/state trả kết quả cũ, dùng cho shipment khác conflict; version cũ với operation mới conflict. Đơn đã giao hết vật lý chỉ hoàn tất fulfillment nếu các món số đã có đủ snapshot và không còn ManualExtension. COD chưa thu có thể FulfillmentCompleted nhưng Order vẫn AwaitingProcessing; sau receipt đầy đủ mới Order.Completed. Đơn mixed phải Paid trước dispatch.
 
-Migration mới `PhysicalShipping` trên SQL Server/PostgreSQL, không sửa năm migrations cũ. Existing reservations backfill ConsumedQuantity0; Orders PhysicalDispatchStartedfalse. Down chặn shipment, consumed stock hoặc ManualCOD receipt trước DDL để không mất lịch sử. Theo chính sách baseline repo, không ETL/compatibility API cũ. Backup toàn DB + key/media theo runbook.
+Migration mới `PhysicalShipping` trên SQL Server/PostgreSQL, không sửa năm migrations cũ. Existing reservations backfill ConsumedQuantity0; Orders PhysicalDispatchStartedfalse. Down chặn shipment, consumed stock hoặc ManualCOD receipt trước DDL để không mất lịch sử; guard còn chặn receipts/digital deliveries/Paid/active holds trước đó để downgrade cả chuỗi không gỡ một phần rồi thất bại ở migration cũ. Ngay cả receipt không liên quan shipping cũng có thể chặn rollback; ưu tiên forward migration/restore backup. Theo chính sách baseline repo, không ETL/compatibility API cũ. Backup toàn DB + key/media theo runbook.
 
 ### API, quyền và vận hành
 
@@ -74,22 +74,30 @@ ShipmentDto gồm Id, OrderId, OrderVersion, Version, Carrier, TrackingNumber, S
 | Bước | Công việc | Đầu ra | Trạng thái |
 |---|---|---|---|
 | 1 | Chốt thiết kế, docs/history | Quan hệ/API/quy tắc này | Đã ghi trước code |
-| 2 | Domain + persistence + migrations + domain tests | State/ledger/constraints; build được | Chưa bắt đầu |
-| 3 | Service/API/ACL + integration | Dispatch/delivered/owner/COD end-to-end | Chưa bắt đầu |
-| 4 | Review/regression hai DB | Race/rollback/replay/permission/migration | Chưa chạy |
+| 2 | Domain + persistence + migrations + domain tests | State/ledger/constraints; build được | Build/scaffold đạt; domain23/23, shipping migration4/4 local |
+| 3 | Service/API/ACL + integration | Dispatch/delivered/owner/COD end-to-end | Đang triển khai |
+| 4 | Review/regression hai DB | Race/rollback/replay/permission/migration | Targeted62/62 đạt; regression đang chạy |
 | 5 | Đồng bộ docs/bằng chứng/commit | Các lát coherent, không khẳng định deployment | Cập nhật song song |
 
 ## 4. Nhật ký triển khai
 
 2026-10-18 — đọc roadmap/MVP/payment và code hiện tại; lập thiết kế trước triển khai. Chưa chạy test mới. [History bước20](../history/2026-10-18-20-physical-shipping-design.md).
 
+2026-10-18 — model/mappings/domain tests đã viết; service bổ sung dispatch/delivered/COD và tránh re-reserve hàng COD đã xuất. Chưa kiểm chứng; [history bước21](../history/2026-10-18-21-shipping-domain-database.md).
+
+2026-10-18 — Host build0 lỗi/1690 warnings; integration22 cases đã viết, migrations đang scaffold. [History bước22](../history/2026-10-18-22-shipping-api-cod.md) ghi ACL/idempotency/COD và chặn retry full-stock sau dispatch; chưa coi tests đã đạt.
+
+2026-10-18 — scaffold MSSQL20261018151738/PostgreSQL20261018151746 đạt; build tests0 lỗi/2192 warnings. Bộ targeted shipping/baseline/ordering-payment migrations đang chạy; [báo cáo](../verification/2026-10-18-physical-shipping.md).
+
+2026-10-18 — targeted62/62 đạt (domain23, integration22, shipping migration4 và baseline/ordering/payment regression phù hợp); bắt đầu regression toàn bộ trừ Container/Recovery/Template. Chưa có carrier/SMTP/gateway thật được nghiệm thu.
+
 ## 5. Kiểm chứng và nghiệm thu
 
-Chưa build/test lát này. Kết quả276/276 thuộc source payment trước đó, không thay thế kiểm chứng shipping. Chưa có carrier tự động/SMTP/gateway/Linux deployment được nghiệm thu từ thay đổi này.
+Build/scaffold đã đạt, targeted tests đang chạy; kết quả từng lượt ở [báo cáo](../verification/2026-10-18-physical-shipping.md). Kết quả276/276 thuộc source payment trước đó, không thay thế kiểm chứng shipping. Chưa có carrier tự động/SMTP/gateway/Linux deployment được nghiệm thu từ thay đổi này.
 
 ## 6. Lịch sử commit
 
-Chưa có commit lát này; chỉ ghi hash khi tồn tại.
+`27d9e2b` — thiết kế shipping/COD trước code. Commit triển khai chỉ ghi khi tồn tại.
 
 ## 7. Còn lại
 

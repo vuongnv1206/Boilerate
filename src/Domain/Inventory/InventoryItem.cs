@@ -69,6 +69,16 @@ public sealed class InventoryItem : CommerceEntity, IAggregateRoot
         Reserved -= quantity;
         Touch();
     }
+    public StockMovement ConsumeReserved(Guid operationId, int quantity, string reason, Guid actor)
+    {
+        if (operationId == Guid.Empty || actor == Guid.Empty || quantity < 1 || quantity > Reserved || quantity > OnHand)
+            throw new DomainException("Reserved stock consumption requires operation and actor IDs and a quantity within held inventory.");
+        reason = CatalogRules.Required(reason, 1000, "Reason");
+        OnHand -= quantity;
+        Reserved -= quantity;
+        Touch();
+        return new StockMovement(Id, operationId, -quantity, OnHand, reason, actor);
+    }
 }
 public sealed class StockMovement : BaseEntity
 {

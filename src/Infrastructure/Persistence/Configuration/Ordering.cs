@@ -50,6 +50,7 @@ internal static class OrderingModel
         order.Property(x => x.Total).HasPrecision(18, 2);
         order.Property(x => x.PaymentStatus).HasDefaultValue(OrderPaymentStatus.Unpaid);
         order.Property(x => x.FulfillmentStatus).HasDefaultValue(OrderFulfillmentStatus.Pending);
+        order.Property(x => x.PhysicalDispatchStarted).HasDefaultValue(false);
         order.Property(x => x.RecipientName).HasMaxLength(256).IsRequired();
         order.Property(x => x.Email).HasMaxLength(256).IsRequired();
         order.Property(x => x.Phone).HasMaxLength(30).IsRequired();
@@ -84,8 +85,10 @@ internal static class OrderingModel
         reservation.ToTable("PhysicalStockReservations", "Ordering", t =>
         {
             t.HasCheckConstraint("CK_PhysicalStockReservation_Quantity", "\"Quantity\" > 0");
-            t.HasCheckConstraint("CK_PhysicalStockReservation_State", "\"State\" IN (1,2)");
+            t.HasCheckConstraint("CK_PhysicalStockReservation_State", "(\"State\" = 1 AND \"ConsumedQuantity\" < \"Quantity\") OR (\"State\" = 2 AND \"ConsumedQuantity\" = 0) OR (\"State\" = 3 AND \"ConsumedQuantity\" = \"Quantity\")");
+            t.HasCheckConstraint("CK_PhysicalStockReservation_Consumed", "\"ConsumedQuantity\" >= 0 AND \"ConsumedQuantity\" <= \"Quantity\"");
         });
+        reservation.Property(x => x.ConsumedQuantity).HasDefaultValue(0);
         reservation.HasIndex(x => x.OrderItemId).IsUnique();
         reservation.HasOne<OrderItem>().WithMany().HasForeignKey(x => new { x.OrderItemId, x.VariantId })
             .HasPrincipalKey(x => new { x.Id, x.VariantId }).OnDelete(DeleteBehavior.Restrict);

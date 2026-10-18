@@ -20,7 +20,7 @@ public sealed class PaymentReceipt : CommerceEntity, IAggregateRoot
     }
 
     public PaymentReceipt(Guid orderId, Guid operationId, string requestHash, string reference, decimal amount,
-        string currency, DateTime receivedAtUtc, DateTime now)
+        string currency, DateTime receivedAtUtc, DateTime now, string source = "ManualBankTransfer")
     {
         if (orderId == Guid.Empty || operationId == Guid.Empty)
             throw new DomainException("Order and payment operation IDs are required.");
@@ -28,6 +28,8 @@ public sealed class PaymentReceipt : CommerceEntity, IAggregateRoot
             throw new DomainException("RequestHash must be a SHA-256 hexadecimal value.");
         if (receivedAtUtc.Kind != DateTimeKind.Utc || now.Kind != DateTimeKind.Utc || receivedAtUtc > now)
             throw new DomainException("Payment receipt time must be UTC and cannot be in the future.");
+        if (source is not "ManualBankTransfer" and not "ManualCOD")
+            throw new DomainException("Only manual bank transfer or COD payment receipts are supported.");
         var validReference = CatalogRules.Code(reference);
         var validCurrency = CatalogRules.Required(currency, 3, "Currency").ToUpperInvariant();
         if (validCurrency != "VND")
@@ -36,6 +38,7 @@ public sealed class PaymentReceipt : CommerceEntity, IAggregateRoot
         OrderId = orderId;
         OperationId = operationId;
         RequestHash = requestHash;
+        Source = source;
         Reference = validReference;
         NormalizedReference = validReference.ToUpperInvariant();
         Amount = amount;

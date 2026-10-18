@@ -1566,6 +1566,11 @@ namespace Boilerate.Migrators.MSSQL.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<bool>("PhysicalDispatchStarted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("RecipientName")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -1697,6 +1702,11 @@ namespace Boilerate.Migrators.MSSQL.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("ConsumedQuantity")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
                     b.Property<Guid>("CreatedBy")
                         .HasColumnType("uniqueidentifier");
 
@@ -1741,9 +1751,11 @@ namespace Boilerate.Migrators.MSSQL.Migrations
 
                     b.ToTable("PhysicalStockReservations", "Ordering", t =>
                         {
+                            t.HasCheckConstraint("CK_PhysicalStockReservation_Consumed", "\"ConsumedQuantity\" >= 0 AND \"ConsumedQuantity\" <= \"Quantity\"");
+
                             t.HasCheckConstraint("CK_PhysicalStockReservation_Quantity", "\"Quantity\" > 0");
 
-                            t.HasCheckConstraint("CK_PhysicalStockReservation_State", "\"State\" IN (1,2)");
+                            t.HasCheckConstraint("CK_PhysicalStockReservation_State", "(\"State\" = 1 AND \"ConsumedQuantity\" < \"Quantity\") OR (\"State\" = 2 AND \"ConsumedQuantity\" = 0) OR (\"State\" = 3 AND \"ConsumedQuantity\" = \"Quantity\")");
                         });
                 });
 
@@ -1828,7 +1840,123 @@ namespace Boilerate.Migrators.MSSQL.Migrations
                         {
                             t.HasCheckConstraint("CK_PaymentReceipt_Amount", "\"Amount\" >= 0 AND \"Amount\" = FLOOR(\"Amount\") AND \"Currency\" = 'VND'");
 
-                            t.HasCheckConstraint("CK_PaymentReceipt_Source", "\"Source\" = 'ManualBankTransfer'");
+                            t.HasCheckConstraint("CK_PaymentReceipt_Source", "\"Source\" IN ('ManualBankTransfer','ManualCOD')");
+                        });
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Shipping.Shipment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Carrier")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeliveredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("DeliveryOperationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("DispatchedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("LastModifiedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("LastModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TrackingNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeliveryOperationId")
+                        .IsUnique()
+                        .HasFilter("[DeliveryOperationId] IS NOT NULL");
+
+                    b.HasIndex("OperationId")
+                        .IsUnique();
+
+                    b.HasIndex("OrderId", "DispatchedAtUtc", "Id");
+
+                    b.ToTable("Shipments", "Shipping", t =>
+                        {
+                            t.HasCheckConstraint("CK_Shipment_Delivery", "(\"Status\" = 1 AND \"DeliveredAtUtc\" IS NULL AND \"DeliveryOperationId\" IS NULL) OR (\"Status\" = 2 AND \"DeliveredAtUtc\" IS NOT NULL AND \"DeliveredAtUtc\" >= \"DispatchedAtUtc\" AND \"DeliveryOperationId\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_Shipment_Status", "\"Status\" IN (1,2)");
+                        });
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Shipping.ShipmentItem", b =>
+                {
+                    b.Property<Guid>("ShipmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrderItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("FulfillmentKind")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("StockMovementId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ShipmentId", "OrderItemId");
+
+                    b.HasIndex("StockMovementId")
+                        .IsUnique();
+
+                    b.HasIndex("ShipmentId", "OrderId");
+
+                    b.HasIndex("OrderItemId", "OrderId", "VariantId", "FulfillmentKind");
+
+                    b.ToTable("ShipmentItems", "Shipping", t =>
+                        {
+                            t.HasCheckConstraint("CK_ShipmentItem_FulfillmentKind", "\"FulfillmentKind\" = 1");
+
+                            t.HasCheckConstraint("CK_ShipmentItem_Quantity", "\"Quantity\" BETWEEN 1 AND 999");
                         });
                 });
 
@@ -2270,6 +2398,38 @@ namespace Boilerate.Migrators.MSSQL.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Boilerate.Domain.Shipping.Shipment", b =>
+                {
+                    b.HasOne("Boilerate.Domain.Ordering.Order", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Shipping.ShipmentItem", b =>
+                {
+                    b.HasOne("Boilerate.Domain.Inventory.StockMovement", null)
+                        .WithMany()
+                        .HasForeignKey("StockMovementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Boilerate.Domain.Shipping.Shipment", null)
+                        .WithMany("Items")
+                        .HasForeignKey("ShipmentId", "OrderId")
+                        .HasPrincipalKey("Id", "OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Boilerate.Domain.Ordering.OrderItem", null)
+                        .WithMany()
+                        .HasForeignKey("OrderItemId", "OrderId", "VariantId", "FulfillmentKind")
+                        .HasPrincipalKey("Id", "OrderId", "VariantId", "FulfillmentKind")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
                     b.HasOne("Boilerate.Domain.Identity.ApplicationUser", null)
@@ -2361,6 +2521,11 @@ namespace Boilerate.Migrators.MSSQL.Migrations
                 });
 
             modelBuilder.Entity("Boilerate.Domain.Ordering.Order", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Shipping.Shipment", b =>
                 {
                     b.Navigation("Items");
                 });
