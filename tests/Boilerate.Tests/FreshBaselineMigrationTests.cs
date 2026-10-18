@@ -21,10 +21,11 @@ public sealed class FreshBaselineMigrationTests
         await db.Database.MigrateAsync();
 
         var migrations = (await db.Database.GetAppliedMigrationsAsync()).ToArray();
-        Assert.Equal(3,migrations.Length);
+        Assert.Equal(4,migrations.Length);
         Assert.EndsWith("_InitialFoundation",migrations[0],StringComparison.Ordinal);
         Assert.EndsWith("_CommerceCatalog",migrations[1],StringComparison.Ordinal);
         Assert.EndsWith("_DigitalInventory",migrations[2],StringComparison.Ordinal);
+        Assert.EndsWith("_OrderingCheckout",migrations[3],StringComparison.Ordinal);
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
         Assert.False(db.Database.HasPendingModelChanges());
         Assert.Empty(await db.Users.ToListAsync());
@@ -53,6 +54,8 @@ public sealed class FreshBaselineMigrationTests
         Assert.Contains("Notifications.NotificationReceipts.ReadOn", columns);
         Assert.Contains("Catalog.Products.FulfillmentKind", columns);
         Assert.Contains("DigitalInventory.DigitalStockItems.ProtectedContent", columns);
+        Assert.Contains("Inventory.InventoryItems.Reserved", columns);
+        Assert.Contains("Ordering.OrderItems.UnitPrice", columns);
     }
 
     [Theory, Trait("Category", "ProviderIntegration")]

@@ -9,6 +9,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Boilerate.Application.Ordering;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace Boilerate.Infrastructure.Commerce;
 
 public static class CommerceStartup
@@ -19,12 +21,37 @@ public static class CommerceStartup
         services.AddScoped<CommerceUnitOfWork>();
         services.AddScoped<ICommerceService, CommerceService>();
         services.AddScoped<ICommerceMediaService, CommerceMediaService>();
+        services.AddOptions<OrderingSettings>().Bind(config.GetSection("Ordering")).ValidateDataAnnotations()
+            .Validate(s => decimal.Truncate(s.FlatShippingAmount) == s.FlatShippingAmount, "Shipping must be whole VND.").ValidateOnStart();
+        services.TryAddSingleton<TimeProvider>(TimeProvider.System);
+        services.AddScoped<IOrderingService, OrderingService>();
         services.AddScoped<OutboxProcessor>();
         services.AddSingleton(new LocalFileStorageService(Path.GetFullPath(config["Storage:Root"] ?? "Files")));
         services.AddSingleton<IFileStorageService>(sp => sp.GetRequiredService<LocalFileStorageService>());
         if (config.GetValue<bool>("Modules:Catalog:Enabled") && config.GetValue("Commerce:WorkerEnabled", true))
+        {
             services.AddHostedService<CommerceWorker>();
+            services.AddHostedService<OrderExpirationWorker>();
+        }
         return services;
+    }
+}
+internal sealed class OrderExpirationWorker(IServiceScopeFactory scopes, IOptions<OrderingSettings> settings,
+    ILogger<OrderExpirationWorker> logger) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(settings.Value.WorkerIntervalSeconds));
+        while (await timer.WaitForNextTickAsync(stoppingToken))
+        {
+            try
+            {
+                using var scope = scopes.CreateScope();
+                await scope.ServiceProvider.GetRequiredService<IOrderingService>().ExpireAsync(stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
+            catch (Exception ex) { logger.LogWarning("Order expiration failed: {ErrorType}", ex.GetType().Name); }
+        }
     }
 }
 internal sealed class CommerceWorker(IServiceScopeFactory scopes, IOptions<CommerceSettings> settings, ILogger<CommerceWorker> logger) : BackgroundService

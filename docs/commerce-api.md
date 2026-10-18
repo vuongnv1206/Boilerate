@@ -5,7 +5,7 @@ Thiết kế quan hệ, khóa và kiểu cột: [commerce-database.md](commerce-
 ## Khởi tạo
 
 1. Cấu hình provider/connection/JWT secret của installation mới theo README.
-2. Apply toàn bộ migrations InitialFoundation, CommerceCatalog và DigitalInventory bằng EF CLI của provider đã chọn; Host không tự migrate. Installation đã ở CommerceCatalog chỉ apply migration còn thiếu.
+2. Apply toàn bộ migrations InitialFoundation, CommerceCatalog, DigitalInventory và OrderingCheckout bằng EF CLI của provider đã chọn; Host không tự migrate. Installation đã ở baseline repo chỉ apply migration còn thiếu.
 3. Bootstrap admin, hoặc chạy `--register-capabilities` rồi `--grant-admin-capabilities` có chủ đích với Catalog bật. Restart không tự cấp quyền mới.
 4. Login, gọi POST `/api/inventory/initialize` một lần; gọi lại trả cùng kho MAIN. Quyền `Inventory.Initialize`.
 5. Tạo ProductType/schema, Category, upload media; sau đó tạo Product/SKU và chọn cách giao. Physical có balance ban đầu bằng 0, nhập kho bằng adjustment riêng; hàng số dùng API kho số bên dưới, không cần MAIN để tạo SKU số.
@@ -99,7 +99,41 @@ Shared PUT nhận `{productId,variantId,version,content,isActive}`; tạo/cập 
 
 List/response import/update không trả plaintext hay ciphertext. Reveal trả `{id,content}` sau kiểm quyền riêng và lưu audit; các response kho số no-store. Quyền kiểm cả ở service nên Product.Update hoặc DigitalInventory.View không thay thế được Import/Update/Reveal. Không nhét secret vào custom fields, description hoặc reference công khai; nhập qua kho số.
 
-Public InStock dùng balance Physical, dòng Unique Available, nội dung Shared Available, hoặc nhận yêu cầu ManualExtension; luôn xét SKU active. Nội dung Shared/Unique không có trong public Product. Publish vẫn cho sản phẩm hết hàng; quản lý kho không tự publish Draft.
+Public InStock dùng Available=OnHand-Reserved với Physical, dòng Unique Available, nội dung Shared Available, hoặc nhận yêu cầu ManualExtension; luôn xét SKU active. Nội dung Shared/Unique không có trong public Product. Publish vẫn cho sản phẩm hết hàng; quản lý kho không tự publish Draft. State kho số thêm Reserved=3, có owner dòng đơn và không cho admin bật/tắt khi đang giữ.
+
+### Giỏ, đơn hàng và giữ hàng
+
+Lát này dùng đăng nhập Identity hiện có; không nhận CustomerId trong request. Giữ chính sách self-registration của installation: nếu đang tắt thì operator tạo tài khoản khách, hoặc cấu hình luồng đăng ký hiện có trước vận hành. Cart chỉ lưu lựa chọn/số lượng, chưa cam kết hàng. Tài khoản khách không cần Order.View để đọc đơn của chính mình; quyền này dành cho admin đọc mọi đơn.
+
+| Endpoint | Nội dung/quyền |
+|---|---|
+| GET/PUT `/api/cart` | Giỏ của khách đăng nhập; PUT thay toàn bộ items với version |
+| POST `/api/orders/checkout` | Tạo đơn, giữ hàng nguyên tử và clear giỏ; OperationId chống trùng |
+| GET `/api/orders/mine?page=1&size=20` | Danh sách đơn của chính khách |
+| GET `/api/orders/{id}` | Chi tiết đơn của khách; sai owner trả404 |
+| POST `/api/orders/{id}/cancel` | `{version}`; hủy/nhả hàng đơn chờ xử lý của khách |
+| GET `/api/admin/orders`, GET `/{id}` | Mọi đơn; Order.View ở controller và service |
+| POST `/api/admin/orders/{id}/cancel` | `{version}`; Order.Cancel ở controller và service |
+
+GET cart chưa tồn tại trả Id Guid.Empty, Version null, Items rỗng. PUT đầu tiên dùng version null; các lần sau dùng Version trả về. Ví dụ:
+
+```json
+{"version":null,"items":[{"variantId":"<sku-id>","quantity":2}]}
+```
+
+Response cart gồm Items với tên/SKU/giá hiện tại/IsAvailable theo số lượng, Subtotal, ShippingAmount, Total và CanCheckout từ server. SKU ẩn/ngừng bán vẫn có thể xuất hiện trong giỏ cũ với IsAvailable=false; checkout sẽ từ chối. Tổng giỏ quá giới hạn tiền Order vẫn đọc/sửa được, giữ Version và CanCheckout=false để khách giảm số lượng; không lưu giỏ xong rồi mất khả năng đọc. Giỏ rỗng cũng CanCheckout=false. Max50 SKU/giỏ và quantity1..999.
+
+Checkout:
+
+```json
+{"cartVersion":"<cart-version>","operationId":"<new-guid>","paymentMethod":1,"recipientName":"<name>","email":"<email>","phone":"<phone>","shippingAddress":"<required-for-physical>","expectedTotal":300000}
+```
+
+PaymentMethod Prepaid=1 hoặc CashOnDelivery=2; COD chỉ thuần vật lý. Server tính giá/ship, đối chiếu ExpectedTotal, rồi lưu snapshot tên/SKU/options/cách giao/giá/số lượng. Tổng đổi trả409 trước khi giữ hàng, client tải lại giỏ và xin xác nhận. Cùng OperationId và payload chuẩn hóa trả lại đơn cũ mà không clear giỏ/giữ hàng lần hai; payload khác trả409. Nếu client đổi cartVersion/tổng sau conflict thì dùng OperationId mới; không retry ghi đè.
+
+Đơn trả trước giữ mặc định30phút theo `Ordering__ReservationMinutes`; physical Reserved không giảm OnHand, Unique chuyển Reserved theo dòng đơn. Shared/Extension không giữ độc quyền. OrderStatus PendingPayment=1/AwaitingProcessing=2(COD)/Cancelled=3/Expired=4. Chưa có Paid/Delivered, PaymentAttempt, giao mã hay email. Hủy/hết hạn nhả holds, gọi lại không nhả hai lần; version cũ trả409. Worker và lượt checkout thu gom expiry bounded batch, không hồi sinh đơn tự động. Thanh toán đến muộn/đúng hạn nhưng thông báo muộn xử lý ở mốc Payment sau.
+
+Response cart/order no-store và không có secret/ciphertext/stock item ID. Phí ship phẳng cấu hình `Ordering__FlatShippingAmount` (mặc định0, whole VND), chỉ đơn có vật lý; thiết lập phí phù hợp trước khi chạy shop. Worker `Ordering__WorkerIntervalSeconds` mặc định15, batch50 (max100); tắt cùng `Commerce__WorkerEnabled=false` cho kiểm thử/operator, không tắt khi cần xử lý đơn tự động trừ khi có runner khác.
 
 ### Tồn kho
 
@@ -107,7 +141,7 @@ Public InStock dùng balance Physical, dòng Unique Available, nội dung Shared
 {"inventoryItemId":"<balance-id>","version":"<balance-version>","operationId":"<new-guid>","delta":10,"reason":"Nhập lô đầu"}
 ```
 
-Gửi lại đúng operationId/target/delta/reason trả movement cũ kể cả version đã cũ; khác nội dung trả 409. Giảm kho dùng delta âm; DB balance không âm. Không chỉnh quantity qua Product form, không sửa/xóa movement. Endpoint adjustment chỉ dùng cho Physical; hàng số đọc từ DigitalInventory.
+Gửi lại đúng operationId/target/delta/reason trả movement cũ kể cả version đã cũ; khác nội dung trả 409. Giảm kho dùng delta âm; DB balance không dưới Reserved. Inventory DTO trả OnHand/Reserved/Available. Không chỉnh quantity qua Product form, không sửa/xóa movement. Endpoint adjustment chỉ dùng cho Physical; hàng số đọc từ DigitalInventory.
 
 ### Trường tùy chỉnh và search
 

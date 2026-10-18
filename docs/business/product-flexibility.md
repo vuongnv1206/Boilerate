@@ -39,7 +39,7 @@ Giữ hàng và trả tiền muộn đã chốt ở mục cam kết hàng bên d
 | ProductType–Product 1–N; Product–Category N–N; typed fields, options/SKU, giá SKU | Đã triển khai trong Catalog v1; xem [database hiện hành](../commerce-database.md) |
 | Tự cấu hình loại/trường/options qua các khả năng Catalog hiện có | Có nền tảng backend; trải nghiệm quản trị tổng thể và độ đầy đủ theo yêu cầu mới chưa được nghiệm thu |
 | Chọn cách bán/giao vật lý/Unique/Shared/Extension | Đã có [cấu hình và kho số](../features/digital-inventory.md); giao theo đơn/thanh toán/gia hạn còn ở mốc sau |
-| Giỏ/đơn chung vật lý + số; trả trước toàn bộ khi có hàng số | Đã chốt quy tắc; chưa có bảng Order/Payment/fulfillment hoặc luồng checkout |
+| Giỏ/đơn chung vật lý + số; trả trước toàn bộ khi có hàng số | Đã có [Cart/Order/giữ hàng](../features/ordering-checkout.md); chưa có nhận tiền/giao theo đơn |
 | Rule/workflow builder tùy ý, page builder, PC build/trừ tồn linh kiện | Chưa đưa vào MVP |
 
 ## Cam kết hàng đã chốt
@@ -50,7 +50,7 @@ Giữ hàng và trả tiền muộn đã chốt ở mục cam kết hàng bên d
 - Đây là quyết định về trả tiền muộn. Thông báo về muộn cho lần trả đúng hạn cần được đối chiếu với nguồn xác nhận tiền và tình trạng hàng; chưa gán một kết quả tài chính tự động cho trường hợp này.
 - Thời hạn 30 phút là cho đơn chờ trả trước. Chưa áp thời hạn đó cho COD, hàng đã trả tiền hoặc yêu cầu gia hạn đang chờ nhân viên.
 
-Chưa có reservation trong code Catalog hiện hành. Các quy tắc trên sẽ được triển khai cùng giỏ/đơn; chưa xác định bảng/cột và migration mới.
+Reservation đã được bổ sung cùng [Cart/Order](../features/ordering-checkout.md): Reserved vật lý và Unique owner theo dòng đơn. Xác nhận tiền/trả muộn vẫn thuộc mốc Payment tiếp theo, chưa có code nhận tiền hoặc hoàn tiền.
 
 ## Các bước và quyết định còn mở
 

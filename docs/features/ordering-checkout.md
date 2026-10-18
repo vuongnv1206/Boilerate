@@ -1,6 +1,6 @@
 # Giỏ hàng, đơn hàng và giữ hàng — Shop MVP bước 2
 
-Ngày bắt đầu/cập nhật: 2026-10-18, Asia/Saigon. Trạng thái: đang thiết kế/triển khai theo [MVP](shop-mvp.md). Source đầu đợt `31a0109`.
+Ngày bắt đầu/cập nhật: 2026-10-18, Asia/Saigon. Trạng thái: **đã triển khai và kiểm chứng local**, bước 2 của [MVP](shop-mvp.md); chưa nghiệm thu deployment. Source đầu đợt `31a0109`.
 
 ## 1. Mục tiêu và phạm vi
 
@@ -55,7 +55,7 @@ Customer endpoints yêu cầu đăng nhập; ownership kiểm ở service bằng
 
 | Endpoint | Hợp đồng |
 |---|---|
-| GET /api/cart | CartDto với version và items/tên/giá hiện tại; chưa có cart trả Id empty/Version null/items rỗng |
+| GET /api/cart | CartDto với version, items/tên/giá hiện tại, subtotal/shipping/total và CanCheckout; chưa có cart trả Id empty/Version null/items rỗng |
 | PUT /api/cart | SaveCart(Version nullable khi chưa có, Items[VariantId,Quantity]); thay toàn bộ giỏ; không giữ kho |
 | POST /api/orders/checkout | Checkout(CartVersion,OperationId,PaymentMethod,RecipientName,Email,Phone,ShippingAddress?,ExpectedTotal); server tính tổng, snapshot và giữ hàng |
 | GET /api/orders/mine | Page<OrderSummary> của khách |
@@ -71,21 +71,27 @@ Response no-store. Order/cart không có ProtectedContent hoặc ID kho số đ�
 | Bước | Đầu ra | Trạng thái |
 |---|---|---|
 | 1 | Kế hoạch/cardinality/API/transaction | Đã ghi trước code |
-| 2 | Domain + contracts + persistence + migration | Đang triển khai |
-| 3 | Cart/checkout/query/cancel/expiry/worker và ACL | Đang triển khai |
-| 4 | Domain, hai provider, concurrency/idempotency/rollback/expiry/security | Chưa chạy |
-| 5 | Docs/API/verification/history và commit | Theo bước |
+| 2 | Domain + contracts + persistence + migration | Đã triển khai; fresh/constraints/Down guard/Down-Up hai provider đạt |
+| 3 | Cart/checkout/query/cancel/expiry/worker và ACL | Đã triển khai; provider/HTTP/stock race/expiry đạt |
+| 4 | Domain, hai provider, concurrency/idempotency/rollback/expiry/security | Regression cuối222/222 đạt, gồm12 domain Ordering,24 integration Ordering và2 migration cases; không cộng các lượt trùng |
+| 5 | Docs/API/verification/history và commit | Đã cập nhật hợp đồng, báo cáo/history và commit theo lát |
 
 2026-10-18: user yêu cầu tiếp tục. Đọc index/roadmap/MVP và code trước khi thiết kế. Không đổi mục tiêu một shop, quản trị linh hoạt tham khảo Webflow. Lát này không có frontend/admin UI.
 
+2026-10-18: code domain/API/persistence/worker đã tích hợp. Sửa Cart.ReplaceItems theo diff để giữ identity EF của dòng cùng SKU; đổi Inventory.Adjust sang type→product→balance sau review deadlock; bổ sung Cart quote gồm shipping/total và canonical decimal trong RequestHash. Domain12/12 và22provider cases đạt, bao gồm nhiều worker/checkout/adjust đồng thời. Các lượt build tích hợp ban đầu có lỗi thiếu using CommerceLock, đã sửa/build lại; chưa coi là kết quả nghiệm thu deployment.
+
+2026-10-18: review phát hiện Money bounds trên MapCart sau SaveCart có thể làm giỏ đã commit không đọc được khi tổng quá lớn hoặc giá tăng. Giữ quote/cart/version đọc được, thêm CanCheckout=false cho tổng không thể checkout/giỏ rỗng; Order vẫn bảo vệ miền tiền khi tạo. Bổ sung provider regression giảm/tăng/xóa giỏ ở giới hạn này. Migration guard/Down-Up đạt2/2; regression cuối cần chạy lại trên bản sửa.
+
+2026-10-18: build cuối đạt0errors/1836warnings ở phần build lại; regression sau sửa quote/lookup locks đạt **222 passed,0 failed,0 skipped**, gồm cả24 integration Ordering và2 migration cases trên hai DB. Kiểm chứng/lệnh ở [báo cáo](../verification/2026-10-18-ordering-checkout.md), tổng kết ở [history](../history/2026-10-18-15-ordering-checkout-implementation.md). Đây là local verification; chưa chấp nhận deployment thật.
+
 ## 5. Kiểm chứng và nghiệm thu
 
-Chưa có kết quả kiểm thử cho lát này tại thời điểm tạo hồ sơ. [Báo cáo](../verification/2026-10-18-ordering-checkout.md) ghi lệnh/kết quả sau thực hiện. Build/local tests không xác nhận deployment/Linux/Docker/payment carrier thật.
+Domain riêng12/12, provider riêng22/22, migration riêng2/2 và regression cuối222/222 đều đạt; regression bao gồm24 Ordering integration cases sau thêm bản sửa giỏ và lặp lại các ca đã chạy riêng. [Báo cáo](../verification/2026-10-18-ordering-checkout.md) ghi phạm vi/lệnh. Không chạy Container/Recovery/Template smoke trong lượt cuối; local tests không xác nhận deployment/Linux/Docker/payment/carrier thật.
 
 ## 6. Lịch sử commit
 
-Source trước bước: `31a0109`. Hash commit mới chỉ ghi sau khi tồn tại; tra `git log -- docs/features/ordering-checkout.md`.
+Source trước bước: `31a0109`; `dfcc92f` ghi thiết kế trước commit code. Hash commit triển khai chỉ ghi sau khi tồn tại; tra `git log -- docs/features/ordering-checkout.md`.
 
 ## 7. Còn lại
 
-Hoàn tất bước 2–5. Sau đó Payment: nhận tiền/retry/webhook, trả muộn thử giữ lại toàn bộ hoặc chờ xử lý, delivery Unique/Shared, email; Extension/PendingVerification và vận chuyển/hủy-hoàn sau nhận tiền ở bước tiếp theo.
+Bước tiếp theo Payment: nhận tiền/retry/webhook, trả muộn thử giữ lại toàn bộ hoặc chờ xử lý, delivery Unique/Shared, email; Extension/PendingVerification và vận chuyển/hủy-hoàn sau nhận tiền theo các bước MVP. Chưa có các use case này trong code; deployment/runtime còn gate riêng.

@@ -6,7 +6,7 @@ namespace Boilerate.Domain.DigitalInventory;
 
 public enum DigitalStockState
 {
-    Available = 1, Disabled = 2
+    Available = 1, Disabled = 2, Reserved = 3
 }
 public sealed class DigitalStockItem : CommerceEntity, IAggregateRoot
 {
@@ -16,6 +16,7 @@ public sealed class DigitalStockItem : CommerceEntity, IAggregateRoot
     public string Reference { get; private set; } = null!;
     public string ProtectedContent { get; private set; } = null!;
     public DigitalStockState State { get; private set; } = DigitalStockState.Available;
+    public Guid? ReservedForOrderItemId { get; private set; }
 
     private DigitalStockItem()
     {
@@ -55,8 +56,33 @@ public sealed class DigitalStockItem : CommerceEntity, IAggregateRoot
 
     public void SetAvailability(bool available)
     {
+        if (State == DigitalStockState.Reserved)
+            throw new DomainException("Reserved digital stock cannot change availability.");
         State = available ? DigitalStockState.Available : DigitalStockState.Disabled;
         Touch();
+    }
+
+    public void Reserve(Guid orderItemId)
+    {
+        if (orderItemId == Guid.Empty || FulfillmentKind != ProductFulfillmentKind.DigitalUnique || State != DigitalStockState.Available)
+            throw new DomainException("Only available Unique stock can be reserved for an order item.");
+        State = DigitalStockState.Reserved;
+        ReservedForOrderItemId = orderItemId;
+        Touch();
+    }
+
+    public bool Release(Guid orderItemId)
+    {
+        if (orderItemId == Guid.Empty || FulfillmentKind != ProductFulfillmentKind.DigitalUnique)
+            throw new DomainException("A Unique stock reservation and order item ID are required.");
+        if (State == DigitalStockState.Available && !ReservedForOrderItemId.HasValue)
+            return false;
+        if (State != DigitalStockState.Reserved || ReservedForOrderItemId != orderItemId)
+            throw new DomainException("Only the owning order item can release a digital reservation.");
+        State = DigitalStockState.Available;
+        ReservedForOrderItemId = null;
+        Touch();
+        return true;
     }
 
     private static string ValidateProtectedContent(string protectedContent)

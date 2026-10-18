@@ -86,4 +86,4 @@ Chọn cấp Product thay vì ghi đè mode theo SKU và một bảng kho số t
 
 ## 7. Công việc còn lại
 
-Tiếp theo Cart/Order/reservation theo MVP. Bước này chưa triển khai giao hàng số sau nhận tiền hoặc gia hạn; không tự mở rộng sang tích hợp bên thứ ba. Nghiệm thu runtime/deployment và adapter thật vẫn cần trước khi vận hành shop.
+[Cart/Order/reservation](ordering-checkout.md) đã bổ sung State Reserved và owner cho Unique ở migration tiếp theo. Nội dung hồ sơ kho số này ghi phạm vi ban đầu; hợp đồng hiện hành nằm ở [database](../commerce-database.md)/[API](../commerce-api.md). Chưa giao hàng số sau nhận tiền hoặc gia hạn; runtime/deployment và adapter thật vẫn cần nghiệm thu trước khi vận hành shop.

@@ -147,7 +147,9 @@ internal static class CommerceModel
         loc.Property(x => x.Name).HasMaxLength(256);
         loc.HasIndex(x => x.Code).IsUnique();
         var item = m.Entity<InventoryItem>();
-        item.ToTable("InventoryItems", "Inventory", t => t.HasCheckConstraint("CK_Inventory_Nonnegative", "\"OnHand\" >= 0"));
+        item.ToTable("InventoryItems", "Inventory", t => t.HasCheckConstraint("CK_Inventory_Nonnegative", "\"Reserved\" >= 0 AND \"OnHand\" >= \"Reserved\""));
+        item.Property(x => x.Reserved).HasDefaultValue(0);
+        item.HasAlternateKey(x => new { x.Id, x.VariantId });
         item.HasIndex(x => new { x.VariantId, x.LocationId }).IsUnique();
         item.HasOne<ProductVariant>().WithMany().HasForeignKey(x => x.VariantId).OnDelete(DeleteBehavior.Restrict);
         item.HasOne<InventoryLocation>().WithMany().HasForeignKey(x => x.LocationId).OnDelete(DeleteBehavior.Restrict);
@@ -162,7 +164,7 @@ internal static class CommerceModel
         digital.ToTable("DigitalStockItems", "DigitalInventory", t =>
         {
             t.HasCheckConstraint("CK_DigitalStockItem_FulfillmentKind", "\"FulfillmentKind\" IN (2,3)");
-            t.HasCheckConstraint("CK_DigitalStockItem_State", "\"State\" IN (1,2)");
+            t.HasCheckConstraint("CK_DigitalStockItem_State", "(\"State\" IN (1,2) AND \"ReservedForOrderItemId\" IS NULL) OR (\"State\" = 3 AND \"FulfillmentKind\" = 2 AND \"ReservedForOrderItemId\" IS NOT NULL)");
         });
         digital.Property(x => x.Reference).HasMaxLength(100).IsUnicode(false).IsRequired();
         digital.Property(x => x.ProtectedContent).HasMaxLength(16000).IsRequired();
@@ -183,6 +185,6 @@ internal static class CommerceModel
         gate.HasKey(x => x.Name);
         gate.Property(x => x.Name).HasMaxLength(50);
         gate.Property(x => x.Version).HasMaxLength(32).IsConcurrencyToken();
-        gate.HasData(new CommerceLock { Name = "categories", Version = "initial" }, new CommerceLock { Name = "initialization", Version = "initial" });
+        gate.HasData(new CommerceLock { Name = "categories", Version = "initial" }, new CommerceLock { Name = "initialization", Version = "initial" }, new CommerceLock { Name = "ordering", Version = "initial" });
     }
 }

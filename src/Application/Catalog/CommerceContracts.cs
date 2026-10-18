@@ -44,7 +44,10 @@ public sealed record FieldValueDto(Guid FieldDefinitionId, ProductFieldType Fiel
 public sealed record ProductSummary(Guid Id, string Name, string Slug, ProductStatus Status, decimal? FromPrice, bool InStock,
     ProductFulfillmentKind FulfillmentKind = ProductFulfillmentKind.Physical);
 public sealed record Page<T>(List<T> Items, int Total, int PageNumber, int PageSize);
-public sealed record InventoryDto(Guid Id, Guid VariantId, Guid LocationId, int OnHand, string Version);
+public sealed record InventoryDto(Guid Id, Guid VariantId, Guid LocationId, int OnHand, string Version, int Reserved = 0)
+{
+    public int Available => OnHand - Reserved;
+}
 public sealed record MovementDto(Guid Id, Guid InventoryItemId, Guid OperationId, int Delta, int QuantityAfter, string Reason, Guid ActorId, DateTime CreatedAt);
 public sealed record MediaDto(Guid Id, string ContentType, long Size, string State, string Version);
 public sealed record FieldFilter(Guid FieldId, string Operator, string? TextValue = null, decimal? NumberValue = null, decimal? NumberTo = null,

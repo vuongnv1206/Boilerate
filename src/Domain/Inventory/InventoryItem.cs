@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Common.Contracts;
 using Boilerate.Domain.Common.Exceptions;
@@ -31,6 +32,9 @@ public sealed class InventoryItem : CommerceEntity, IAggregateRoot
     {
         get; private set;
     }
+    public int Reserved { get; private set; }
+    [NotMapped]
+    public int Available => OnHand - Reserved;
     private InventoryItem()
     {
     }
@@ -44,12 +48,26 @@ public sealed class InventoryItem : CommerceEntity, IAggregateRoot
         if (operationId == Guid.Empty || delta == 0)
             throw new DomainException("OperationId and a nonzero delta are required.");
         long next = (long)OnHand + delta;
-        if (next < 0 || next > int.MaxValue)
+        if (next < Reserved || next > int.MaxValue)
             throw new DomainException("Adjustment would exceed inventory limits.");
         reason = CatalogRules.Required(reason, 1000, "Reason");
         OnHand = (int)next;
         Touch();
         return new StockMovement(Id, operationId, delta, OnHand, reason, actor);
+    }
+    public void Reserve(int quantity)
+    {
+        if (quantity < 1 || quantity > Available)
+            throw new DomainException("Reservation exceeds available inventory.");
+        Reserved += quantity;
+        Touch();
+    }
+    public void Release(int quantity)
+    {
+        if (quantity < 1 || quantity > Reserved)
+            throw new DomainException("Release exceeds reserved inventory.");
+        Reserved -= quantity;
+        Touch();
     }
 }
 public sealed class StockMovement : BaseEntity

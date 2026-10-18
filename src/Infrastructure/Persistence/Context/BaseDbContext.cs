@@ -53,6 +53,7 @@ public abstract class BaseDbContext : IdentityDbContext<
 
         modelBuilder.ApplyConfigurationsFromAssembly(GetType().Assembly);
         Boilerate.Infrastructure.Persistence.Configuration.CommerceModel.Configure(modelBuilder, Database.IsNpgsql());
+        Boilerate.Infrastructure.Persistence.Configuration.OrderingModel.Configure(modelBuilder, Database.IsNpgsql());
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -86,6 +87,12 @@ public abstract class BaseDbContext : IdentityDbContext<
             throw new InvalidOperationException("Archive products/SKUs instead of deleting commerce history.");
         if (ChangeTracker.Entries<Boilerate.Domain.DigitalInventory.DigitalStockItem>().Any(e => e.State == EntityState.Deleted))
             throw new InvalidOperationException("Disable digital stock items instead of deleting commerce history.");
+        if (ChangeTracker.Entries<Boilerate.Domain.Ordering.OrderItem>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Order item snapshots are immutable.");
+        if (ChangeTracker.Entries<Boilerate.Domain.Ordering.Cart>().Any(e => e.State == EntityState.Deleted) ||
+            ChangeTracker.Entries<Boilerate.Domain.Ordering.Order>().Any(e => e.State == EntityState.Deleted) ||
+            ChangeTracker.Entries<Boilerate.Domain.Ordering.PhysicalStockReservation>().Any(e => e.State == EntityState.Deleted))
+            throw new InvalidOperationException("Retain ordering history instead of deleting carts, orders or reservations.");
         var ownsTransaction = Database.CurrentTransaction is null;
         var externalTransaction = Database.CurrentTransaction;
         if (_externalTransactionId.HasValue && _externalTransactionId != externalTransaction?.TransactionId)

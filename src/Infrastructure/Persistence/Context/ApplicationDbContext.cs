@@ -31,6 +31,10 @@ public class ApplicationDbContext : BaseDbContext
     public DbSet<Boilerate.Domain.Inventory.StockMovement> StockMovements => Set<Boilerate.Domain.Inventory.StockMovement>();
     public DbSet<Boilerate.Domain.Media.MediaAsset> MediaAssets => Set<Boilerate.Domain.Media.MediaAsset>();
     public DbSet<Boilerate.Domain.Messaging.OutboxMessage> OutboxMessages => Set<Boilerate.Domain.Messaging.OutboxMessage>();
+    public DbSet<Boilerate.Domain.Ordering.Cart> Carts => Set<Boilerate.Domain.Ordering.Cart>();
+    public DbSet<Boilerate.Domain.Ordering.Order> Orders => Set<Boilerate.Domain.Ordering.Order>();
+    public DbSet<Boilerate.Domain.Ordering.OrderItem> OrderItems => Set<Boilerate.Domain.Ordering.OrderItem>();
+    public DbSet<Boilerate.Domain.Ordering.PhysicalStockReservation> PhysicalStockReservations => Set<Boilerate.Domain.Ordering.PhysicalStockReservation>();
 
     // Auditing
     public DbSet<Trail> Trails => Set<Trail>();

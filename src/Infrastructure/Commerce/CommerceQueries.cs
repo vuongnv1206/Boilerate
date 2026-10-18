@@ -11,7 +11,7 @@ public sealed partial class CommerceService
 {
     private IQueryable<ProductVariant> StockedVariants(IQueryable<ProductVariant> variants) => variants.Where(v =>
         db.Products.Any(p => p.Id == v.ProductId &&
-            ((p.FulfillmentKind == ProductFulfillmentKind.Physical && db.InventoryItems.Any(i => i.VariantId == v.Id && i.OnHand > 0)) ||
+            ((p.FulfillmentKind == ProductFulfillmentKind.Physical && db.InventoryItems.Any(i => i.VariantId == v.Id && i.OnHand > i.Reserved)) ||
              ((p.FulfillmentKind == ProductFulfillmentKind.DigitalUnique || p.FulfillmentKind == ProductFulfillmentKind.DigitalShared) &&
                 db.DigitalStockItems.Any(i => i.VariantId == v.Id && i.State == DigitalStockState.Available)) ||
              p.FulfillmentKind == ProductFulfillmentKind.ManualExtension)));
@@ -162,7 +162,7 @@ public sealed partial class CommerceService
     {
         ValidatePage(page, size);
         var q = db.InventoryItems.AsNoTracking();
-        return new(await q.OrderBy(i => i.Id).Skip((page - 1) * size).Take(size).Select(i => new InventoryDto(i.Id, i.VariantId, i.LocationId, i.OnHand, i.Version)).ToListAsync(ct), await q.CountAsync(ct), page, size);
+        return new(await q.OrderBy(i => i.Id).Skip((page - 1) * size).Take(size).Select(i => new InventoryDto(i.Id, i.VariantId, i.LocationId, i.OnHand, i.Version, i.Reserved)).ToListAsync(ct), await q.CountAsync(ct), page, size);
     }
     internal static MovementDto MapMovement(StockMovement m) => new(m.Id, m.InventoryItemId, m.OperationId, m.Delta, m.QuantityAfter, m.Reason, m.ActorId, m.CreatedAt);
     public async Task<Page<MovementDto>> MovementsAsync(Guid itemId, int page, int size, CancellationToken ct)

@@ -18,5 +18,6 @@ public static class AppAction
     public const string Initialize = nameof(Initialize);
     public const string Replay = nameof(Replay);
     public const string Reveal = nameof(Reveal);
+    public const string Cancel = nameof(Cancel);
     public const string Send = nameof(Send);
 }

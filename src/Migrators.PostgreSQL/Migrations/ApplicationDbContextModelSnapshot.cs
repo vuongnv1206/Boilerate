@@ -605,6 +605,9 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         .IsUnicode(false)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<Guid?>("ReservedForOrderItemId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("State")
                         .HasColumnType("integer");
 
@@ -625,6 +628,8 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
 
                     b.HasIndex("ProductId", "FulfillmentKind");
 
+                    b.HasIndex("ReservedForOrderItemId", "VariantId");
+
                     b.HasIndex("VariantId", "Reference")
                         .IsUnique();
 
@@ -634,7 +639,7 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         {
                             t.HasCheckConstraint("CK_DigitalStockItem_FulfillmentKind", "\"FulfillmentKind\" IN (2,3)");
 
-                            t.HasCheckConstraint("CK_DigitalStockItem_State", "\"State\" IN (1,2)");
+                            t.HasCheckConstraint("CK_DigitalStockItem_State", "(\"State\" IN (1,2) AND \"ReservedForOrderItemId\" IS NULL) OR (\"State\" = 3 AND \"FulfillmentKind\" = 2 AND \"ReservedForOrderItemId\" IS NOT NULL)");
                         });
                 });
 
@@ -1021,6 +1026,11 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                     b.Property<int>("OnHand")
                         .HasColumnType("integer");
 
+                    b.Property<int>("Reserved")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<Guid>("VariantId")
                         .HasColumnType("uuid");
 
@@ -1039,7 +1049,7 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
 
                     b.ToTable("InventoryItems", "Inventory", t =>
                         {
-                            t.HasCheckConstraint("CK_Inventory_Nonnegative", "\"OnHand\" >= 0");
+                            t.HasCheckConstraint("CK_Inventory_Nonnegative", "\"Reserved\" >= 0 AND \"OnHand\" >= \"Reserved\"");
                         });
                 });
 
@@ -1206,6 +1216,11 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         {
                             Name = "initialization",
                             Version = "initial"
+                        },
+                        new
+                        {
+                            Name = "ordering",
+                            Version = "initial"
                         });
                 });
 
@@ -1359,6 +1374,287 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("NotificationReceipts", "Notifications");
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Ordering.Cart", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LastModifiedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("LastModifiedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId")
+                        .IsUnique();
+
+                    b.ToTable("Carts", "Ordering");
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Ordering.CartItem", b =>
+                {
+                    b.Property<Guid>("CartId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.HasKey("CartId", "VariantId");
+
+                    b.HasIndex("VariantId");
+
+                    b.ToTable("CartItems", "Ordering", t =>
+                        {
+                            t.HasCheckConstraint("CK_CartItem_Quantity", "\"Quantity\" BETWEEN 1 AND 999");
+                        });
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Ordering.Order", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CartId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("LastModifiedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("LastModifiedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("PaymentMethod")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("RecipientName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("ShippingAddress")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<decimal>("ShippingAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CartId");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
+
+                    b.HasIndex("CustomerId", "OperationId")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "ExpiresAt");
+
+                    b.HasIndex("CustomerId", "CreatedOn", "Id");
+
+                    b.ToTable("Orders", "Ordering", t =>
+                        {
+                            t.HasCheckConstraint("CK_Order_Amounts", "\"Currency\" = 'VND' AND \"Subtotal\" >= 0 AND \"Subtotal\" = FLOOR(\"Subtotal\") AND \"ShippingAmount\" >= 0 AND \"ShippingAmount\" = FLOOR(\"ShippingAmount\") AND \"Total\" >= 0 AND \"Total\" = FLOOR(\"Total\") AND \"Total\" = \"Subtotal\" + \"ShippingAmount\"");
+
+                            t.HasCheckConstraint("CK_Order_Expiry", "(\"Status\" <> 1 OR \"ExpiresAt\" IS NOT NULL) AND (\"PaymentMethod\" <> 2 OR \"ExpiresAt\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_Order_PaymentMethod", "\"PaymentMethod\" IN (1,2)");
+
+                            t.HasCheckConstraint("CK_Order_Status", "\"Status\" IN (1,2,3,4)");
+                        });
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Ordering.OrderItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("FulfillmentKind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("OptionDescription")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Sku")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId", "VariantId")
+                        .IsUnique();
+
+                    b.HasIndex("ProductId", "VariantId");
+
+                    b.ToTable("OrderItems", "Ordering", t =>
+                        {
+                            t.HasCheckConstraint("CK_OrderItem_FulfillmentKind", "\"FulfillmentKind\" IN (1,2,3,4)");
+
+                            t.HasCheckConstraint("CK_OrderItem_Price", "\"UnitPrice\" >= 0 AND \"UnitPrice\" = FLOOR(\"UnitPrice\")");
+
+                            t.HasCheckConstraint("CK_OrderItem_Quantity", "\"Quantity\" BETWEEN 1 AND 999");
+                        });
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Ordering.PhysicalStockReservation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("InventoryItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LastModifiedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("LastModifiedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrderItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderItemId")
+                        .IsUnique();
+
+                    b.HasIndex("InventoryItemId", "VariantId");
+
+                    b.HasIndex("OrderItemId", "VariantId");
+
+                    b.ToTable("PhysicalStockReservations", "Ordering", t =>
+                        {
+                            t.HasCheckConstraint("CK_PhysicalStockReservation_Quantity", "\"Quantity\" > 0");
+
+                            t.HasCheckConstraint("CK_PhysicalStockReservation_State", "\"State\" IN (1,2)");
+                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
@@ -1601,6 +1897,12 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         .HasPrincipalKey("ProductId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Boilerate.Domain.Ordering.OrderItem", null)
+                        .WithMany()
+                        .HasForeignKey("ReservedForOrderItemId", "VariantId")
+                        .HasPrincipalKey("Id", "VariantId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Boilerate.Domain.Identity.ActionInFunction", b =>
@@ -1710,6 +2012,63 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                     b.Navigation("Notification");
                 });
 
+            modelBuilder.Entity("Boilerate.Domain.Ordering.CartItem", b =>
+                {
+                    b.HasOne("Boilerate.Domain.Ordering.Cart", null)
+                        .WithMany("Items")
+                        .HasForeignKey("CartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Boilerate.Domain.Catalog.ProductVariant", null)
+                        .WithMany()
+                        .HasForeignKey("VariantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Ordering.Order", b =>
+                {
+                    b.HasOne("Boilerate.Domain.Ordering.Cart", null)
+                        .WithMany()
+                        .HasForeignKey("CartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Ordering.OrderItem", b =>
+                {
+                    b.HasOne("Boilerate.Domain.Ordering.Order", null)
+                        .WithMany("Items")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Boilerate.Domain.Catalog.ProductVariant", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId", "VariantId")
+                        .HasPrincipalKey("ProductId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Ordering.PhysicalStockReservation", b =>
+                {
+                    b.HasOne("Boilerate.Domain.Inventory.InventoryItem", null)
+                        .WithMany()
+                        .HasForeignKey("InventoryItemId", "VariantId")
+                        .HasPrincipalKey("Id", "VariantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Boilerate.Domain.Ordering.OrderItem", null)
+                        .WithMany()
+                        .HasForeignKey("OrderItemId", "VariantId")
+                        .HasPrincipalKey("Id", "VariantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
                     b.HasOne("Boilerate.Domain.Identity.ApplicationUser", null)
@@ -1793,6 +2152,16 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
             modelBuilder.Entity("Boilerate.Domain.Identity.Function", b =>
                 {
                     b.Navigation("ActionInFunctions");
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Ordering.Cart", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Ordering.Order", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

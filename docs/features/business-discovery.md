@@ -1,6 +1,6 @@
 # Kế hoạch nghiệp vụ shop — phỏng vấn và chốt phạm vi
 
-Ngày bắt đầu/cập nhật: 2026-10-18, Asia/Saigon. Trạng thái: **kết thúc vòng hỏi sâu hiện tại theo chỉ dẫn shop nhỏ; chuyển sang [MVP](shop-mvp.md)**. Đang triển khai [cách giao và kho số](digital-inventory.md). Mục tiêu mới nhất là phần mềm cho một shop thích ứng với mặt hàng muốn bán, không phải quản lý nhiều shop.
+Ngày bắt đầu/cập nhật: 2026-10-18, Asia/Saigon. Trạng thái: **kết thúc vòng hỏi sâu hiện tại theo chỉ dẫn shop nhỏ; chuyển sang [MVP](shop-mvp.md)**. [Kho số](digital-inventory.md) và [Cart/Order/giữ hàng](ordering-checkout.md) đã triển khai/kiểm local. Mục tiêu là phần mềm cho một shop thích ứng với mặt hàng muốn bán, không phải quản lý nhiều shop.
 
 ## 1. Mục tiêu và phạm vi
 
@@ -21,7 +21,7 @@ Giai đoạn phỏng vấn chỉ ghi quyết định và lập kế hoạch; vò
 |---|---|---|
 | Phạm vi đã duyệt trước đây | Baseline Catalog v1 | Một shop, hàng vật lý, VND nguyên đồng, kho MAIN không âm. Hướng mới là một phần mềm thích ứng với sản phẩm muốn bán trong shop đó; không phải quản lý nhiều shop |
 | Catalog đã triển khai | Hợp đồng hiện hành | ProductType → Product 1–N; Product ↔ Category N–N; SKU giữ giá/tồn, custom field khác option |
-| Hướng mốc sau đã duyệt | Chưa triển khai | OrderItem snapshot; Order/Payment/Shipment có trạng thái riêng; quan hệ tương lai trong database docs |
+| Hướng mốc sau đã duyệt | Triển khai theo lát | OrderItem snapshot đã có trong Ordering; Payment/Shipment chưa tạo bảng, có trạng thái riêng ở mốc sau |
 | Yêu cầu ngày 2026-10-18 | Đã rõ | Tạm ưu tiên kế hoạch nghiệp vụ; hỏi sâu theo tình huống, phát triển tài liệu song song |
 | Trả lời vòng 1 và bổ sung ngày 2026-10-18 | Ví dụ kiểm tra độ linh hoạt | Quần áo, điện thoại, laptop, PC, khóa học và tài khoản; không mặc định tất cả nghiệp vụ đặc thù bắt buộc ở MVP. Người dùng đã làm rõ PC chỉ là ý tưởng tham khảo |
 | Trả lời vòng 1A ngày 2026-10-18 | **Đã chọn A** | Một shop tương ứng một phần mềm được triển khai/vận hành riêng. Không yêu cầu multi-tenant; không đưa SaaS/marketplace vào kế hoạch hiện tại |

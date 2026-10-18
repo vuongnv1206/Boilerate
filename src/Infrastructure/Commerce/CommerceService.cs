@@ -332,15 +332,23 @@ public sealed partial class CommerceService(ApplicationDbContext db, CommerceUni
         {
             return await work.ExecuteAsync(async () =>
             {
+                // Separate reads release their read locks before looking up the parent; a joined
+                // balance/product lookup could itself recreate the inverse lock dependency.
+                var variantId = await db.InventoryItems.Where(i => i.Id == r.InventoryItemId).Select(i => (Guid?)i.VariantId)
+                    .SingleOrDefaultAsync(ct) ?? throw new NotFoundException("Inventory item not found.");
+                var productId = await db.ProductVariants.Where(v => v.Id == variantId).Select(v => v.ProductId).SingleAsync(ct);
+                var source = await db.Products.Where(p => p.Id == productId).Select(p => new { p.Id, p.ProductTypeId }).SingleAsync(ct);
+                // Ordering locks type -> product -> balance too; never read a locked product while holding only its balance.
+                await LockedType(source.ProductTypeId, ct);
+                await db.Products.Where(p => p.Id == source.Id).ExecuteUpdateAsync(s => s.SetProperty(p => p.Version, p => p.Version), ct);
+                if (!await db.Products.AnyAsync(p => p.Id == source.Id && p.FulfillmentKind == ProductFulfillmentKind.Physical, ct))
+                    throw new ConflictException("Only physical SKUs use warehouse adjustments.");
                 if (await db.InventoryItems.Where(i => i.Id == r.InventoryItemId).ExecuteUpdateAsync(s => s.SetProperty(i => i.Version, i => i.Version), ct) != 1)
                     throw new NotFoundException("Inventory item not found.");
                 var prior = await Existing();
                 if (prior is not null)
                     return Replay(prior);
                 var item = await db.InventoryItems.SingleAsync(i => i.Id == r.InventoryItemId, ct);
-                if (!await db.ProductVariants.AnyAsync(v => v.Id == item.VariantId &&
-                    db.Products.Any(p => p.Id == v.ProductId && p.FulfillmentKind == ProductFulfillmentKind.Physical), ct))
-                    throw new ConflictException("Only physical SKUs use warehouse adjustments.");
                 Version(r.Version, item.Version);
                 var movement = item.Adjust(r.OperationId, r.Delta, r.Reason, actor.GetUserId());
                 db.StockMovements.Add(movement);
