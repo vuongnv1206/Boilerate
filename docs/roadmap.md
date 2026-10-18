@@ -39,7 +39,7 @@ Các mốc 2–6 có phần triển khai song song. Tồn tại code ở mốc s
 ## Việc ưu tiên tiếp theo
 
 1. **MVP cho shop nhỏ — đang ưu tiên:** đã có [kế hoạch gọn](features/shop-mvp.md) từ các quyết định được ghi nhận. Dừng mở rộng phỏng vấn; triển khai các luồng bán hàng/admin thông thường và xử lý chi tiết khi tới bước liên quan. Chưa đưa rule builder/page builder/PC BOM hoặc nhiều adapter vào MVP.
-2. **Bước BE tiếp theo:** Cart/Order/giữ hàng, dùng [cách giao/kho số đã triển khai](features/digital-inventory.md); sau đó nhận tiền/giao số, admin/giao vật lý/hủy/hoàn. Mỗi lát ghi cardinality/ownership/cột/constraints/concurrency/xóa, API/quyền và migrations hai DB theo [mẫu](templates/feature-plan.md). Giữ DDD có chọn lọc; không để handler tự bỏ qua quy tắc tồn/cấp phát/trạng thái.
+2. **Bước BE đang triển khai:** [Cart/Order/giữ hàng](features/ordering-checkout.md), dùng [cách giao/kho số đã triển khai](features/digital-inventory.md); sau đó nhận tiền/giao số, admin/giao vật lý/hủy/hoàn. Mỗi lát ghi cardinality/ownership/cột/constraints/concurrency/xóa, API/quyền và migrations hai DB theo [mẫu](templates/feature-plan.md). Giữ DDD có chọn lọc; không để handler tự bỏ qua quy tắc tồn/cấp phát/trạng thái.
 3. **Nghiệm thu runtime trước vận hành thật:** chạy Linux CI và container non-root trên SQL Server/PostgreSQL theo [runbook](operations-runbook.md); kiểm operator CLI, volume media/Data Protection keys, health và thay container. Local proxy đã đạt, nhưng chưa chứng minh cấu hình proxy của deployment cụ thể.
 4. **Vận hành/adapter trước vận hành thật:** [native recovery drill local](verification/2026-10-18-operations.md) đã đạt trên hai DB; tiếp tục staging restore/RPO/RTO/session policy và smoke các adapter được bật bằng cấu hình thật.
 

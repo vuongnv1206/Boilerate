@@ -9,6 +9,7 @@
 - 2026-10-18: [Giữ hàng và MVP gọn cho shop nhỏ](2026-10-18-11-small-shop-mvp.md).
 - 2026-10-18: [Thiết kế cách giao và kho số trước code](2026-10-18-12-digital-inventory-design.md).
 - 2026-10-18: [Triển khai và kiểm chứng cách giao/kho số](2026-10-18-13-digital-inventory-implementation.md).
+- 2026-10-18: [Thiết kế giỏ/đơn và giữ hàng trước code](2026-10-18-14-ordering-checkout-design.md).
 
 - 2026-10-18: [Lập kế hoạch nghiệm thu vận hành](2026-10-18-01-operations-plan.md).
 - 2026-10-18: [Gate runtime và trusted proxy](2026-10-18-02-runtime-gates.md).
