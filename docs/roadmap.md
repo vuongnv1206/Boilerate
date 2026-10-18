@@ -33,6 +33,7 @@ Theo chỉ dẫn mới nhất ngày 2026-10-18, ưu tiên **shop nhỏ, đủ lu
 | 7. Ordering/checkout | Cart/Order chung vật lý + số, snapshot, reservation/idempotency, hủy/hết hạn/xem đơn | **Đã triển khai/kiểm chứng local; regression cuối222/222 đạt**, gồm24 Ordering integration và2 migration cases trên hai DB | Nhận tiền/trả muộn/giao số được bổ sung ở mốc8; [bằng chứng](verification/2026-10-18-ordering-checkout.md) |
 | 8. Payment/giao số | Xác nhận chuyển khoản thực nhận, cấp Unique/Shared và email outbox; attempts/refunds/webhook ở lát sau | **Đã triển khai/kiểm local; regression276/276 đạt**, [hồ sơ](features/payment-digital-delivery.md), [bằng chứng](verification/2026-10-18-payment-delivery.md) | Gateway/SMTP thật, runtime và refund còn mở |
 | 9. Shipping | Shipment/ShipmentItem có số lượng, giao từng phần, trạng thái riêng; thu COD độc lập | **Đã triển khai/kiểm local4A; regression326/326 đạt**, [hồ sơ](features/physical-shipping.md), [bằng chứng](verification/2026-10-18-physical-shipping.md) | Gia hạn/refund/returns và carrier/callback, deployment còn mở |
+| 10. Gia hạn thủ công | Request/claim/start/PendingVerification/kết quả và bằng chứng, hoàn tất đơn độc lập Paid | **Đang triển khai4B**, [thiết kế](features/manual-renewals.md), chưa kiểm chứng | Domain/DB/API/tests; refund/returns và provider tự động ở lát riêng |
 
 Các mốc 2–6 có phần triển khai song song. Tồn tại code ở mốc sau không làm các điều kiện nghiệm thu của mốc trước tự hoàn tất.
 
