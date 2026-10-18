@@ -35,6 +35,8 @@ public class ApplicationDbContext : BaseDbContext
     public DbSet<Boilerate.Domain.Ordering.Order> Orders => Set<Boilerate.Domain.Ordering.Order>();
     public DbSet<Boilerate.Domain.Ordering.OrderItem> OrderItems => Set<Boilerate.Domain.Ordering.OrderItem>();
     public DbSet<Boilerate.Domain.Ordering.PhysicalStockReservation> PhysicalStockReservations => Set<Boilerate.Domain.Ordering.PhysicalStockReservation>();
+    public DbSet<Boilerate.Domain.Payments.PaymentReceipt> PaymentReceipts => Set<Boilerate.Domain.Payments.PaymentReceipt>();
+    public DbSet<Boilerate.Domain.Ordering.DigitalDelivery> DigitalDeliveries => Set<Boilerate.Domain.Ordering.DigitalDelivery>();
 
     // Auditing
     public DbSet<Trail> Trails => Set<Trail>();

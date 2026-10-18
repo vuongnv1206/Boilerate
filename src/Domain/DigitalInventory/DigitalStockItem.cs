@@ -6,7 +6,7 @@ namespace Boilerate.Domain.DigitalInventory;
 
 public enum DigitalStockState
 {
-    Available = 1, Disabled = 2, Reserved = 3
+    Available = 1, Disabled = 2, Reserved = 3, Delivered = 4
 }
 public sealed class DigitalStockItem : CommerceEntity, IAggregateRoot
 {
@@ -56,8 +56,8 @@ public sealed class DigitalStockItem : CommerceEntity, IAggregateRoot
 
     public void SetAvailability(bool available)
     {
-        if (State == DigitalStockState.Reserved)
-            throw new DomainException("Reserved digital stock cannot change availability.");
+        if (State is DigitalStockState.Reserved or DigitalStockState.Delivered)
+            throw new DomainException("Reserved or delivered digital stock cannot change availability.");
         State = available ? DigitalStockState.Available : DigitalStockState.Disabled;
         Touch();
     }
@@ -83,6 +83,15 @@ public sealed class DigitalStockItem : CommerceEntity, IAggregateRoot
         ReservedForOrderItemId = null;
         Touch();
         return true;
+    }
+
+    public void Deliver(Guid orderItemId)
+    {
+        if (orderItemId == Guid.Empty || FulfillmentKind != ProductFulfillmentKind.DigitalUnique ||
+            State != DigitalStockState.Reserved || ReservedForOrderItemId != orderItemId)
+            throw new DomainException("Only the owning order item can receive reserved Unique stock.");
+        State = DigitalStockState.Delivered;
+        Touch();
     }
 
     private static string ValidateProtectedContent(string protectedContent)

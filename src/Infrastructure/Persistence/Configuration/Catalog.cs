@@ -164,7 +164,7 @@ internal static class CommerceModel
         digital.ToTable("DigitalStockItems", "DigitalInventory", t =>
         {
             t.HasCheckConstraint("CK_DigitalStockItem_FulfillmentKind", "\"FulfillmentKind\" IN (2,3)");
-            t.HasCheckConstraint("CK_DigitalStockItem_State", "(\"State\" IN (1,2) AND \"ReservedForOrderItemId\" IS NULL) OR (\"State\" = 3 AND \"FulfillmentKind\" = 2 AND \"ReservedForOrderItemId\" IS NOT NULL)");
+            t.HasCheckConstraint("CK_DigitalStockItem_State", "(\"State\" IN (1,2) AND \"ReservedForOrderItemId\" IS NULL) OR (\"State\" IN (3,4) AND \"FulfillmentKind\" = 2 AND \"ReservedForOrderItemId\" IS NOT NULL)");
         });
         digital.Property(x => x.Reference).HasMaxLength(100).IsUnicode(false).IsRequired();
         digital.Property(x => x.ProtectedContent).HasMaxLength(16000).IsRequired();

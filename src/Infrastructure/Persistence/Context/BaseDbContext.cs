@@ -54,6 +54,7 @@ public abstract class BaseDbContext : IdentityDbContext<
         modelBuilder.ApplyConfigurationsFromAssembly(GetType().Assembly);
         Boilerate.Infrastructure.Persistence.Configuration.CommerceModel.Configure(modelBuilder, Database.IsNpgsql());
         Boilerate.Infrastructure.Persistence.Configuration.OrderingModel.Configure(modelBuilder, Database.IsNpgsql());
+        Boilerate.Infrastructure.Persistence.Configuration.PaymentModel.Configure(modelBuilder, Database.IsNpgsql());
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -89,6 +90,9 @@ public abstract class BaseDbContext : IdentityDbContext<
             throw new InvalidOperationException("Disable digital stock items instead of deleting commerce history.");
         if (ChangeTracker.Entries<Boilerate.Domain.Ordering.OrderItem>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
             throw new InvalidOperationException("Order item snapshots are immutable.");
+        if (ChangeTracker.Entries<Boilerate.Domain.Payments.PaymentReceipt>().Any(e => e.State is EntityState.Modified or EntityState.Deleted) ||
+            ChangeTracker.Entries<Boilerate.Domain.Ordering.DigitalDelivery>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Payment receipts and digital deliveries are append-only history.");
         if (ChangeTracker.Entries<Boilerate.Domain.Ordering.Cart>().Any(e => e.State == EntityState.Deleted) ||
             ChangeTracker.Entries<Boilerate.Domain.Ordering.Order>().Any(e => e.State == EntityState.Deleted) ||
             ChangeTracker.Entries<Boilerate.Domain.Ordering.PhysicalStockReservation>().Any(e => e.State == EntityState.Deleted))

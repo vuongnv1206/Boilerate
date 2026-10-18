@@ -20,9 +20,13 @@ public sealed record OrderLineDto(Guid Id, Guid ProductId, Guid VariantId, strin
     ProductFulfillmentKind FulfillmentKind, decimal UnitPrice, int Quantity);
 public sealed record OrderDto(Guid Id, string Number, string Version, OrderStatus Status, OrderPaymentMethod PaymentMethod,
     decimal Subtotal, decimal ShippingAmount, decimal Total, string Currency, DateTime? ExpiresAt,
-    string RecipientName, string Email, string Phone, string? ShippingAddress, List<OrderLineDto> Items);
+    string RecipientName, string Email, string Phone, string? ShippingAddress, List<OrderLineDto> Items,
+    OrderPaymentStatus PaymentStatus = OrderPaymentStatus.Unpaid,
+    OrderFulfillmentStatus FulfillmentStatus = OrderFulfillmentStatus.Pending, DateTime? PaidAtUtc = null);
 public sealed record OrderSummary(Guid Id, string Number, OrderStatus Status, OrderPaymentMethod PaymentMethod, decimal Total,
-    string Currency, DateTime CreatedOn, DateTime? ExpiresAt);
+    string Currency, DateTime CreatedOn, DateTime? ExpiresAt,
+    OrderPaymentStatus PaymentStatus = OrderPaymentStatus.Unpaid,
+    OrderFulfillmentStatus FulfillmentStatus = OrderFulfillmentStatus.Pending, DateTime? PaidAtUtc = null);
 
 public interface IOrderingService
 {

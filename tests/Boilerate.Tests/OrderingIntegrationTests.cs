@@ -44,7 +44,8 @@ public sealed class OrderingIntegrationTests
         users.HasPermissionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(call => (string)call[1] != deniedPermission);
         return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<ICurrentUser>(), users,
-            Options.Create(settings ?? new OrderingSettings()), clock ?? TimeProvider.System);
+            Options.Create(settings ?? new OrderingSettings()), clock ?? TimeProvider.System,
+            scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
     }
 
     private static CreateProduct Simple(ProductType type, string slug, ProductFulfillmentKind kind = ProductFulfillmentKind.Physical) =>

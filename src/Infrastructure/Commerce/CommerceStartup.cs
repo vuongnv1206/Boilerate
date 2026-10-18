@@ -24,7 +24,9 @@ public static class CommerceStartup
         services.AddOptions<OrderingSettings>().Bind(config.GetSection("Ordering")).ValidateDataAnnotations()
             .Validate(s => decimal.Truncate(s.FlatShippingAmount) == s.FlatShippingAmount, "Shipping must be whole VND.").ValidateOnStart();
         services.TryAddSingleton<TimeProvider>(TimeProvider.System);
-        services.AddScoped<IOrderingService, OrderingService>();
+        services.AddScoped<OrderingService>();
+        services.AddScoped<IOrderingService>(sp => sp.GetRequiredService<OrderingService>());
+        services.AddScoped<IPaymentService>(sp => sp.GetRequiredService<OrderingService>());
         services.AddScoped<OutboxProcessor>();
         services.AddSingleton(new LocalFileStorageService(Path.GetFullPath(config["Storage:Root"] ?? "Files")));
         services.AddSingleton<IFileStorageService>(sp => sp.GetRequiredService<LocalFileStorageService>());

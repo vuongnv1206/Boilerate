@@ -40,7 +40,7 @@ Payment sở hữu sổ khoản đã xác nhận, Ordering sở hữu snapshot g
 | Orders | PaymentStatus Unpaid1/Paid2; FulfillmentStatus Pending1/NeedsReview2/InProgress3/Completed4; PaidAtUtc nullable; Status thêm Completed5 | Version của Order bảo vệ admin write; chỉ Paid có PaidAtUtc; Completed yêu cầu Paid và hoàn tất fulfillment |
 | DigitalStockItems | State thêm Delivered4; giữ ReservedForOrderItemId vĩnh viễn khi đã giao Unique | Không enable/release/delete mã đã giao; chỉ Available/Disabled được không có owner |
 
-PK/FK/index giữ kiểu GUID hiện hữu; FK không cascade sang lịch sử. Thêm alternate key OrderItem `(Id,OrderId,VariantId)` và Stock `(Id,VariantId)`. Receipt/delivery không update/delete qua SaveChanges. Audit chỉ metadata, không ciphertext/contact; đọc nội dung có TrailType.Read.
+PK/FK/index giữ kiểu GUID hiện hữu; FK không cascade sang lịch sử. Cả hai composite FK của delivery và alternate key đích còn chứa `FulfillmentKind`, chặn gán Unique thành Shared để vượt unique index. Receipt/delivery không update/delete qua SaveChanges. Audit chỉ metadata, không ciphertext/contact; đọc nội dung có TrailType.Read. Toàn bộ nội dung được giải mã/mã hóa snapshot trước khi thay đổi giữ hàng; lỗi crypto giữ Paid + NeedsReview và ghi metadata `DigitalContentUnavailable`, không cấp/giữ thêm một phần.
 
 Thứ tự khóa: commerce ordering gate → ProductTypes → Products → balance MAIN theo ID. Nhận tiền/đơn/giữ hàng/giao số/audit commit cùng UoW; không SMTP/storage/network trong transaction. Sau khóa, preflight toàn bộ availability trước thay đổi giữ hàng; released physical hold được tái sử dụng, Unique đã giữ đúng owner tiếp tục dùng. Đơn Cancelled nhận tiền chỉ chờ xử lý, không tự hồi sinh. Expired hoặc pending quá hạn có thể tiếp tục nếu đủ; snapshot giá không tính lại theo Catalog mới. Sản phẩm archive không xóa cam kết đã đặt; cấp từ SKU/kho hiện hữu, Shared phải còn Available. Thiếu hàng không rollback khoản tiền đã được xác nhận. Retry fulfillment riêng chỉ dành cho Paid+NeedsReview, không được xử lý đơn Cancelled.
 
@@ -69,22 +69,24 @@ Email: `DigitalDeliveryReady` outbox v1, payload chỉ OrderId; worker tải ema
 | Bước | Công việc | Đầu ra | Trạng thái |
 |---|---|---|---|
 | 1 | Chốt hồ sơ/quan hệ/nguồn nhận tiền | Tài liệu này, history, roadmap | Đã ghi thiết kế, chưa kiểm chứng code |
-| 2 | Domain, persistence, API nhận tiền + giao số | Hai migrations; idempotency, late payment, ACL, owner reveal | Đang triển khai |
+| 2 | Domain, persistence, API nhận tiền + giao số | Hai migrations; idempotency, late payment, ACL, owner reveal | Đã triển khai/kiểm chứng local48/48 core |
 | 3 | Email outbox | Consumer retry được, email không mang secret | Chưa triển khai |
-| 4 | Regression và review | Test domain/provider/race/rollback/HTTP/migration | Chưa chạy |
+| 4 | Regression và review | Test domain/provider/race/rollback/HTTP/migration | Đang chạy Payment/core; regression toàn bộ sau email |
 | 5 | Đồng bộ docs vận hành/lịch sử và commit nhỏ | Bằng chứng thật + phần còn mở | Cập nhật theo từng bước |
 
 ## 4. Nhật ký triển khai
 
 2026-10-18 — Bước 1: đọc kế hoạch Ordering/kho số và chọn lát nhận tiền xác nhận thủ công. Chưa có code/test mới. Tiếp theo domain/persistence đồng thời với orchestration. [History](../history/2026-10-18-16-payment-delivery-design.md).
 
+2026-10-18 — Bước 2: code domain/receipt/delivery/ACL/API và hai migrations; build Release 0 lỗi. Review bổ sung kind composite FK và xử lý crypto giữ Paid+NeedsReview. Bộ Payment/domain/provider/migration đang chạy. [History](../history/2026-10-18-17-payment-delivery-implementation.md).
+
 ## 5. Kiểm chứng và nghiệm thu
 
-Chưa chạy kiểm chứng cho lát này. Linux/Docker/CI, ngân hàng/gateway và SMTP thật chưa nghiệm thu. Hạn chế: chưa xử lý thanh toán một phần, khoản chuyển thừa/trùng thực tế, hoàn tiền, shipping hay thao tác gia hạn; nhân viên cần đối chiếu thực tế trước ghi nhận.
+Core local48/48 đạt sau sửa assertion, xem [báo cáo từng lượt](../verification/2026-10-18-payment-delivery.md). Email/regression cuối còn đang làm. Linux/Docker/CI, ngân hàng/gateway và SMTP thật chưa nghiệm thu. Hạn chế: chưa xử lý thanh toán một phần, khoản chuyển thừa/trùng thực tế, hoàn tiền, shipping hay thao tác gia hạn; nhân viên cần đối chiếu thực tế trước ghi nhận.
 
 ## 6. Lịch sử commit
 
-Chưa có commit của lát này; chỉ ghi hash khi commit tồn tại.
+`5315fa4` — thiết kế nhận tiền và giao số trước code. Commit triển khai ghi khi tồn tại.
 
 ## 7. Còn lại
 

@@ -15,11 +15,12 @@ using Boilerate.Domain.Ordering;
 using Boilerate.Infrastructure.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace Boilerate.Infrastructure.Commerce;
 
-public sealed class OrderingService(ApplicationDbContext db, CommerceUnitOfWork work, ICurrentUser actor,
-    IUserService users, IOptions<OrderingSettings> settings, TimeProvider clock) : IOrderingService
+public sealed partial class OrderingService(ApplicationDbContext db, CommerceUnitOfWork work, ICurrentUser actor,
+    IUserService users, IOptions<OrderingSettings> settings, TimeProvider clock, IDataProtectionProvider protection) : IOrderingService, IPaymentService
 {
     private DateTime Now => clock.GetUtcNow().UtcDateTime;
     private Guid Customer()
@@ -245,7 +246,8 @@ public sealed class OrderingService(ApplicationDbContext db, CommerceUnitOfWork 
         var query = db.Orders.AsNoTracking().Where(o => admin || o.CustomerId == customer);
         var total = await query.CountAsync(ct);
         var items = await query.OrderByDescending(o => o.CreatedOn).ThenBy(o => o.Id).Skip((page - 1) * size).Take(size)
-            .Select(o => new OrderSummary(o.Id, o.Number, o.Status, o.PaymentMethod, o.Total, o.Currency, o.CreatedOn, o.ExpiresAt)).ToListAsync(ct);
+            .Select(o => new OrderSummary(o.Id, o.Number, o.Status, o.PaymentMethod, o.Total, o.Currency, o.CreatedOn, o.ExpiresAt,
+                o.PaymentStatus, o.FulfillmentStatus, o.PaidAtUtc)).ToListAsync(ct);
         return new(items, total, page, size);
     }
     public async Task<OrderDto> CancelAsync(Guid id, CancelOrder r, bool admin, CancellationToken ct)
@@ -258,6 +260,8 @@ public sealed class OrderingService(ApplicationDbContext db, CommerceUnitOfWork 
             var order = await Orders().SingleOrDefaultAsync(o => o.Id == id && (admin || o.CustomerId == customer), ct)
                 ?? throw new NotFoundException("Order not found.");
             CheckVersion(r.Version, order.Version);
+            if (order.PaymentStatus == OrderPaymentStatus.Paid)
+                throw new ConflictException("Paid orders require the refund/review workflow and cannot be cancelled here.");
             if (order.Status is OrderStatus.Cancelled or OrderStatus.Expired)
                 return MapOrder(order);
             await Release(order, ct);
@@ -300,5 +304,5 @@ public sealed class OrderingService(ApplicationDbContext db, CommerceUnitOfWork 
     private static OrderDto MapOrder(Order order) => new(order.Id, order.Number, order.Version, order.Status, order.PaymentMethod,
         order.Subtotal, order.ShippingAmount, order.Total, order.Currency, order.ExpiresAt, order.RecipientName, order.Email, order.Phone,
         order.ShippingAddress, order.Items.OrderBy(i => i.Id).Select(i => new OrderLineDto(i.Id, i.ProductId, i.VariantId, i.Name, i.Sku,
-            i.OptionDescription, i.FulfillmentKind, i.UnitPrice, i.Quantity)).ToList());
+            i.OptionDescription, i.FulfillmentKind, i.UnitPrice, i.Quantity)).ToList(), order.PaymentStatus, order.FulfillmentStatus, order.PaidAtUtc);
 }

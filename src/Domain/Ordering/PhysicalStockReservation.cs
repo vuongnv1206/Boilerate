@@ -38,4 +38,13 @@ public sealed class PhysicalStockReservation : CommerceEntity, IAggregateRoot
         Touch();
         return true;
     }
+
+    public bool Reacquire()
+    {
+        if (State == HoldState.Held)
+            return false;
+        State = HoldState.Held;
+        Touch();
+        return true;
+    }
 }

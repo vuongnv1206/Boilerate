@@ -33,7 +33,11 @@ internal static class OrderingModel
         var order = m.Entity<Order>();
         order.ToTable("Orders", "Ordering", t =>
         {
-            t.HasCheckConstraint("CK_Order_Status", "\"Status\" IN (1,2,3,4)");
+            t.HasCheckConstraint("CK_Order_Status", "\"Status\" IN (1,2,3,4,5)");
+            t.HasCheckConstraint("CK_Order_PaymentStatus", "\"PaymentStatus\" IN (1,2)");
+            t.HasCheckConstraint("CK_Order_FulfillmentStatus", "\"FulfillmentStatus\" IN (1,2,3,4)");
+            t.HasCheckConstraint("CK_Order_PaidAt", "(\"PaymentStatus\" = 1 AND \"PaidAtUtc\" IS NULL) OR (\"PaymentStatus\" = 2 AND \"PaidAtUtc\" IS NOT NULL)");
+            t.HasCheckConstraint("CK_Order_Completion", "\"Status\" <> 5 OR (\"PaymentStatus\" = 2 AND \"FulfillmentStatus\" = 4)");
             t.HasCheckConstraint("CK_Order_PaymentMethod", "\"PaymentMethod\" IN (1,2)");
             t.HasCheckConstraint("CK_Order_Expiry", "(\"Status\" <> 1 OR \"ExpiresAt\" IS NOT NULL) AND (\"PaymentMethod\" <> 2 OR \"ExpiresAt\" IS NULL)");
             t.HasCheckConstraint("CK_Order_Amounts", "\"Currency\" = 'VND' AND \"Subtotal\" >= 0 AND \"Subtotal\" = FLOOR(\"Subtotal\") AND \"ShippingAmount\" >= 0 AND \"ShippingAmount\" = FLOOR(\"ShippingAmount\") AND \"Total\" >= 0 AND \"Total\" = FLOOR(\"Total\") AND \"Total\" = \"Subtotal\" + \"ShippingAmount\"");
@@ -44,6 +48,8 @@ internal static class OrderingModel
         order.Property(x => x.Subtotal).HasPrecision(18, 2);
         order.Property(x => x.ShippingAmount).HasPrecision(18, 2);
         order.Property(x => x.Total).HasPrecision(18, 2);
+        order.Property(x => x.PaymentStatus).HasDefaultValue(OrderPaymentStatus.Unpaid);
+        order.Property(x => x.FulfillmentStatus).HasDefaultValue(OrderFulfillmentStatus.Pending);
         order.Property(x => x.RecipientName).HasMaxLength(256).IsRequired();
         order.Property(x => x.Email).HasMaxLength(256).IsRequired();
         order.Property(x => x.Phone).HasMaxLength(30).IsRequired();

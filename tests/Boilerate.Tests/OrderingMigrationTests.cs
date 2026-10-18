@@ -35,7 +35,8 @@ public sealed class OrderingMigrationTests
         var work = new CommerceUnitOfWork(db);
         var catalog = new CommerceService(db, work, actor, users, Options.Create(new CommerceSettings()),
             scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
-        var ordering = new OrderingService(db, work, actor, users, Options.Create(new OrderingSettings()), TimeProvider.System);
+        var ordering = new OrderingService(db, work, actor, users, Options.Create(new OrderingSettings()), TimeProvider.System,
+            scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
         await catalog.InitializeAsync(default);
         var type = await catalog.CreateTypeAsync(new("DOWNGRADE", "Downgrade fixture", []), default);
         async Task<ProductDto> CreatePublished(string slug, ProductFulfillmentKind kind)
@@ -60,7 +61,7 @@ public sealed class OrderingMigrationTests
         var migrator = db.GetService<IMigrator>();
         var previous = db.Database.GetMigrations().Single(name => name.EndsWith("_DigitalInventory", StringComparison.Ordinal));
         var appliedBefore = (await db.Database.GetAppliedMigrationsAsync()).ToArray();
-        Assert.EndsWith("_OrderingCheckout", appliedBefore.Last());
+        Assert.EndsWith("_PaymentDigitalDelivery", appliedBefore.Last());
 
         var blocked = await Record.ExceptionAsync(() => migrator.MigrateAsync(previous));
         Assert.True(blocked is Microsoft.Data.SqlClient.SqlException { Number: 51000 } ||

@@ -39,7 +39,7 @@ public static class AuditTrailHelper
             {
                 // Digital stock contents remain secret even in their encrypted representation.
                 // The entity version and metadata retain the audit history for content changes.
-                if (entry.Entity is Boilerate.Domain.DigitalInventory.DigitalStockItem &&
+                if ((entry.Entity is Boilerate.Domain.DigitalInventory.DigitalStockItem or Boilerate.Domain.Ordering.DigitalDelivery) &&
                     property.Metadata.Name == nameof(Boilerate.Domain.DigitalInventory.DigitalStockItem.ProtectedContent))
                     continue;
 
@@ -68,7 +68,7 @@ public static class AuditTrailHelper
                 }
 
                 // Skip navigation/foreign keys nếu muốn gọn log
-                if (property.Metadata.IsForeignKey() && entry.Entity.GetType().Namespace is not ("Boilerate.Domain.Catalog" or "Boilerate.Domain.Inventory" or "Boilerate.Domain.Media" or "Boilerate.Domain.DigitalInventory" or "Boilerate.Domain.Ordering")) continue;
+                if (property.Metadata.IsForeignKey() && entry.Entity.GetType().Namespace is not ("Boilerate.Domain.Catalog" or "Boilerate.Domain.Inventory" or "Boilerate.Domain.Media" or "Boilerate.Domain.DigitalInventory" or "Boilerate.Domain.Ordering" or "Boilerate.Domain.Payments")) continue;
 
                 switch (entry.State)
                 {

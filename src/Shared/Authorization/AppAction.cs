@@ -19,5 +19,7 @@ public static class AppAction
     public const string Replay = nameof(Replay);
     public const string Reveal = nameof(Reveal);
     public const string Cancel = nameof(Cancel);
+    public const string Confirm = nameof(Confirm);
+    public const string Fulfill = nameof(Fulfill);
     public const string Send = nameof(Send);
 }

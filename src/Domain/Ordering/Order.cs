@@ -6,12 +6,22 @@ namespace Boilerate.Domain.Ordering;
 
 public enum OrderStatus
 {
-    PendingPayment = 1, AwaitingProcessing = 2, Cancelled = 3, Expired = 4
+    PendingPayment = 1, AwaitingProcessing = 2, Cancelled = 3, Expired = 4, Completed = 5
 }
 
 public enum OrderPaymentMethod
 {
     Prepaid = 1, CashOnDelivery = 2
+}
+
+public enum OrderPaymentStatus
+{
+    Unpaid = 1, Paid = 2
+}
+
+public enum OrderFulfillmentStatus
+{
+    Pending = 1, NeedsReview = 2, InProgress = 3, Completed = 4
 }
 
 public sealed class Order : CommerceEntity, IAggregateRoot
@@ -24,6 +34,9 @@ public sealed class Order : CommerceEntity, IAggregateRoot
     public string Number { get; private set; } = null!;
     public OrderStatus Status { get; private set; }
     public OrderPaymentMethod PaymentMethod { get; private set; }
+    public OrderPaymentStatus PaymentStatus { get; private set; } = OrderPaymentStatus.Unpaid;
+    public OrderFulfillmentStatus FulfillmentStatus { get; private set; } = OrderFulfillmentStatus.Pending;
+    public DateTime? PaidAtUtc { get; private set; }
     public string Currency { get; private set; } = "VND";
     public decimal Subtotal { get; private set; }
     public decimal ShippingAmount { get; private set; }
@@ -93,7 +106,7 @@ public sealed class Order : CommerceEntity, IAggregateRoot
 
     public void Cancel()
     {
-        if (Status is not OrderStatus.PendingPayment and not OrderStatus.AwaitingProcessing)
+        if (PaymentStatus == OrderPaymentStatus.Paid || Status is not OrderStatus.PendingPayment and not OrderStatus.AwaitingProcessing)
             throw new DomainException("Only pending orders can be cancelled.");
         Status = OrderStatus.Cancelled;
         Touch();
@@ -103,11 +116,40 @@ public sealed class Order : CommerceEntity, IAggregateRoot
     {
         if (now.Kind != DateTimeKind.Utc)
             throw new DomainException("Expiry checks require UTC time.");
-        if (Status != OrderStatus.PendingPayment || !ExpiresAt.HasValue || now < ExpiresAt.Value)
+        if (PaymentStatus != OrderPaymentStatus.Unpaid || Status != OrderStatus.PendingPayment || !ExpiresAt.HasValue || now < ExpiresAt.Value)
             return false;
         Status = OrderStatus.Expired;
         Touch();
         return true;
+    }
+
+    public void RecordPayment(DateTime receivedAtUtc)
+    {
+        if (PaymentStatus == OrderPaymentStatus.Paid || receivedAtUtc.Kind != DateTimeKind.Utc)
+            throw new DomainException("An unpaid order and a UTC payment receipt time are required.");
+        PaymentStatus = OrderPaymentStatus.Paid;
+        PaidAtUtc = receivedAtUtc;
+        FulfillmentStatus = OrderFulfillmentStatus.NeedsReview;
+        if (Status != OrderStatus.Cancelled)
+            Status = OrderStatus.AwaitingProcessing;
+        Touch();
+    }
+
+    public void CompleteFulfillment(bool automaticDeliveryComplete)
+    {
+        if (PaymentStatus != OrderPaymentStatus.Paid || Status == OrderStatus.Cancelled)
+            throw new DomainException("Only a paid, non-cancelled order can be fulfilled.");
+        FulfillmentStatus = automaticDeliveryComplete ? OrderFulfillmentStatus.Completed : OrderFulfillmentStatus.InProgress;
+        Status = automaticDeliveryComplete ? OrderStatus.Completed : OrderStatus.AwaitingProcessing;
+        Touch();
+    }
+
+    public void MarkFulfillmentReview()
+    {
+        if (PaymentStatus != OrderPaymentStatus.Paid)
+            throw new DomainException("Only paid orders can await fulfillment review.");
+        FulfillmentStatus = OrderFulfillmentStatus.NeedsReview;
+        Touch();
     }
 }
 
