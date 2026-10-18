@@ -84,13 +84,15 @@ Email: `DigitalDeliveryReady` outbox v1, payload chỉ OrderId; worker tải ema
 
 2026-10-18 — Bước 4–5: build cuối0 lỗi, regression276/276 đạt, gồm rollback sau EF flush trước commit và email retry/replay/lease. Đồng bộ docs và chia commit theo core/email; fix timestamp UTC phát hiện khi review được tách commit kế tiếp, cùng kết quả test đã ghi trong báo cáo.
 
+2026-10-18 — Review bổ sung: [fix timestamp UTC](../history/2026-10-18-19-order-timestamp-utc.md) cho PaidAtUtc/ExpiresAt và CreatedOn của danh sách. SQL Server datetime2 trả Unspecified được chuẩn hóa Kind=Utc, giữ nguyên instant và JSON có `Z` như PostgreSQL. Hai ca roundtrip đã đạt trong regression276/276; không đổi DB hoặc lịch sử.
+
 ## 5. Kiểm chứng và nghiệm thu
 
 Core local48/48 đạt sau sửa assertion; regression cuối276/276 đạt, xem [báo cáo từng lượt](../verification/2026-10-18-payment-delivery.md). Linux/Docker/CI, ngân hàng/gateway và SMTP thật chưa nghiệm thu. Hạn chế: chưa xử lý thanh toán một phần, khoản chuyển thừa/trùng thực tế, hoàn tiền, shipping hay thao tác gia hạn; nhân viên cần đối chiếu thực tế trước ghi nhận.
 
 ## 6. Lịch sử commit
 
-`5315fa4` — thiết kế nhận tiền và giao số trước code. `533b681` — core nhận tiền/giao số và migrations. Commit email ghi khi tồn tại.
+`5315fa4` — thiết kế nhận tiền và giao số trước code. `533b681` — core nhận tiền/giao số và migrations. `b7afe1a` — email outbox và kiểm chứng rollback. Commit fix UTC tra từ history bước19; không ghi hash dự đoán.
 
 ## 7. Còn lại
 

@@ -140,6 +140,8 @@ Response cart/order no-store và không có secret/ciphertext/stock item ID. Ph�
 
 ### Xác nhận nhận tiền và giao số
 
+Các timestamp của Order response là UTC, serialize có `Z`: PaidAtUtc/ExpiresAt nullable và CreatedOn của danh sách. Giá trị đọc lại từ SQL Server/PostgreSQL giữ cùng instant; client chuyển sang múi giờ hiển thị, không tự coi giá trị không có timezone là giờ local.
+
 Nguồn nhận tiền hiện tại là **nhân viên kiểm tra chuyển khoản thực tế rồi xác nhận**. Chưa chọn/nghiệm thu payment provider; không có callback công khai hoặc API cho khách tự khai đã thanh toán. Cấp Payment.Confirm và Order.Fulfill riêng bằng operator CLI; Order.View/Cancel không thay thế hai quyền này. [Hồ sơ payment/delivery](features/payment-digital-delivery.md) ghi cardinality, transaction và các phần còn lại.
 
 POST `/api/admin/orders/{id}/payment-confirmations`:

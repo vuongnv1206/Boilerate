@@ -248,6 +248,12 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
         var items = await query.OrderByDescending(o => o.CreatedOn).ThenBy(o => o.Id).Skip((page - 1) * size).Take(size)
             .Select(o => new OrderSummary(o.Id, o.Number, o.Status, o.PaymentMethod, o.Total, o.Currency, o.CreatedOn, o.ExpiresAt,
                 o.PaymentStatus, o.FulfillmentStatus, o.PaidAtUtc)).ToListAsync(ct);
+        // SQL Server datetime2 materializes Unspecified; values are stored as UTC.
+        // Normalize after paging/materialization so both providers keep a plain SQL projection.
+        items = items.Select(o => o with
+        {
+            CreatedOn = UtcTimestamp(o.CreatedOn), ExpiresAt = UtcTimestamp(o.ExpiresAt), PaidAtUtc = UtcTimestamp(o.PaidAtUtc)
+        }).ToList();
         return new(items, total, page, size);
     }
     public async Task<OrderDto> CancelAsync(Guid id, CancelOrder r, bool admin, CancellationToken ct)
@@ -302,7 +308,10 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
     }, ct);
 
     private static OrderDto MapOrder(Order order) => new(order.Id, order.Number, order.Version, order.Status, order.PaymentMethod,
-        order.Subtotal, order.ShippingAmount, order.Total, order.Currency, order.ExpiresAt, order.RecipientName, order.Email, order.Phone,
+        order.Subtotal, order.ShippingAmount, order.Total, order.Currency, UtcTimestamp(order.ExpiresAt), order.RecipientName, order.Email, order.Phone,
         order.ShippingAddress, order.Items.OrderBy(i => i.Id).Select(i => new OrderLineDto(i.Id, i.ProductId, i.VariantId, i.Name, i.Sku,
-            i.OptionDescription, i.FulfillmentKind, i.UnitPrice, i.Quantity)).ToList(), order.PaymentStatus, order.FulfillmentStatus, order.PaidAtUtc);
+            i.OptionDescription, i.FulfillmentKind, i.UnitPrice, i.Quantity)).ToList(), order.PaymentStatus, order.FulfillmentStatus, UtcTimestamp(order.PaidAtUtc));
+
+    private static DateTime UtcTimestamp(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);
+    private static DateTime? UtcTimestamp(DateTime? value) => value.HasValue ? UtcTimestamp(value.Value) : null;
 }
