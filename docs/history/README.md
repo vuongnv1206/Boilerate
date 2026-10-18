@@ -15,6 +15,7 @@
 - 2026-10-18: [Nhận tiền và tự động giao Unique/Shared](2026-10-18-17-payment-delivery-implementation.md).
 - 2026-10-18: [Email thông báo giao hàng số qua outbox](2026-10-18-18-digital-delivery-email.md).
 - 2026-10-18: [Nhất quán timestamp UTC khi đọc lại đơn](2026-10-18-19-order-timestamp-utc.md).
+- 2026-10-18: [Thiết kế giao vật lý và thu COD](2026-10-18-20-physical-shipping-design.md).
 
 - 2026-10-18: [Lập kế hoạch nghiệm thu vận hành](2026-10-18-01-operations-plan.md).
 - 2026-10-18: [Gate runtime và trusted proxy](2026-10-18-02-runtime-gates.md).

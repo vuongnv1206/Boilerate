@@ -43,7 +43,7 @@ Trước khi code mỗi lát, bổ sung thiết kế tối thiểu theo [mẫu f
 | 1 | Chọn cách giao và kho hàng số | Dùng Catalog hiện có; cấu hình hành vi được hỗ trợ, nhập/quản lý mã/link/tài khoản; bảo vệ nội dung; thiết kế DB/API trước code | Đã triển khai/kiểm chứng local theo [hồ sơ](digital-inventory.md); deployment chưa nghiệm thu |
 | 2 | Giỏ, checkout, đơn và giữ hàng | Tổng tiền/địa chỉ/phí ship được xác định trước khi trả; snapshot; đơn chung; đơn trả trước giữ 30 phút/cấu hình, hết hạn/nhả; khách xem đơn | Đã triển khai/kiểm chứng local, regression222/222; [hồ sơ](ordering-checkout.md) |
 | 3 | Nhận tiền và giao hàng số | Xác nhận khoản chuyển khoản thực nhận, chống trùng; giao Unique/Shared qua My Orders; email thông báo; Extension chờ nhân viên | Đã triển khai/kiểm local, regression276/276; chưa nghiệm thu SMTP thật, [hồ sơ](payment-digital-delivery.md) |
-| 4 | Quản trị đơn và giao vật lý | Xem/tìm đơn; cập nhật xử lý/vận chuyển; hủy/ghi nhận hoàn tiền; gia hạn có lịch sử/bằng chứng và PendingVerification | Chưa triển khai, phụ thuộc 2–3 |
+| 4 | Quản trị đơn và giao vật lý | Xem/tìm đơn; cập nhật xử lý/vận chuyển; hủy/ghi nhận hoàn tiền; gia hạn có lịch sử/bằng chứng và PendingVerification | [4A shipping/COD](physical-shipping.md) đang triển khai; gia hạn/refund chưa bắt đầu |
 | 5 | Kiểm chứng và chuẩn bị chạy thật | Luồng mua trọn vẹn, retry/concurrency/quyền trên hai DB; docs/OpenAPI; hoàn tất các gate runtime/adapter trước vận hành thật | Chưa triển khai, phụ thuộc 1–4 |
 
 Mỗi lát có docs/history và commit riêng, giữ các thay đổi model/API/migration liên quan trong một commit build được. Bước tiếp theo là quản trị giao vật lý/gia hạn/hủy-hoàn; không coi các bước đó hoàn tất từ trạng thái Paid.
