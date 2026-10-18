@@ -21,5 +21,7 @@ public static class AppAction
     public const string Cancel = nameof(Cancel);
     public const string Confirm = nameof(Confirm);
     public const string Fulfill = nameof(Fulfill);
+    public const string Dispatch = nameof(Dispatch);
+    public const string Deliver = nameof(Deliver);
     public const string Send = nameof(Send);
 }

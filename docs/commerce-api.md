@@ -5,8 +5,8 @@ Thiết kế quan hệ, khóa và kiểu cột: [commerce-database.md](commerce-
 ## Khởi tạo
 
 1. Cấu hình provider/connection/JWT secret của installation mới theo README.
-2. Apply toàn bộ migrations InitialFoundation, CommerceCatalog, DigitalInventory, OrderingCheckout và PaymentDigitalDelivery bằng EF CLI của provider đã chọn; Host không tự migrate. Installation đã ở baseline repo chỉ apply migration còn thiếu.
-3. Bootstrap admin, hoặc chạy `--register-capabilities` rồi `--grant-admin-capabilities` có chủ đích với Catalog bật. Restart không tự cấp quyền mới.
+2. Apply đủ sáu migrations InitialFoundation, CommerceCatalog, DigitalInventory, OrderingCheckout, PaymentDigitalDelivery và PhysicalShipping bằng EF CLI của provider đã chọn; Host không tự migrate. Installation đã ở baseline repo chỉ apply migration còn thiếu. PhysicalShipping có ID `20261018151738` trên SQL Server và `20261018151746` trên PostgreSQL.
+3. Bootstrap admin, hoặc chạy `--register-capabilities` rồi `--grant-admin-capabilities` có chủ đích với Catalog bật. Restart không tự cấp quyền mới. Shipping bổ sung đúng các cặp `Shipping.View`, `Shipping.Dispatch`, `Shipping.Deliver`; `Payment.Confirm` dùng riêng để xác nhận tiền, kể cả COD. Đăng ký capability không tự cấp grant cho nhân viên.
 4. Login, gọi POST `/api/inventory/initialize` một lần; gọi lại trả cùng kho MAIN. Quyền `Inventory.Initialize`.
 5. Tạo ProductType/schema, Category, upload media; sau đó tạo Product/SKU và chọn cách giao. Physical có balance ban đầu bằng 0, nhập kho bằng adjustment riêng; hàng số dùng API kho số bên dưới, không cần MAIN để tạo SKU số.
 
@@ -44,7 +44,7 @@ Giá chỉ nhận VND nguyên đồng. Mọi mã SKU được giữ duy nhất t
 | GET `/api/catalog/categories` | Category active | Công khai |
 | GET `/api/catalog/media/{id}` | Ảnh có liên kết Product Published | Công khai |
 
-Các request có ID trong body phải khớp route. Đọc lại version sau mỗi write. Stale version hoặc constraint conflict trả 409; client tải lại và quyết định thay đổi, không retry ghi đè mù quáng. Adjustment, checkout và xác nhận tiền có OperationId để replay kết quả thành công theo hợp đồng riêng; request khác cần đọc trạng thái nếu mất response sau commit.
+Các request có ID trong body phải khớp route. Đọc lại version sau mỗi write. Stale version hoặc constraint conflict trả 409; client tải lại và quyết định thay đổi, không retry ghi đè mù quáng. Adjustment, checkout, xác nhận tiền và shipment có OperationId để replay kết quả thành công theo hợp đồng riêng; request khác cần đọc trạng thái nếu mất response sau commit.
 
 ### Tạo schema và Product
 
@@ -114,9 +114,13 @@ Lát này dùng đăng nhập Identity hiện có; không nhận CustomerId tron
 | POST `/api/orders/{id}/cancel` | `{version}`; hủy/nhả hàng đơn chờ xử lý của khách |
 | GET `/api/admin/orders`, GET `/{id}` | Mọi đơn; Order.View ở controller và service |
 | POST `/api/admin/orders/{id}/cancel` | `{version}`; Order.Cancel ở controller và service |
-| POST `/api/admin/orders/{id}/payment-confirmations` | Xác nhận đủ tiền chuyển khoản thực nhận; Payment.Confirm ở controller và service |
+| POST `/api/admin/orders/{id}/payment-confirmations` | Xác nhận đủ tiền thực nhận, Source mặc định ManualBankTransfer hoặc ManualCOD sau giao đủ; Payment.Confirm ở controller và service |
 | POST `/api/admin/orders/{id}/retry-fulfillment` | `{version}`; Order.Fulfill; thử lại đơn Paid + NeedsReview sau bổ sung kho/khắc phục key |
 | GET `/api/orders/{id}/digital-deliveries` | Nội dung đã giao của chính khách đã trả tiền; audit đọc, no-store; sai owner trả404 |
+| GET `/api/orders/{id}/shipments` | Tiến độ giao vật lý của chính khách; sai owner trả404, no-store |
+| GET `/api/admin/orders/{id}/shipments` | Các lần giao của đơn; Shipping.View ở controller và service |
+| POST `/api/admin/orders/{id}/shipments` | Xuất giao số lượng đã giữ; Shipping.Dispatch ở controller và service |
+| POST `/api/admin/orders/{id}/shipments/{shipmentId}/deliver` | Xác nhận shipment đã giao; Shipping.Deliver ở controller và service; không tự Paid |
 
 GET cart chưa tồn tại trả Id Guid.Empty, Version null, Items rỗng. PUT đầu tiên dùng version null; các lần sau dùng Version trả về. Ví dụ:
 
@@ -134,7 +138,7 @@ Checkout:
 
 PaymentMethod Prepaid=1 hoặc CashOnDelivery=2; COD chỉ thuần vật lý. Server tính giá/ship, đối chiếu ExpectedTotal, rồi lưu snapshot tên/SKU/options/cách giao/giá/số lượng. Tổng đổi trả409 trước khi giữ hàng, client tải lại giỏ và xin xác nhận. Cùng OperationId và payload chuẩn hóa trả lại đơn cũ mà không clear giỏ/giữ hàng lần hai; payload khác trả409. Nếu client đổi cartVersion/tổng sau conflict thì dùng OperationId mới; không retry ghi đè.
 
-Đơn trả trước giữ mặc định30phút theo `Ordering__ReservationMinutes`; physical Reserved không giảm OnHand, Unique chuyển Reserved theo dòng đơn. Shared/Extension không giữ độc quyền. OrderStatus PendingPayment=1/AwaitingProcessing=2/Cancelled=3/Expired=4/Completed=5. PaymentStatus Unpaid=1/Paid=2 và FulfillmentStatus Pending=1/NeedsReview=2/InProgress=3/Completed=4 độc lập với nhau. OrderDto chi tiết và OrderSummary danh sách đều trả hai trạng thái cùng PaidAtUtc nullable. Hủy/hết hạn chỉ áp dụng đơn chưa trả, nhả holds một lần; version cũ trả409. Paid không bị expiry hoặc được hủy qua API này. Worker và lượt checkout thu gom expiry bounded batch; chỉ nghiệp vụ xác nhận tiền mới có thể tiếp tục đơn hết hạn khi đủ hàng. Chưa có PaymentAttempt, refund hoặc gateway/webhook; email thông báo đã có qua outbox.
+Đơn trả trước giữ mặc định30phút theo `Ordering__ReservationMinutes`; physical Reserved không giảm OnHand, Unique chuyển Reserved theo dòng đơn. Shared/Extension không giữ độc quyền. OrderStatus PendingPayment=1/AwaitingProcessing=2/Cancelled=3/Expired=4/Completed=5. PaymentStatus Unpaid=1/Paid=2 và FulfillmentStatus Pending=1/NeedsReview=2/InProgress=3/Completed=4 độc lập với nhau. OrderDto chi tiết và OrderSummary danh sách đều trả hai trạng thái cùng PaidAtUtc nullable. Hủy/hết hạn chỉ áp dụng đơn chưa trả và chưa xuất giao, nhả holds một lần; version cũ trả409. Paid không bị expiry hoặc được hủy qua API này. COD đã xuất dù một phần cũng không được hủy/nhả tồn qua API cũ. Worker và lượt checkout thu gom expiry bounded batch; chỉ nghiệp vụ xác nhận tiền mới có thể tiếp tục đơn hết hạn khi đủ hàng. Chưa có PaymentAttempt, refund hoặc gateway/webhook; email thông báo đã có qua outbox.
 
 Response cart/order no-store và không có secret/ciphertext/stock item ID. Phí ship phẳng cấu hình `Ordering__FlatShippingAmount` (mặc định0, whole VND), chỉ đơn có vật lý; thiết lập phí phù hợp trước khi chạy shop. Worker `Ordering__WorkerIntervalSeconds` mặc định15, batch50 (max100); tắt cùng `Commerce__WorkerEnabled=false` cho kiểm thử/operator, không tắt khi cần xử lý đơn tự động trừ khi có runner khác.
 
@@ -142,19 +146,19 @@ Response cart/order no-store và không có secret/ciphertext/stock item ID. Ph�
 
 Các timestamp của Order response là UTC, serialize có `Z`: PaidAtUtc/ExpiresAt nullable và CreatedOn của danh sách. Giá trị đọc lại từ SQL Server/PostgreSQL giữ cùng instant; client chuyển sang múi giờ hiển thị, không tự coi giá trị không có timezone là giờ local.
 
-Nguồn nhận tiền hiện tại là **nhân viên kiểm tra chuyển khoản thực tế rồi xác nhận**. Chưa chọn/nghiệm thu payment provider; không có callback công khai hoặc API cho khách tự khai đã thanh toán. Cấp Payment.Confirm và Order.Fulfill riêng bằng operator CLI; Order.View/Cancel không thay thế hai quyền này. [Hồ sơ payment/delivery](features/payment-digital-delivery.md) ghi cardinality, transaction và các phần còn lại.
+Nguồn nhận tiền hiện tại là **nhân viên kiểm tra tiền thực nhận rồi xác nhận**: chuyển khoản, hoặc COD sau khi giao đủ đơn thuần vật lý. Chưa chọn/nghiệm thu payment provider; không có callback công khai hoặc API cho khách tự khai đã thanh toán. Cấp Payment.Confirm và Order.Fulfill riêng bằng operator CLI; Order.View/Cancel không thay thế hai quyền này. [Hồ sơ payment/delivery](features/payment-digital-delivery.md) và [bổ sung shipping/COD](features/physical-shipping.md) ghi cardinality, transaction và các phần còn lại.
 
 POST `/api/admin/orders/{id}/payment-confirmations`:
 
 ```json
-{"version":"<order-version>","operationId":"<new-guid>","reference":"BANK-TRANSFER-001","amount":300000,"currency":"VND","receivedAtUtc":"2026-10-18T10:00:00Z"}
+{"version":"<order-version>","operationId":"<new-guid>","reference":"BANK-TRANSFER-001","amount":300000,"currency":"VND","receivedAtUtc":"2026-10-18T10:00:00Z","source":"ManualBankTransfer"}
 ```
 
-Amount phải đúng toàn bộ Total snapshot của đơn, Currency chỉ VND; không hỗ trợ ghi nhận thiếu/thừa tiền trong lát này. ReceivedAtUtc bắt buộc UTC và không được ở tương lai. Reference là mã giao dịch ASCII dài tối đa100, cho chữ/số/dấu `.`/`-`/`_`, được trim/chuẩn hóa uppercase để chống dùng lại. Không nhập thông tin đăng nhập vào reference. Chỉ ghi tối đa một receipt đầy đủ cho mỗi đơn. Sai input/số tiền trả400, stale version/đã trả/reference trùng trả409, thiếu auth/quyền trả401/403.
+Amount phải đúng toàn bộ Total snapshot của đơn, Currency chỉ VND; không hỗ trợ ghi nhận thiếu/thừa tiền trong lát này. ReceivedAtUtc bắt buộc UTC và không được ở tương lai. Reference là mã giao dịch ASCII dài tối đa100, cho chữ/số/dấu `.`/`-`/`_`, được trim/chuẩn hóa uppercase để chống dùng lại trong cùng Source. Không nhập thông tin đăng nhập vào reference. Source có thể bỏ qua để giữ mặc định `ManualBankTransfer`; chỉ nhận đúng `ManualBankTransfer` hoặc `ManualCOD`. ManualCOD yêu cầu đơn COD đã giao thành công toàn bộ số lượng vật lý; chưa giao đủ hoặc sai phương thức trả409. Delivered không tự tạo receipt. Chỉ ghi tối đa một receipt đầy đủ cho mỗi đơn. Sai input/số tiền trả400, stale version/đã trả/reference trùng trả409, thiếu auth/quyền trả401/403.
 
-OperationId của receipt unique toàn shop, độc lập với OperationId checkout. Gửi lại cùng order/reference/amount/currency/received time trả trạng thái đơn hiện tại, kể cả Version đã thay đổi; không ghi receipt hoặc cấp hàng lần hai. Dùng cùng operation với nội dung khác trả409. Khi mất response, retry đúng payload/OperationId; không tự tạo mã khác để xác nhận lại khoản tiền.
+OperationId của receipt unique toàn shop, độc lập với OperationId checkout. Gửi lại cùng order/reference/amount/currency/received time/source trả trạng thái đơn hiện tại, kể cả Version đã thay đổi; không ghi receipt hoặc cấp hàng lần hai. Hash chuyển khoản cũ được giữ tương thích; ManualCOD thêm Source vào hash. Dùng cùng operation với nội dung khác, kể cả đổi nguồn nhận tiền, trả409. Khi mất response, retry đúng payload/OperationId; không tự tạo mã khác để xác nhận lại khoản tiền.
 
-Khi xác nhận tiền, server kiểm đủ toàn bộ hàng theo snapshot đơn dưới khóa. Unique giữ đúng owner được giao tiếp, hàng đã nhả do hết hạn phải được giữ lại đủ; Shared cần nội dung Available. Nếu đủ, Unique qty2 nhận hai snapshot khác nhau; Shared qty2 nhận một snapshot. Shared đổi link sau đó không đổi nội dung khách đã nhận. Đơn chỉ có Unique/Shared hoàn tất tự động; đơn có Physical/ManualExtension vẫn InProgress, Paid không đồng nghĩa đã gửi hàng hoặc đã gia hạn.
+Khi xác nhận tiền trước khi có lần xuất giao nào, server kiểm đủ toàn bộ hàng theo snapshot đơn dưới khóa. Unique giữ đúng owner được giao tiếp, hàng đã nhả do hết hạn phải được giữ lại đủ; Shared cần nội dung Available. Nếu đủ, Unique qty2 nhận hai snapshot khác nhau; Shared qty2 nhận một snapshot. Shared đổi link sau đó không đổi nội dung khách đã nhận. Đơn chỉ có Unique/Shared hoàn tất tự động; đơn có Physical/ManualExtension vẫn InProgress, Paid không đồng nghĩa đã gửi hàng hoặc đã gia hạn. Với COD đã xuất một phần hoặc toàn bộ, xác nhận chuyển khoản chỉ đối chiếu các shipment đã có và trạng thái hoàn tất; không giữ lại số lượng ban đầu đã xuất, không tạo movement hoặc cấp lại hàng số.
 
 Thanh toán thực sự muộn hoặc thông báo/xác nhận muộn đều đối chiếu tồn hiện tại khi holds đã được nhả. Thiếu một dòng vẫn giữ Paid + NeedsReview, không tạo phần giữ hàng/cấp phát mới; holds cũ giữ nguyên. Giải mã/mã hóa snapshot lỗi cũng giữ Paid + NeedsReview, audit metadata `DigitalContentUnavailable`. Sau khi nhập thêm hàng hoặc khôi phục đúng key, nhân viên dùng retry-fulfillment với Version mới; không xác nhận tiền lần nữa. Đơn Cancelled nhận tiền vẫn Cancelled + Paid + NeedsReview, không tự hồi sinh hoặc cho retry giao; hoàn tiền/xử lý hủy sau nhận tiền là mốc sau.
 
@@ -162,13 +166,45 @@ GET `/api/orders/{id}/digital-deliveries` trả mảng `{id,orderItemId,sequence
 
 Giao Unique/Shared tạo một email outbox trong cùng transaction. Email chỉ thông báo vào Đơn hàng của tôi, không gửi mã, mật khẩu, link bí mật hoặc attachment. SMTP lỗi không làm mất hàng đã giao hoặc đảo Paid; worker retry/dead-letter/replay. Retry payment/fulfillment đã thành công không tạo thêm notification. SMTP có thể gửi lặp nếu crash sau send/trước ack; Message-Id ổn định chỉ hỗ trợ nhận diện. Bật worker, cấu hình SMTP và kiểm thử adapter thật trước vận hành.
 
+### Giao hàng vật lý và thu COD
+
+[Hồ sơ shipping](features/physical-shipping.md) có thiết kế và trạng thái kiểm chứng. Service/API đã đạt regression326/326 local trên hai DB; chưa nghiệm thu carrier/deployment thật. Shipping có các cặp quyền riêng View/Dispatch/Deliver ở cả controller và service. Khách chỉ GET shipment của đơn mình, không cần Shipping.View. Mọi response shipping no-store; timestamp UTC có `Z`, DeliveredAtUtc nullable trước giao thành công. Không trả nội dung số, movement nội bộ hoặc dữ liệu kho bí mật.
+
+POST `/api/admin/orders/{id}/shipments` xuất giao trực tiếp:
+
+```json
+{"orderVersion":"<order-version>","operationId":"<new-guid>","carrier":"Giao hàng tại shop","trackingNumber":"SHOP-001","items":[{"orderItemId":"<physical-order-item-id>","quantity":1}]}
+```
+
+Đây là xác nhận xuất thật, không phải nháp đóng gói. Carrier/TrackingNumber bắt buộc, trim và tối đa100ký tự. Items từ1–50 dòng khác nhau, mỗi quantity1..999, chỉ dòng Physical của đúng đơn. Đơn trả trước phải Paid; COD thuần vật lý có thể xuất trước khi thu tiền. Cancelled/Expired/NeedsReview bị từ chối. Số lượng vượt phần còn đã giữ hoặc đã mua trả409; lỗi cấu trúc/giới hạn trả400. Trong một transaction, server giảm OnHand và Reserved cùng số lượng, thêm movement âm và ShipmentItem, tăng ConsumedQuantity và Order.Version. Các dòng còn lại tiếp tục được giữ; không gửi API adjustment để xuất thêm lần nữa.
+
+Response ShipmentDto có dạng:
+
+```json
+{"id":"<shipment-id>","orderId":"<order-id>","orderVersion":"<new-order-version>","version":"<shipment-version>","carrier":"Giao hàng tại shop","trackingNumber":"SHOP-001","status":1,"dispatchedAtUtc":"2026-10-18T11:00:00Z","deliveredAtUtc":null,"items":[{"orderItemId":"<physical-order-item-id>","quantity":1}]}
+```
+
+Dùng OrderVersion từ response để thực hiện lần ghi đơn tiếp theo. Một đơn có nhiều shipment, một dòng đơn có thể giao qua nhiều shipment. Shipment OperationId unique toàn shop; replay cùng order/carrier/tracking và tập item/quantity đã sắp theo ID trả lại shipment cũ, bỏ qua version cũ, không trừ kho lần hai. Cùng operation đổi nội dung trả409. Khi mất response phải retry đúng OperationId/payload.
+
+POST `/api/admin/orders/{id}/shipments/{shipmentId}/deliver`:
+
+```json
+{"orderVersion":"<current-order-version>","version":"<current-shipment-version>","operationId":"<new-delivery-guid>"}
+```
+
+Status shipment chuyển Dispatched=1 → Delivered=2, thời điểm do server ghi và không nhỏ hơn thời điểm xuất. DispatchedAtUtc/DeliveredAtUtc được chuẩn hóa microsecond trước persist/response đầu để đọc lại hoặc replay trên hai DB không đổi độ chính xác. OperationId delivery có namespace riêng, unique giữa các lần delivery; replay đúng shipment/đơn trả kết quả hiện tại, không thay ngày giao cũ. Dùng operation cho shipment khác, operation mới trên shipment đã Delivered hoặc version cũ đều trả409. GET `/api/admin/orders/{id}/shipments` và GET `/api/orders/{id}/shipments` trả mảng ShipmentDto; sai owner trả404 ở API khách.
+
+Chỉ khi tổng số lượng Delivered của từng dòng vật lý đã đủ mới xét hoàn tất. Đơn mixed còn cần đủ snapshot Unique/Shared; có ManualExtension thì vẫn InProgress. COD giao đủ mà chưa nhận tiền có FulfillmentStatus.Completed, PaymentStatus.Unpaid, OrderStatus.AwaitingProcessing. Sau đối chiếu thực nhận đủ, gửi payment-confirmations với `source:"ManualCOD"`; lúc đó mới Paid và Order.Completed. Nếu khách chuyển khoản trước khi giao đủ COD, dùng ManualBankTransfer; các lần xuất/nhận sau tiếp tục trên lịch sử đã có. Không tự Paid từ tracking/delivered.
+
+Đã xuất dù một phần thì API cancel đơn cũ trả409, kể cả COD chưa trả tiền. Lát này chưa có sửa/xóa shipment, hủy chuyến, trả hàng/nhập bù hoặc refund; không nhả reservation, bật lại tồn hay sửa ledger để giả lập các nghiệp vụ đó. Chưa có API carrier/webhook; nhân viên lưu kết quả vận chuyển thực tế.
+
 ### Tồn kho
 
 ```json
 {"inventoryItemId":"<balance-id>","version":"<balance-version>","operationId":"<new-guid>","delta":10,"reason":"Nhập lô đầu"}
 ```
 
-Gửi lại đúng operationId/target/delta/reason trả movement cũ kể cả version đã cũ; khác nội dung trả 409. Giảm kho dùng delta âm; DB balance không dưới Reserved. Inventory DTO trả OnHand/Reserved/Available. Không chỉnh quantity qua Product form, không sửa/xóa movement. Endpoint adjustment chỉ dùng cho Physical; hàng số đọc từ DigitalInventory.
+Gửi lại đúng operationId/target/delta/reason trả movement cũ kể cả version đã cũ; khác nội dung trả 409. Giảm kho dùng delta âm; DB balance không dưới Reserved. Inventory DTO trả OnHand/Reserved/Available. Dispatch dùng nghiệp vụ consume reservation riêng, giảm đồng thời OnHand và Reserved, không dùng adjustment để xuất phần đã giữ. Không chỉnh quantity qua Product form, không sửa/xóa movement. Endpoint adjustment chỉ dùng cho Physical; hàng số đọc từ DigitalInventory.
 
 ### Trường tùy chỉnh và search
 
@@ -192,7 +228,7 @@ Sau proxy, đặt `ReverseProxy__Enabled=true` và `ReverseProxy__KnownProxies__
 
 Worker log định kỳ backlog, oldestAgeSeconds, deadLetters; cảnh báo nếu backlog/tuổi tăng kéo dài hoặc deadLetters >0. API outbox trả trạng thái để operator điều tra/replay sau khi sửa nguyên nhân. Replay giữ nguyên message identity và có audit. File missing được coi là đã xóa; permission denied/offline phải retry/dead-letter.
 
-Backup database, media và Data Protection key ring cùng cửa sổ vận hành. Receipt/delivery/stock owner phải cùng recovery point; sau restore cũ cần đối chiếu tiền ngân hàng và mã đã giao ngoài cửa sổ backup trước khi mở cấp phát lại. Tạm dừng write/worker khi lấy snapshot nhất quán; kiểm thử restore trên installation cô lập, chạy migration/preflight/health, thử đọc media, nội dung kho số/snapshot giao và session/token. Không dùng cache làm nguồn giá, kho hoặc authorization. Chỉ bật adapter SMTP/blob/OAuth/Redis sau smoke với cấu hình thực của môi trường.
+Backup database, media và Data Protection key ring cùng cửa sổ vận hành. Receipt/digital delivery/shipment/stock movement/consumption/stock owner phải cùng recovery point; sau restore cũ cần đối chiếu tiền ngân hàng/COD, hàng đã xuất và mã đã giao ngoài cửa sổ backup trước khi mở cấp phát lại. PhysicalShipping Down chặn toàn bộ receipt/delivery/Paid/holds và lịch sử xuất giao trước DDL; không dùng downgrade để dọn giao dịch. Tạm dừng write/worker khi lấy snapshot nhất quán; kiểm thử restore trên installation cô lập, chạy migration/preflight/health, thử đọc media, nội dung kho số/snapshot giao và session/token. Không dùng cache làm nguồn giá, kho hoặc authorization. Chỉ bật adapter SMTP/blob/OAuth/Redis sau smoke với cấu hình thực của môi trường.
 
 ## Kiểm chứng
 

@@ -94,4 +94,4 @@ Source trước bước: `31a0109`; `dfcc92f` ghi thiết kế trước commit c
 
 ## 7. Còn lại
 
-Cập nhật lát tiếp nối: [nhận tiền/giao số](payment-digital-delivery.md) đã bổ sung receipt xác nhận chuyển khoản, trả muộn giữ lại toàn bộ hoặc chờ xử lý, retry fulfillment, delivery Unique/Shared và email outbox. Gateway/webhook, Extension/PendingVerification và vận chuyển/hủy-hoàn sau nhận tiền vẫn thuộc các mốc sau; deployment/runtime còn gate riêng. Các kết quả kiểm chứng Ordering ở hồ sơ này giữ nguyên phạm vi ban đầu.
+Cập nhật lát tiếp nối: [nhận tiền/giao số](payment-digital-delivery.md) đã bổ sung receipt xác nhận chuyển khoản, trả muộn giữ lại toàn bộ hoặc chờ xử lý, retry fulfillment, delivery Unique/Shared và email outbox. [Shipping/COD](physical-shipping.md) bổ sung partial consume, shipment và chặn hủy sau xuất; gateway/webhook, Extension/PendingVerification và returns/refund vẫn thuộc các mốc sau. Deployment/runtime còn gate riêng. Các kết quả kiểm chứng Ordering ở hồ sơ này giữ nguyên phạm vi ban đầu.

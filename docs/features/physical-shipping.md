@@ -1,6 +1,6 @@
 # Giao hàng vật lý và ghi nhận tiền COD
 
-Ngày bắt đầu/cập nhật: 2026-10-18, Asia/Saigon. Trạng thái: **đang thiết kế/triển khai, chưa kiểm chứng**.
+Ngày bắt đầu/cập nhật: 2026-10-18, Asia/Saigon. Trạng thái: **đã triển khai/kiểm chứng local326/326; chưa nghiệm thu deployment/carrier thật**.
 Mốc: bước 4A [Shop MVP](shop-mvp.md), [roadmap](../roadmap.md).
 
 ## 1. Mục tiêu và phạm vi
@@ -13,13 +13,13 @@ Nhân viên lập lần xuất giao, chọn số lượng từng dòng vật lý
 
 Tiêu chí chấp nhận:
 
-- [ ] Order 1–N Shipment; Shipment N–N OrderItem có số lượng, chỉ dòng Physical của đúng Order/SKU.
-- [ ] Dispatch trừ đồng thời OnHand và Reserved, thêm movement âm; retry/race không xuất hai lần hoặc vượt số đã mua.
-- [ ] Giao từng phần giữ phần còn lại; không hủy đơn đã xuất qua API nhả hàng cũ; không tự đưa hàng đã xuất về Available.
-- [ ] Prepaid phải Paid, không NeedsReview; COD có thể xuất trước trả; đã giao hết mà chưa thu vẫn Unpaid, chỉ Completed Order sau đủ tiền và hoàn tất mọi món.
-- [ ] Đơn chung không cấp lại mã số; ManualExtension không được đánh dấu hoàn tất từ giao vật lý/nhận COD.
-- [ ] Quyền Shipping.View/Dispatch/Deliver và Payment.Confirm ở controller/service; khách chỉ đọc shipment đơn của mình, no-store; mọi timestamp UTC.
-- [ ] Hai provider có migrations mới, PK/FK/check/unique và rollback/idempotency/HTTP được kiểm chứng; adapter thật ghi trạng thái riêng.
+- [x] Order 1–N Shipment; Shipment N–N OrderItem có số lượng, chỉ dòng Physical của đúng Order/SKU.
+- [x] Dispatch trừ đồng thời OnHand và Reserved, thêm movement âm; retry/race không xuất hai lần hoặc vượt số đã mua.
+- [x] Giao từng phần giữ phần còn lại; không hủy đơn đã xuất qua API nhả hàng cũ; không tự đưa hàng đã xuất về Available.
+- [x] Prepaid phải Paid, không NeedsReview; COD có thể xuất trước trả; đã giao hết mà chưa thu vẫn Unpaid, chỉ Completed Order sau đủ tiền và hoàn tất mọi món.
+- [x] Đơn chung không cấp lại mã số; ManualExtension không được đánh dấu hoàn tất từ giao vật lý/nhận COD.
+- [x] Quyền Shipping.View/Dispatch/Deliver và Payment.Confirm ở controller/service; khách chỉ đọc shipment đơn của mình, no-store; mọi timestamp UTC.
+- [x] Hai provider có migrations mới, PK/FK/check/unique và rollback/idempotency/HTTP được kiểm chứng; adapter thật ghi trạng thái riêng.
 
 ## 2. Thiết kế
 
@@ -60,7 +60,7 @@ Migration mới `PhysicalShipping` trên SQL Server/PostgreSQL, không sửa nă
 | GET /api/orders/{id}/shipments | List ShipmentDto/Items | Authenticated owner, đơn khác404; no-store |
 | POST payment-confirmations hiện hữu | Thêm Source optional, mặc định ManualBankTransfer; ManualCOD là lựa chọn mới | Payment.Confirm; ManualCOD chỉ COD đã giao đủ; full amount/currency/idempotency giữ nguyên |
 
-ShipmentDto gồm Id, OrderId, OrderVersion, Version, Carrier, TrackingNumber, Status, DispatchedAtUtc/DeliveredAtUtc và Items(OrderItemId,Quantity); không expose movement nội bộ hoặc secret. Bank receipt mặc định giữ hash tương thích các request cũ; ManualCOD hash chứa Source để không replay khác nguồn. Chưa có carrier adapter mới để nghiệm thu.
+ShipmentDto gồm Id, OrderId, OrderVersion, Version, Carrier, TrackingNumber, Status, DispatchedAtUtc/DeliveredAtUtc và Items(OrderItemId,Quantity); không expose movement nội bộ hoặc secret. Timestamp shipment chuẩn hóa UTC microsecond trước khi trả response đầu để replay/đọc DB không khác độ chính xác giữa hai provider. Bank receipt mặc định giữ hash tương thích các request cũ; ManualCOD hash chứa Source để không replay khác nguồn. Chưa có carrier adapter mới để nghiệm thu.
 
 ### Nhật ký quyết định
 
@@ -74,10 +74,10 @@ ShipmentDto gồm Id, OrderId, OrderVersion, Version, Carrier, TrackingNumber, S
 | Bước | Công việc | Đầu ra | Trạng thái |
 |---|---|---|---|
 | 1 | Chốt thiết kế, docs/history | Quan hệ/API/quy tắc này | Đã ghi trước code |
-| 2 | Domain + persistence + migrations + domain tests | State/ledger/constraints; build được | Build/scaffold đạt; domain23/23, shipping migration4/4 local |
-| 3 | Service/API/ACL + integration | Dispatch/delivered/owner/COD end-to-end | Đang triển khai |
-| 4 | Review/regression hai DB | Race/rollback/replay/permission/migration | Targeted62/62 đạt; regression đang chạy |
-| 5 | Đồng bộ docs/bằng chứng/commit | Các lát coherent, không khẳng định deployment | Cập nhật song song |
+| 2 | Domain + persistence + migrations + domain tests | State/ledger/constraints; build được | Đạt; domain24/24, shipping migration4/4 local |
+| 3 | Service/API/ACL + integration | Dispatch/delivered/owner/COD end-to-end | API và22 integration cases đạt trên hai DB |
+| 4 | Review/regression hai DB | Race/rollback/replay/permission/migration | Sau sửa precision, regression326/326 đạt; giữ bằng chứng lượt đầu fail |
+| 5 | Đồng bộ docs/bằng chứng/commit | Các lát coherent, không khẳng định deployment | Đã đồng bộ docs/history/runbook; commit theo thiết kế/domain/API |
 
 ## 4. Nhật ký triển khai
 
@@ -91,13 +91,17 @@ ShipmentDto gồm Id, OrderId, OrderVersion, Version, Carrier, TrackingNumber, S
 
 2026-10-18 — targeted62/62 đạt (domain23, integration22, shipping migration4 và baseline/ordering/payment regression phù hợp); bắt đầu regression toàn bộ trừ Container/Recovery/Template. Chưa có carrier/SMTP/gateway thật được nghiệm thu.
 
+2026-10-18 — regression đầu phát hiện precision timestamp PostgreSQL khác response đầu; [history bước23](../history/2026-10-18-23-shipment-timestamp-precision.md) ghi kế hoạch sửa trước code. Domain chuẩn hóa microsecond, thêm ca ticks cố định và clock replay tái hiện, không nới assertion. Chờ lượt cũ kết thúc để build/test lại.
+
+2026-10-18 — build sau sửa0 lỗi/2806 warnings,3/3 kiểm precision và regression326/326 đạt. Hoàn tất local phần4A; đồng bộ hợp đồng/roadmap/history, tách commit thiết kế/domain/API. Gia hạn/refund và deployment/carrier thật vẫn mở.
+
 ## 5. Kiểm chứng và nghiệm thu
 
-Build/scaffold đã đạt, targeted tests đang chạy; kết quả từng lượt ở [báo cáo](../verification/2026-10-18-physical-shipping.md). Kết quả276/276 thuộc source payment trước đó, không thay thế kiểm chứng shipping. Chưa có carrier tự động/SMTP/gateway/Linux deployment được nghiệm thu từ thay đổi này.
+Build/scaffold, targeted62/62, precision3/3 và regression cuối326/326 đã đạt; lượt đầu324/325 và nguyên nhân/sửa được giữ trong [báo cáo](../verification/2026-10-18-physical-shipping.md). Không cộng test trùng giữa các lượt. Chưa có carrier tự động/SMTP/gateway/Linux deployment được nghiệm thu từ thay đổi này.
 
 ## 6. Lịch sử commit
 
-`27d9e2b` — thiết kế shipping/COD trước code. Commit triển khai chỉ ghi khi tồn tại.
+`27d9e2b` — thiết kế shipping/COD trước code. `39e8d0e` — domain/persistence/migrations và kiểm chứng targeted. API/ACL/COD và fix precision được chốt cùng docs/bằng chứng sau regression326/326; hash tra bằng `git log -- docs/history/2026-10-18-22-shipping-api-cod.md`, không ghi hash dự đoán.
 
 ## 7. Còn lại
 

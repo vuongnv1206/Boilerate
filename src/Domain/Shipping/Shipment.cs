@@ -49,7 +49,7 @@ public sealed class Shipment : CommerceEntity, IAggregateRoot
         RequestHash = requestHash;
         Carrier = validCarrier;
         TrackingNumber = validTracking;
-        DispatchedAtUtc = now;
+        DispatchedAtUtc = UtcMicroseconds(now);
         foreach (var item in snapshot)
         {
             item.Attach(Id);
@@ -69,10 +69,13 @@ public sealed class Shipment : CommerceEntity, IAggregateRoot
         }
         Status = ShipmentStatus.Delivered;
         DeliveryOperationId = operationId;
-        DeliveredAtUtc = now;
+        DeliveredAtUtc = UtcMicroseconds(now);
         Touch();
         return true;
     }
+
+    // PostgreSQL stores microseconds; normalize before returning the initial response as well.
+    private static DateTime UtcMicroseconds(DateTime value) => new(value.Ticks - value.Ticks % 10, DateTimeKind.Utc);
 }
 
 public sealed class ShipmentItem

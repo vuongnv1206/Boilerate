@@ -26,18 +26,28 @@ public sealed partial class OrderingService
             throw new ForbiddenException("Payment.Confirm is required.");
     }
 
-    private static string PaymentHash(Guid orderId, ConfirmPayment r, string reference, string currency) =>
-        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+    private static string PaymentHash(Guid orderId, ConfirmPayment r, string reference, string currency)
+    {
+        // Preserve the existing bank hash; include the new source only for COD confirmations.
+        var payload = r.Source == "ManualBankTransfer" ? JsonSerializer.Serialize(new
         {
             OrderId = orderId, Reference = reference, Amount = r.Amount.ToString("0.##", CultureInfo.InvariantCulture),
             Currency = currency, r.ReceivedAtUtc
-        }))));
+        }) : JsonSerializer.Serialize(new
+        {
+            OrderId = orderId, Reference = reference, Amount = r.Amount.ToString("0.##", CultureInfo.InvariantCulture),
+            Currency = currency, r.ReceivedAtUtc, r.Source
+        });
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload)));
+    }
 
     public async Task<OrderDto> ConfirmPaymentAsync(Guid orderId, ConfirmPayment r, CancellationToken ct)
     {
         await PaymentPermission(ct);
         var reference = CatalogRules.Code(r.Reference).ToUpperInvariant();
         var currency = CatalogRules.Required(r.Currency, 3, "Currency").ToUpperInvariant();
+        if (r.Source is not "ManualBankTransfer" and not "ManualCOD")
+            throw new DomainException("Receipt source must be ManualBankTransfer or ManualCOD.");
         CatalogRules.Money(r.Amount, null);
         var hash = PaymentHash(orderId, r, reference, currency);
         return await work.ExecuteAsync(async () =>
@@ -50,8 +60,8 @@ public sealed partial class OrderingService
                     throw new ConflictException("OperationId was already used with different payment content.");
                 return MapOrder(await Orders().SingleAsync(o => o.Id == orderId, ct));
             }
-            if (await db.PaymentReceipts.AnyAsync(p => p.Source == "ManualBankTransfer" && p.NormalizedReference == reference, ct))
-                throw new ConflictException("This bank reference has already been recorded.");
+            if (await db.PaymentReceipts.AnyAsync(p => p.Source == r.Source && p.NormalizedReference == reference, ct))
+                throw new ConflictException("This payment reference has already been recorded for the source.");
             var order = await Orders().SingleOrDefaultAsync(o => o.Id == orderId, ct)
                 ?? throw new NotFoundException("Order not found.");
             CheckVersion(r.Version, order.Version);
@@ -59,10 +69,14 @@ public sealed partial class OrderingService
                 throw new ConflictException("The order has already been paid.");
             if (r.Amount != order.Total || currency != order.Currency)
                 throw new DomainException("Confirm the exact full order total and currency; partial or excess receipts require separate review.");
-            var receipt = new PaymentReceipt(order.Id, r.OperationId, hash, r.Reference, r.Amount, currency, r.ReceivedAtUtc, Now);
+            if (r.Source == "ManualCOD" && (order.PaymentMethod != OrderPaymentMethod.CashOnDelivery || !await AllPhysicalDelivered(order, ct)))
+                throw new ConflictException("COD receipts require a COD order with all physical quantities delivered.");
+            var receipt = new PaymentReceipt(order.Id, r.OperationId, hash, r.Reference, r.Amount, currency, r.ReceivedAtUtc, Now, r.Source);
             db.PaymentReceipts.Add(receipt);
             order.RecordPayment(r.ReceivedAtUtc);
-            if (order.Status != OrderStatus.Cancelled)
+            if (order.PhysicalDispatchStarted)
+                await ReconcilePhysicalFulfillment(order, ct);
+            else if (order.Status != OrderStatus.Cancelled)
                 await FulfillPaidOrder(order, ct);
             return MapOrder(order);
         }, ct);
@@ -80,7 +94,11 @@ public sealed partial class OrderingService
             if (order.PaymentStatus != OrderPaymentStatus.Paid || order.Status == OrderStatus.Cancelled)
                 throw new ConflictException("Only paid, non-cancelled orders can resume fulfillment.");
             if (order.FulfillmentStatus == OrderFulfillmentStatus.NeedsReview)
+            {
+                if (order.PhysicalDispatchStarted)
+                    throw new ConflictException("A dispatched order requires shipment/return review and cannot reacquire its full stock.");
                 await FulfillPaidOrder(order, ct);
+            }
             return MapOrder(order);
         }, ct);
     }

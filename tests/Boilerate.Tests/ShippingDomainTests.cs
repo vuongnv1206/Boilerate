@@ -40,6 +40,17 @@ public sealed class ShippingDomainTests
     }
 
     [Fact]
+    public void DispatchAndDeliveryPreserveMicrosecondsAcrossDatabaseRoundTrips()
+    {
+        var shipment = NewShipment(now: Now.AddTicks(1234567));
+        Assert.Equal(Now.AddTicks(1234560), shipment.DispatchedAtUtc);
+        shipment.MarkDelivered(Guid.NewGuid(), Now.AddTicks(2345678));
+        Assert.Equal(Now.AddTicks(2345670), shipment.DeliveredAtUtc);
+        Assert.Equal(DateTimeKind.Utc, shipment.DispatchedAtUtc.Kind);
+        Assert.Equal(DateTimeKind.Utc, shipment.DeliveredAtUtc!.Value.Kind);
+    }
+
+    [Fact]
     public void ShipmentRejectsMissingIdsMalformedHashAndNonUtcDispatchTime()
     {
         Assert.Throws<DomainException>(() => NewShipment(orderId: Guid.Empty));

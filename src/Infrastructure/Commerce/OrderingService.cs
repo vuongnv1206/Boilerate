@@ -20,7 +20,7 @@ using Microsoft.AspNetCore.DataProtection;
 namespace Boilerate.Infrastructure.Commerce;
 
 public sealed partial class OrderingService(ApplicationDbContext db, CommerceUnitOfWork work, ICurrentUser actor,
-    IUserService users, IOptions<OrderingSettings> settings, TimeProvider clock, IDataProtectionProvider protection) : IOrderingService, IPaymentService
+    IUserService users, IOptions<OrderingSettings> settings, TimeProvider clock, IDataProtectionProvider protection) : IOrderingService, IPaymentService, IShippingService
 {
     private DateTime Now => clock.GetUtcNow().UtcDateTime;
     private Guid Customer()
@@ -268,6 +268,8 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
             CheckVersion(r.Version, order.Version);
             if (order.PaymentStatus == OrderPaymentStatus.Paid)
                 throw new ConflictException("Paid orders require the refund/review workflow and cannot be cancelled here.");
+            if (order.PhysicalDispatchStarted)
+                throw new ConflictException("Dispatched orders require a return/review workflow and cannot release stock here.");
             if (order.Status is OrderStatus.Cancelled or OrderStatus.Expired)
                 return MapOrder(order);
             await Release(order, ct);

@@ -26,6 +26,7 @@ public static class AppFunction
     public const string DigitalInventory = nameof(DigitalInventory);
     public const string Order = nameof(Order);
     public const string Payment = nameof(Payment);
+    public const string Shipping = nameof(Shipping);
     public const string Outbox = nameof(Outbox);
     public const string Notifications = nameof(Notifications);
 }

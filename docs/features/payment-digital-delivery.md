@@ -3,6 +3,8 @@
 Ngày bắt đầu/cập nhật: 2026-10-18 (Asia/Saigon). Trạng thái: **đã triển khai/kiểm chứng local; chờ nghiệm thu runtime/adapter thật**.
 Mốc: bước 3 [Shop MVP](shop-mvp.md), [roadmap](../roadmap.md).
 
+Cập nhật lát tiếp nối: [giao vật lý/COD](physical-shipping.md) bổ sung Shipment/ShipmentItem, xuất phần đã giữ và Source=ManualCOD sau khi COD đã giao đủ. Các cột/giới hạn và kết quả276/276 bên dưới mô tả lát payment ban đầu; hợp đồng hiện hành tổng thể ở [database](../commerce-database.md) và [API](../commerce-api.md).
+
 ## 1. Mục tiêu và phạm vi
 
 Nhân viên xác nhận khoản chuyển khoản thực tế đã nhận đủ cho một đơn; hệ thống cấp mã/tài khoản Unique hoặc snapshot link Shared cho khách trong cùng transaction. Khách đăng nhập xem nội dung ở đơn của mình, email chỉ thông báo. Thanh toán và giao hàng là hai trạng thái độc lập.
@@ -96,4 +98,4 @@ Core local48/48 đạt sau sửa assertion; regression cuối276/276 đạt, xem
 
 ## 7. Còn lại
 
-Phần code/local của các bước đã hoàn tất. Provider tự động, manual renewal workflow, refund/shipping và nghiệm thu deployment/SMTP thật thuộc mốc tiếp theo, không được suy ra từ trạng thái Paid hoặc test mock.
+Phần code/local của lát payment đã hoàn tất. Giao vật lý/COD được triển khai riêng ở [lát shipping](physical-shipping.md); provider tự động, manual renewal workflow, refund/returns và nghiệm thu deployment/SMTP/carrier thật vẫn thuộc mốc tiếp theo, không được suy ra từ trạng thái Paid hoặc test mock.

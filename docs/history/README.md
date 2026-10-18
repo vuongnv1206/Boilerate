@@ -18,6 +18,7 @@
 - 2026-10-18: [Thiết kế giao vật lý và thu COD](2026-10-18-20-physical-shipping-design.md).
 - 2026-10-18: [Domain và database giao vật lý](2026-10-18-21-shipping-domain-database.md).
 - 2026-10-18: [API giao vật lý và nhận COD](2026-10-18-22-shipping-api-cod.md).
+- 2026-10-18: [Độ chính xác timestamp shipment](2026-10-18-23-shipment-timestamp-precision.md).
 
 - 2026-10-18: [Lập kế hoạch nghiệm thu vận hành](2026-10-18-01-operations-plan.md).
 - 2026-10-18: [Gate runtime và trusted proxy](2026-10-18-02-runtime-gates.md).
