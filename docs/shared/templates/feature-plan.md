@@ -121,4 +121,4 @@ Chỉ điền hash sau khi commit đã tồn tại; bảng có thể được ho
 |---|---|---|---|
 | `<...>` | `<...>` | `<...>` | `<...>` |
 
-Hoàn tất khi các tiêu chí chấp nhận được đáp ứng và trạng thái trong roadmap của khu vực phụ trách phản ánh đúng bằng chứng. Báo cáo vào `docs/<area>/verification/`; history vào `docs/<area>/history/` và liên kết từ index tương ứng. Bắt đầu từ [quy trình chung](../development-workflow.md) trước khi sao chép mẫu này.
+Hoàn tất khi các tiêu chí chấp nhận được đáp ứng và trạng thái trong roadmap của khu vực phụ trách phản ánh đúng bằng chứng. Báo cáo vào `docs/<area>/verification/`; history vào `docs/<area>/history/` và liên kết từ index tương ứng. Bắt đầu từ [quy trình chung](../../shared/development-workflow.md) trước khi sao chép mẫu này.

@@ -41,8 +41,41 @@ git diff --cached --check
 
 Script cục bộ tương đương ở `artifacts/docs-standardization/check_links.py` lưu JSON khi chạy. Raw mapping/JSON/logs/package/project sinh thử không được commit. Dùng đoạn lệnh trên để tái kiểm tra khi artifacts không còn.
 
+## Bước 2 — Rule generic và template
+
+| Kiểm tra đã chạy | Kết quả |
+|---|---|
+| `dotnet pack Boilerate.Template.csproj --no-restore -o artifacts/docs-standardization/packages --verbosity quiet` | Đạt |
+| Cài package bằng `dotnet new install` với custom hive cô lập; sinh `RenamedBackend` | Đạt |
+| Kiểm tra các đường dẫn từ `$requiredFiles` trong `scripts/verify-template.ps1` | **18/18 có trong dự án sinh ra** |
+| Kiểm tra toàn bộ đích di chuyển tài liệu | **67/67 có trong package và dự án sinh ra** |
+| So sánh CLAUDE.md source với dự án đổi tên | **Giữ nguyên byte**; nội dung không phụ thuộc tên dự án/stack/nghiệp vụ |
+| Quét package | 495 entries; không có các nhóm `bin/obj/logs/Files/TestResults/artifacts/__pycache__/.git`, hoặc hậu tố `.trx/.pyc/.pfx/.env/.nupkg` |
+| Parse `scripts/verify-template.ps1` bằng PowerShell AST | Đạt; không có parse error |
+| Kiểm tra liên kết source và template đổi tên | **Mỗi nơi 82 file Markdown, 483 liên kết nội bộ, 0 hỏng**; phạm vi checker giống bước 1 |
+| Diff và staged diff trước commit | `git diff --check`, `git diff --cached --check` đạt |
+
+Lệnh tạo môi trường smoke (PowerShell tại root; đường dẫn có GUID để không ghi đè output cũ):
+
+```powershell
+$taskDocsSmoke = Join-Path (Get-Location) ('artifacts/docs-standardization/template-' + [guid]::NewGuid().ToString('N'))
+$taskDocsHive = Join-Path $taskDocsSmoke 'hive'
+$taskDocsGenerated = Join-Path $taskDocsSmoke 'RenamedBackend'
+$taskDocsPackage = Join-Path (Get-Location) 'artifacts/docs-standardization/packages/Boilerate.CleanArchitecture.Template.1.0.0.nupkg'
+dotnet pack Boilerate.Template.csproj --no-restore -o artifacts/docs-standardization/packages --verbosity quiet
+if ($LASTEXITCODE) { throw 'Pack failed' }
+dotnet new install $taskDocsPackage --debug:custom-hive $taskDocsHive
+if ($LASTEXITCODE) { throw 'Install failed' }
+dotnet new boilerate -n RenamedBackend -o $taskDocsGenerated --debug:custom-hive $taskDocsHive
+if ($LASTEXITCODE) { throw 'Generate failed' }
+```
+
+Đối chiếu danh sách `$requiredFiles` của runner với các file tương ứng trong `$taskDocsGenerated`; so sánh rule bằng byte. Mở package bằng ZIP để kiểm đích tài liệu và nhóm artifact nêu trong bảng. Chạy lại đoạn kiểm liên kết ở trên từ thư mục sinh ra. Không dùng full runner chỉ để kiểm docs, vì full runner còn yêu cầu hai DB và chạy restore/build/test.
+
+Raw evidence cục bộ: `artifacts/docs-standardization/pack.log`, `template-install.log`, `template-generate.log`, `template-paths.json`, `template-check.json`, `links-step2.json`, `links-template.json`. Source trước khi tổ chức lại: `7a480d0`; commit tổ chức docs: `a696182`. Commit rule được tạo cùng bản ghi bước 2, không ghi hash dự đoán.
+
 ## Phạm vi chưa chạy
 
 Không chạy lại build/regression hai DB, Linux/Docker/CI, adapter thật hoặc E2E FE trong nhiệm vụ tài liệu này. Các báo cáo BE cũ giữ nguyên ngày/phạm vi, không được gộp thành kết quả kiểm chứng mới.
 
-Kiểm tra pack/sinh template và file quy tắc generic được ghi ở bước 2 sau khi thực hiện.
+Phần pack/sinh template ở trên chỉ nghiệm thu nội dung tài liệu được phân phối, không thay thế full template build/test hoặc kiểm chứng nghiệp vụ.

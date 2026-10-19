@@ -4,6 +4,8 @@ Backend template .NET 10: Identity, quyền Function–Action từ database, nhi
 
 ## Kế hoạch và lịch sử phát triển
 
+[CLAUDE.md](CLAUDE.md) chứa quy tắc làm việc chung, dùng lại được cho các dự án khác; [AGENTS.md](AGENTS.md) bổ sung quy ước riêng về tài liệu và phát triển trong repository này.
+
 Code và tài liệu được phát triển song song theo [quy trình chung](docs/shared/development-workflow.md), có quy ước trong [AGENTS.md](AGENTS.md). [Docs index](docs/README.md) tách [BE](docs/backend/README.md), [FE](docs/frontend/README.md) và [nghiệp vụ/quy trình chung](docs/shared/README.md). Tiến độ BE nằm tại [roadmap BE](docs/backend/roadmap.md), [hồ sơ tính năng](docs/backend/features/shop-mvp.md), [history](docs/backend/history/README.md) và [báo cáo kiểm chứng](docs/backend/verification/2026-10-19-aftersales.md). FE có [lộ trình riêng, chưa triển khai](docs/frontend/roadmap.md). Khi bắt đầu tính năng, dùng [mẫu kế hoạch](docs/shared/templates/feature-plan.md) và đọc [hướng dẫn phối hợp BE–FE](docs/shared/contracts/frontend-backend.md).
 
 ## Cấu trúc và context

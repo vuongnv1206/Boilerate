@@ -14,7 +14,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
   <ItemGroup>
-    <Content Include="src/**;tests/**;docs/**;.config/**;.template.config/**;scripts/**;.github/workflows/**;Boilerate.Template.csproj;README.md;AGENTS.md;plan.md;THIRD_PARTY_NOTICES.md;Boilerate.sln;Directory.Build.props;Directory.Build.targets;Directory.Packages.props;global.json;stylecop.json;.editorconfig;.gitignore;compose.yaml;.dockerignore"
+    <Content Include="src/**;tests/**;docs/**;.config/**;.template.config/**;scripts/**;.github/workflows/**;Boilerate.Template.csproj;README.md;AGENTS.md;CLAUDE.md;plan.md;THIRD_PARTY_NOTICES.md;Boilerate.sln;Directory.Build.props;Directory.Build.targets;Directory.Packages.props;global.json;stylecop.json;.editorconfig;.gitignore;compose.yaml;.dockerignore"
              Exclude="**/bin/**;**/obj/**;**/Logs/**;**/logs/**;**/Files/**;**/TestResults/**;**/*.trx;**/artifacts/**;**/__pycache__/**;**/*.pyc;**/*.user;**/*.env;**/*.pfx;**/*.nupkg"
              Pack="true" PackagePath="content/%(Identity)" />
     <!-- An extensionless PackagePath is interpreted as a directory by NuGet. -->

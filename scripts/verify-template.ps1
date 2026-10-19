@@ -24,9 +24,17 @@ try {
     Invoke-Dotnet -Arguments @('new', 'boilerate', '-n', 'RenamedBackend', '-o', $generated, '--debug:custom-hive', $hive)
     Push-Location $generated
     try {
-        foreach ($requiredFile in @('Dockerfile', 'compose.yaml', '.dockerignore', 'README.md', 'plan.md', '.editorconfig', 'RenamedBackend.sln')) {
+        $requiredFiles = @(
+            'Dockerfile', 'compose.yaml', '.dockerignore', 'README.md', 'AGENTS.md', 'CLAUDE.md',
+            'plan.md', '.editorconfig', 'RenamedBackend.sln', 'docs/README.md',
+            'docs/backend/README.md', 'docs/backend/roadmap.md',
+            'docs/frontend/README.md', 'docs/frontend/roadmap.md', 'docs/shared/README.md',
+            'docs/shared/development-workflow.md', 'docs/shared/templates/feature-plan.md',
+            'docs/shared/contracts/frontend-backend.md'
+        )
+        foreach ($requiredFile in $requiredFiles) {
             if (!(Test-Path -LiteralPath (Join-Path $generated $requiredFile) -PathType Leaf)) {
-                throw "Generated template is missing the expected root file: $requiredFile"
+                throw "Generated template is missing the expected file: $requiredFile"
             }
         }
         Invoke-Dotnet -Arguments @('tool', 'restore')

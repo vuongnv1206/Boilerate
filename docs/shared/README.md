@@ -10,6 +10,7 @@ Phần này mô tả sản phẩm cần làm gì và cách BE–FE phối hợp.
 | [Phối hợp và tích hợp BE–FE](contracts/frontend-backend.md) | Nguồn hợp đồng, trách nhiệm, version/retry/quyền và cách bàn giao một lát tính năng |
 | [Quy trình phát triển](development-workflow.md) | Các bước từ phạm vi đến triển khai, kiểm chứng, tài liệu và commit |
 | [Mẫu feature plan](templates/feature-plan.md) | Mẫu dùng cho BE, FE hoặc thay đổi chung |
+| [Quy tắc làm việc chung](../../CLAUDE.md) | Một nguồn generic ở root, dùng lại cho các dự án khác; quy ước riêng của repo ở AGENTS |
 | [Kế hoạch tổ chức tài liệu](features/documentation-structure.md) | Di chuyển tài liệu, chuẩn bị FE và quy tắc chung |
 | [Lịch sử dùng chung](history/README.md) | Các thay đổi chung kể từ khi tách tài liệu |
 

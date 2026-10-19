@@ -2,6 +2,8 @@
 
 These rules apply to the whole repository.
 
+Read [CLAUDE.md](CLAUDE.md) for reusable working principles. This file adds the repository's documentation conventions; keep the generic rules in one place.
+
 - Read `docs/README.md`, the owning area's roadmap (`docs/backend/roadmap.md` or `docs/frontend/roadmap.md`) and the relevant feature plan before changing a feature. For shared changes, read `docs/shared/README.md` and the affected areas' plans.
 - Develop documentation alongside implementation. Do not wait until the end of a feature to reconstruct its design and decisions.
 - Before substantive implementation, create or update `docs/<area>/features/<feature>.md` using `docs/shared/templates/feature-plan.md`, where `<area>` is `backend`, `frontend` or `shared`. Record the goal, scope, ordered steps, acceptance criteria and pending decisions. Cross-area features use a shared coordination plan linked to the BE/FE plans; do not duplicate contracts or progress.

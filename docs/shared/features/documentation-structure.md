@@ -1,7 +1,7 @@
 # Chuẩn hóa tài liệu BE, FE và quy tắc chung
 
 Ngày bắt đầu/cập nhật: 2026-10-19, Asia/Saigon.
-Trạng thái: đang triển khai tài liệu; không thay đổi chức năng BE hoặc triển khai FE.
+Trạng thái: hoàn tất tổ chức tài liệu và kiểm chứng local; không thay đổi chức năng BE hoặc triển khai FE.
 Mốc liên quan: tổ chức tài liệu cho giai đoạn BE và FE phát triển song song.
 
 ## 1. Mục tiêu và phạm vi
@@ -16,8 +16,8 @@ Tiêu chí chấp nhận:
 - [x] FE có index và lộ trình ban đầu, ghi rõ chưa triển khai và các quyết định còn mở.
 - [x] Nghiệp vụ và quy trình dùng chung có một nguồn; hướng dẫn tích hợp trỏ tới hợp đồng BE hiện hành.
 - [x] Các liên kết nội bộ resolve được; root README, plan và AGENTS dùng đường dẫn mới.
-- [ ] Một file quy tắc chung không phụ thuộc stack/nghiệp vụ, có dẫn nguồn tham khảo, được đưa vào template.
-- [ ] Có history và báo cáo kiểm chứng đúng phạm vi; chia commit theo thay đổi có ý nghĩa.
+- [x] Một file quy tắc chung không phụ thuộc stack/nghiệp vụ, có dẫn nguồn tham khảo, được đưa vào template.
+- [x] Có history và báo cáo kiểm chứng đúng phạm vi; chia commit theo thay đổi có ý nghĩa.
 
 ## 2. Quyết định thiết kế
 
@@ -36,8 +36,8 @@ Không đổi database/cardinality, quyền, transaction, API, migration hoặc 
 | Bước | Công việc | Tiêu chí hoàn tất | Trạng thái |
 |---|---|---|---|
 | 1 | Phân loại, chuyển tài liệu và sửa điều hướng | Có BE/FE/shared; liên kết, hướng dẫn và template kế hoạch nhất quán | Đã triển khai/kiểm tra local |
-| 2 | Thêm quy tắc chung và đóng gói template | File generic có nguồn, AGENTS tham chiếu, template sinh ra có file mới | Chưa bắt đầu |
-| 3 | Kiểm chứng và ghi lịch sử/commit | Kiểm tra links/diff, pack và sinh template; ghi rõ phạm vi không chạy lại | Chưa bắt đầu |
+| 2 | Thêm quy tắc chung và đóng gói template | File generic có nguồn, AGENTS tham chiếu, template sinh ra có file mới | Đã triển khai/kiểm tra local |
+| 3 | Kiểm chứng và ghi lịch sử/commit | Kiểm tra links/diff, pack và sinh template; ghi rõ phạm vi không chạy lại | Đã kiểm chứng local; history theo hai lát commit |
 
 ## 4. Nhật ký triển khai
 
@@ -54,16 +54,23 @@ Không đổi database/cardinality, quyền, transaction, API, migration hoặc 
 - Kiểm chứng bước 1 được lưu tại [báo cáo](../verification/2026-10-19-documentation.md); [history](../history/2026-10-19-01-documentation-structure.md) ghi thay đổi và phần tiếp theo.
 - Tiếp theo: thêm quy tắc chung và kiểm tra template.
 
+### 2026-10-19 — Bước 2–3: quy tắc chung và kiểm chứng template
+
+- Thêm [CLAUDE.md](../../../CLAUDE.md) generic, dẫn nguồn tham khảo; AGENTS/README/index cùng trỏ tới một file. Thêm file rule vào pack và 18 đường dẫn bắt buộc trong runner template.
+- Pack thành công; cài template bằng custom hive cô lập và sinh RenamedBackend. Kiểm tra 18/18 file, 67/67 tài liệu đã move, rule giữ nguyên byte và package không chứa các nhóm runtime/test artifacts được quét.
+- Kiểm tra links ở source lẫn template sinh ra, parse PowerShell runner và diff; số liệu/lệnh/phần chưa chạy ở [báo cáo](../verification/2026-10-19-documentation.md). [History bước 2](../history/2026-10-19-02-generic-project-rules.md) ghi phạm vi riêng.
+- Tiếp theo ngoài nhiệm vụ này: chọn lát FE đầu tiên theo roadmap FE; nghiệm thu BE/runtime tiếp tục theo roadmap BE.
+
 ## 5. Kiểm chứng và nghiệm thu
 
-Đã kiểm tra đích move, bảo toàn báo cáo/lịch sử và liên kết file Markdown bước 1; xem [báo cáo](../verification/2026-10-19-documentation.md) cho số liệu cuối và phạm vi. Kiểm tra đường dẫn hướng dẫn còn dùng, `git diff --check` và staged diff trước commit. Pack/sinh template thực hiện ở bước 2 khi thêm file rule.
+Đã kiểm tra đích move, bảo toàn báo cáo/lịch sử, liên kết file Markdown, đường dẫn hướng dẫn, parse runner và pack/sinh template. Xem [báo cáo](../verification/2026-10-19-documentation.md) cho số liệu cuối và phạm vi. Diff/staged diff được kiểm tra trước từng commit.
 
 Không cần chạy lại kiểm thử nghiệp vụ hai DB cho thay đổi chỉ về tài liệu và nội dung template. Kết quả BE trước đó giữ nguyên ngày và phạm vi; không có bằng chứng nghiệm thu FE hoặc deployment mới ở nhiệm vụ này.
 
 ## 6. Lịch sử commit
 
-Chỉ ghi hash sau khi commit tồn tại; mỗi commit có history tương ứng.
+`a696182` — tổ chức BE/FE/shared, cập nhật workflow/template và kiểm chứng liên kết bước 1. Commit tiếp theo cho rule/template được ghi trong history sau khi đã tồn tại; không dự đoán hash.
 
 ## 7. Công việc còn lại
 
-Hoàn tất các bước trên. Framework, thiết kế giao diện và phạm vi lát FE đầu tiên chưa được chọn trong nhiệm vụ chuẩn hóa tài liệu.
+Không còn bước tổ chức tài liệu trong phạm vi này. Framework, thiết kế giao diện và phạm vi lát FE đầu tiên chưa được chọn trong nhiệm vụ chuẩn hóa tài liệu; theo [roadmap FE](../../frontend/roadmap.md). Các gate chạy thật vẫn ở [roadmap BE](../../backend/roadmap.md).
