@@ -1,6 +1,6 @@
 # Lộ trình backend shop
 
-Cập nhật: 2026-10-18. Lộ trình được cập nhật cùng code và [nhật ký phát triển](history/README.md). Trạng thái dưới đây mô tả bằng chứng hiện có; không coi cấu hình CI hoặc test adapter giả là nghiệm thu môi trường thật.
+Cập nhật: 2026-10-19. Lộ trình được cập nhật cùng code và [nhật ký phát triển](history/README.md). Trạng thái dưới đây mô tả bằng chứng hiện có; không coi cấu hình CI hoặc test adapter giả là nghiệm thu môi trường thật.
 
 ## Phạm vi nền tảng
 
@@ -12,7 +12,7 @@ Luồng hàng số đã chốt ở mức kịch bản nghiệp vụ: mã/tài kh
 
 Product thuộc đúng một ProductType và có 0–N Category qua bảng nối N–N. Category phục vụ phân loại, ProductType quyết định bộ trường. Chi tiết tại [thiết kế database](commerce-database.md).
 
-Đã chốt hành trình mua: vật lý và hàng số chung giỏ/đơn, thanh toán một lần, từng món giao riêng. Đơn có hàng số phải trả trước toàn bộ; COD chỉ thuần vật lý. Cart/checkout/snapshot/giữ hàng đã triển khai; trả trước mặc định30phút/cấu hình, COD giữ tới hủy hoặc bước xử lý tiếp theo. Nhân viên xác nhận chuyển khoản đã kiểm tra; Unique/Shared tự giao và email qua outbox. Trả sau hạn giữ lại đủ toàn bộ thì tiếp tục, thiếu hàng vẫn ghi Paid + NeedsReview để nhân viên bổ sung hàng/retry hoặc xử lý hoàn tiền ở mốc sau. Giao vật lý từng phần và xác nhận COD đã có API thủ công; gia hạn, hoàn tiền và gateway/carrier tự động chưa triển khai.
+Đã chốt hành trình mua: vật lý và hàng số chung giỏ/đơn, thanh toán một lần, từng món giao riêng. Đơn có hàng số phải trả trước toàn bộ; COD chỉ thuần vật lý. Cart/checkout/snapshot/giữ hàng đã triển khai; trả trước mặc định30phút/cấu hình, COD giữ tới hủy hoặc bước xử lý tiếp theo. Nhân viên xác nhận chuyển khoản đã kiểm tra; Unique/Shared tự giao và email qua outbox. Trả sau hạn giữ lại đủ toàn bộ thì tiếp tục, thiếu hàng vẫn ghi Paid + NeedsReview để nhân viên bổ sung hàng/retry hoặc xử lý hoàn tiền ở mốc sau. Giao vật lý/COD và gia hạn có claim/xác minh đã có API; hoàn tiền và gateway/carrier/gia hạn tự động bên ngoài chưa triển khai.
 
 Tiến độ từng bước của mốc đầu nằm tại [hồ sơ Catalog v1](features/catalog-v1.md).
 
@@ -33,7 +33,7 @@ Theo chỉ dẫn mới nhất ngày 2026-10-18, ưu tiên **shop nhỏ, đủ lu
 | 7. Ordering/checkout | Cart/Order chung vật lý + số, snapshot, reservation/idempotency, hủy/hết hạn/xem đơn | **Đã triển khai/kiểm chứng local; regression cuối222/222 đạt**, gồm24 Ordering integration và2 migration cases trên hai DB | Nhận tiền/trả muộn/giao số được bổ sung ở mốc8; [bằng chứng](verification/2026-10-18-ordering-checkout.md) |
 | 8. Payment/giao số | Xác nhận chuyển khoản thực nhận, cấp Unique/Shared và email outbox; attempts/refunds/webhook ở lát sau | **Đã triển khai/kiểm local; regression276/276 đạt**, [hồ sơ](features/payment-digital-delivery.md), [bằng chứng](verification/2026-10-18-payment-delivery.md) | Gateway/SMTP thật, runtime và refund còn mở |
 | 9. Shipping | Shipment/ShipmentItem có số lượng, giao từng phần, trạng thái riêng; thu COD độc lập | **Đã triển khai/kiểm local4A; regression326/326 đạt**, [hồ sơ](features/physical-shipping.md), [bằng chứng](verification/2026-10-18-physical-shipping.md) | Gia hạn/refund/returns và carrier/callback, deployment còn mở |
-| 10. Gia hạn thủ công | Request/claim/start/PendingVerification/kết quả và bằng chứng, hoàn tất đơn độc lập Paid | **Đang triển khai4B**, [thiết kế](features/manual-renewals.md), chưa kiểm chứng | Domain/DB/API/tests; refund/returns và provider tự động ở lát riêng |
+| 10. Gia hạn thủ công | Request/claim/start/PendingVerification/kết quả và bằng chứng, hoàn tất đơn độc lập Paid | **Đã triển khai4B, targeted52/52 nền và34/34 API đạt local**; [hồ sơ](features/manual-renewals.md), [bằng chứng](verification/2026-10-19-manual-renewals.md) | Regression chung đang chạy; refund/returns, provider tự động và deployment ở lát riêng |
 
 Các mốc 2–6 có phần triển khai song song. Tồn tại code ở mốc sau không làm các điều kiện nghiệm thu của mốc trước tự hoàn tất.
 

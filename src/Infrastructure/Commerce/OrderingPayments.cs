@@ -74,8 +74,9 @@ public sealed partial class OrderingService
             var receipt = new PaymentReceipt(order.Id, r.OperationId, hash, r.Reference, r.Amount, currency, r.ReceivedAtUtc, Now, r.Source);
             db.PaymentReceipts.Add(receipt);
             order.RecordPayment(r.ReceivedAtUtc);
+            await EnsureRenewalRequests(order, ct);
             if (order.PhysicalDispatchStarted)
-                await ReconcilePhysicalFulfillment(order, ct);
+                await ReconcileOrderFulfillment(order, ct);
             else if (order.Status != OrderStatus.Cancelled)
                 await FulfillPaidOrder(order, ct);
             return MapOrder(order);
@@ -93,6 +94,7 @@ public sealed partial class OrderingService
             CheckVersion(r.Version, order.Version);
             if (order.PaymentStatus != OrderPaymentStatus.Paid || order.Status == OrderStatus.Cancelled)
                 throw new ConflictException("Only paid, non-cancelled orders can resume fulfillment.");
+            await EnsureRenewalRequests(order, ct);
             if (order.FulfillmentStatus == OrderFulfillmentStatus.NeedsReview)
             {
                 if (order.PhysicalDispatchStarted)

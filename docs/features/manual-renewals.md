@@ -80,8 +80,8 @@ Mọi response no-store. API thường không mang ciphertext/full target/eviden
 |---|---|---|
 | 1 | Thiết kế domain/DB/API/history trước code | Đã ghi |
 | 2 | Domain/mappings/migrations/domain tests | Đạt targeted52/52 local (gồm32 domain và6 renewal migration); deployment chưa nghiệm thu |
-| 3 | Payment provisioning, owner/admin claim/start/verify và order reconcile | Đã có code, build thành công; chờ tests |
-| 4 | Hai DB: replay/race/lease/restart/rollback/ACL/privacy/fulfillment/migration | Đang chuẩn bị chạy |
+| 3 | Payment provisioning, owner/admin claim/start/verify và order reconcile | Đạt34/34 API integration local trên hai DB |
+| 4 | Hai DB: replay/race/lease/restart/rollback/ACL/privacy/fulfillment/migration | Targeted đạt; regression chung đang chạy |
 | 5 | Docs/runbook/roadmap/bằng chứng và commit nhỏ | Cập nhật song song |
 
 ## 4. Nhật ký
@@ -90,13 +90,13 @@ Mọi response no-store. API thường không mang ciphertext/full target/eviden
 
 ## 5. Kiểm chứng
 
-2026-10-19: tiếp tục kiểm chứng source hoàn thiện; sửa biên domain32000/32001 cho khớp dung lượng Unicode. [History nền](../history/2026-10-19-01-renewal-domain-database.md), [báo cáo từng lượt](../verification/2026-10-19-manual-renewals.md). Targeted domain/migration52/52 đạt; bổ sung ca API rollback receipt, NeedsReview và Release/replay trong working tree cho bước kế tiếp.
+2026-10-19: tiếp tục kiểm chứng source hoàn thiện; sửa biên domain32000/32001 cho khớp dung lượng Unicode. [History nền](../history/2026-10-19-01-renewal-domain-database.md), [history API](../history/2026-10-19-02-renewal-api-verification.md), [báo cáo từng lượt](../verification/2026-10-19-manual-renewals.md). Targeted domain/migration52/52 và API34/34 đạt; regression chung đang chạy. Không coi kiểm thử local là nghiệm thu gia hạn ngoài hoặc deployment.
 
-Targeted domain/migration52/52 đạt; API/regression đang chuẩn bị. Build và từng lượt được ghi riêng trong báo cáo, không cộng trùng.326/326 thuộc source Shipping trước đó, không chứng minh renewal. Chưa có provider/SMTP/deployment được nghiệm thu từ thay đổi này. Quy trình thủ công không chứng minh exactly-once trên dịch vụ ngoài nếu nhân viên bỏ qua Start/verification hoặc dùng alias khác; phải đối chiếu thực tế.
+Targeted domain/migration52/52 và API34/34 đạt; regression chung đang chạy. Build và từng lượt được ghi riêng trong báo cáo, không cộng trùng.326/326 thuộc source Shipping trước đó, không chứng minh renewal. Chưa có provider/SMTP/deployment được nghiệm thu từ thay đổi này. Quy trình thủ công không chứng minh exactly-once trên dịch vụ ngoài nếu nhân viên bỏ qua Start/verification hoặc dùng alias khác; phải đối chiếu thực tế.
 
 ## 6. Commit
 
-`e06fafc`: thiết kế trước code. Các commit triển khai chỉ ghi hash sau khi tồn tại.
+`e06fafc`: thiết kế trước code. `3d2f152`: domain, persistence, migrations hai DB và kiểm chứng nền. Các commit tiếp nối chỉ ghi hash sau khi tồn tại.
 
 ## 7. Còn lại
 

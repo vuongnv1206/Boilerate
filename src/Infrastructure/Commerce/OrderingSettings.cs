@@ -8,4 +8,5 @@ public sealed class OrderingSettings
     [Range(typeof(decimal), "0", "9999999999999999")] public decimal FlatShippingAmount { get; set; }
     [Range(1, 60)] public int WorkerIntervalSeconds { get; set; } = 15;
     [Range(1, 100)] public int ExpirationBatchSize { get; set; } = 50;
+    [Range(1, 120)] public int RenewalClaimMinutes { get; set; } = 15;
 }

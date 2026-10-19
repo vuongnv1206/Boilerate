@@ -7,6 +7,7 @@ using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Common.Exceptions;
 using Boilerate.Domain.Ordering;
 using Boilerate.Domain.Shipping;
+using Boilerate.Domain.Renewals;
 using Microsoft.EntityFrameworkCore;
 
 namespace Boilerate.Infrastructure.Commerce;
@@ -119,7 +120,7 @@ public sealed partial class OrderingService
             if (shipment.Status == ShipmentStatus.Delivered)
                 throw new ConflictException("Shipment was already delivered; replay its original delivery operation.");
             shipment.MarkDelivered(r.OperationId, Now);
-            await ReconcilePhysicalFulfillment(order, ct);
+            await ReconcileOrderFulfillment(order, ct);
             return MapShipment(shipment, order);
         }, ct);
     }
@@ -134,10 +135,13 @@ public sealed partial class OrderingService
         return physical.Length > 0 && physical.All(i => delivered.GetValueOrDefault(i.Id) == i.Quantity);
     }
 
-    private async Task ReconcilePhysicalFulfillment(Order order, CancellationToken ct)
+    private async Task ReconcileOrderFulfillment(Order order, CancellationToken ct)
     {
-        var complete = await AllPhysicalDelivered(order, ct);
-        if (order.Items.Any(i => i.FulfillmentKind == ProductFulfillmentKind.ManualExtension))
+        var complete = !order.Items.Any(i => i.FulfillmentKind == ProductFulfillmentKind.Physical) || await AllPhysicalDelivered(order, ct);
+        // Materialize before evaluating status so verification in this transaction is visible.
+        var renewals = await db.RenewalRequests.Where(r => r.OrderId == order.Id).ToListAsync(ct);
+        if (order.Items.Any(i => i.FulfillmentKind == ProductFulfillmentKind.ManualExtension &&
+            !renewals.Any(r => r.OrderItemId == i.Id && r.Status == RenewalStatus.Completed)))
             complete = false;
         var delivered = await db.DigitalDeliveries.Where(d => d.OrderId == order.Id)
             .GroupBy(d => d.OrderItemId).Select(g => new { Id = g.Key, Count = g.Count() })
@@ -145,7 +149,8 @@ public sealed partial class OrderingService
         if (order.Items.Any(i => i.FulfillmentKind == ProductFulfillmentKind.DigitalUnique && delivered.GetValueOrDefault(i.Id) != i.Quantity ||
                                 i.FulfillmentKind == ProductFulfillmentKind.DigitalShared && delivered.GetValueOrDefault(i.Id) != 1))
             complete = false;
-        order.RegisterPhysicalShipment(complete);
+        if (order.PhysicalDispatchStarted) order.RegisterPhysicalShipment(complete);
+        else order.CompleteFulfillment(complete);
     }
 
     public async Task<List<ShipmentDto>> ShipmentsAsync(Guid orderId, bool admin, CancellationToken ct)

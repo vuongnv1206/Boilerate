@@ -5,8 +5,8 @@ Thiết kế quan hệ, khóa và kiểu cột: [commerce-database.md](commerce-
 ## Khởi tạo
 
 1. Cấu hình provider/connection/JWT secret của installation mới theo README.
-2. Apply đủ sáu migrations InitialFoundation, CommerceCatalog, DigitalInventory, OrderingCheckout, PaymentDigitalDelivery và PhysicalShipping bằng EF CLI của provider đã chọn; Host không tự migrate. Installation đã ở baseline repo chỉ apply migration còn thiếu. PhysicalShipping có ID `20261018151738` trên SQL Server và `20261018151746` trên PostgreSQL.
-3. Bootstrap admin, hoặc chạy `--register-capabilities` rồi `--grant-admin-capabilities` có chủ đích với Catalog bật. Restart không tự cấp quyền mới. Shipping bổ sung đúng các cặp `Shipping.View`, `Shipping.Dispatch`, `Shipping.Deliver`; `Payment.Confirm` dùng riêng để xác nhận tiền, kể cả COD. Đăng ký capability không tự cấp grant cho nhân viên.
+2. Apply đủ bảy migrations InitialFoundation, CommerceCatalog, DigitalInventory, OrderingCheckout, PaymentDigitalDelivery, PhysicalShipping và ManualRenewals bằng EF CLI của provider đã chọn; Host không tự migrate. Installation đã ở baseline repo chỉ apply migration còn thiếu. PhysicalShipping có ID `20261018151738` trên SQL Server và `20261018151746` trên PostgreSQL. ManualRenewals có ID `20261018160428`/`20261018160441` tương ứng; thêm schema Renewals, không tự tạo việc cho đơn Paid cũ; dùng provision rõ ràng khi cần.
+3. Bootstrap admin, hoặc chạy `--register-capabilities` rồi `--grant-admin-capabilities` có chủ đích với Catalog bật. Restart không tự cấp quyền mới. Shipping có các cặp `Shipping.View`, `Shipping.Dispatch`, `Shipping.Deliver`; Renewal có `Renewal.View`, `Renewal.Process`, `Renewal.Verify`, `Renewal.Reveal`. `Payment.Confirm` dùng riêng để xác nhận tiền, kể cả COD. Đăng ký capability không tự cấp grant cho nhân viên; Process không suy ra Verify hoặc Reveal.
 4. Login, gọi POST `/api/inventory/initialize` một lần; gọi lại trả cùng kho MAIN. Quyền `Inventory.Initialize`.
 5. Tạo ProductType/schema, Category, upload media; sau đó tạo Product/SKU và chọn cách giao. Physical có balance ban đầu bằng 0, nhập kho bằng adjustment riêng; hàng số dùng API kho số bên dưới, không cần MAIN để tạo SKU số.
 
@@ -44,7 +44,7 @@ Giá chỉ nhận VND nguyên đồng. Mọi mã SKU được giữ duy nhất t
 | GET `/api/catalog/categories` | Category active | Công khai |
 | GET `/api/catalog/media/{id}` | Ảnh có liên kết Product Published | Công khai |
 
-Các request có ID trong body phải khớp route. Đọc lại version sau mỗi write. Stale version hoặc constraint conflict trả 409; client tải lại và quyết định thay đổi, không retry ghi đè mù quáng. Adjustment, checkout, xác nhận tiền và shipment có OperationId để replay kết quả thành công theo hợp đồng riêng; request khác cần đọc trạng thái nếu mất response sau commit.
+Các request có ID trong body phải khớp route. Đọc lại version sau mỗi write. Stale version hoặc constraint conflict trả 409; client tải lại và quyết định thay đổi, không retry ghi đè mù quáng. Adjustment, checkout, xác nhận tiền, shipment và các thao tác renewal có OperationId để replay kết quả thành công theo hợp đồng riêng; request khác cần đọc trạng thái nếu mất response sau commit.
 
 ### Tạo schema và Product
 
@@ -85,7 +85,7 @@ POST status nhận `{id,version,status}`. Không có hard delete/trash/restore c
 
 ### Cách giao và kho hàng số
 
-CreateProduct thêm `fulfillmentKind`: 1 Physical (mặc định), 2 DigitalUnique, 3 DigitalShared, 4 ManualExtension. Cách giao ở Product, độc lập ProductType; SKU kế thừa. Product detail/summary trả lại kind. Kind không sửa qua EditProduct hoặc payload SKU trong lát này. ManualExtension có thể đặt và xác nhận nhận tiền; giao việc vẫn InProgress, chưa có thao tác gia hạn/PendingVerification và chưa tự cộng thời hạn.
+CreateProduct thêm `fulfillmentKind`: 1 Physical (mặc định), 2 DigitalUnique, 3 DigitalShared, 4 ManualExtension. Cách giao ở Product, độc lập ProductType; SKU kế thừa. Product detail/summary trả lại kind. Kind không sửa qua EditProduct hoặc payload SKU trong lát này. ManualExtension tạo request sau Paid, khách khai tài khoản đích rồi nhân viên claim/start/xác minh theo API bên dưới; hệ thống không tự cộng thời hạn hoặc thực hiện gia hạn tại dịch vụ ngoài. Trạng thái kiểm chứng renewal được theo dõi riêng trong [hồ sơ](features/manual-renewals.md).
 
 Unique import:
 
@@ -158,7 +158,7 @@ Amount phải đúng toàn bộ Total snapshot của đơn, Currency chỉ VND; 
 
 OperationId của receipt unique toàn shop, độc lập với OperationId checkout. Gửi lại cùng order/reference/amount/currency/received time/source trả trạng thái đơn hiện tại, kể cả Version đã thay đổi; không ghi receipt hoặc cấp hàng lần hai. Hash chuyển khoản cũ được giữ tương thích; ManualCOD thêm Source vào hash. Dùng cùng operation với nội dung khác, kể cả đổi nguồn nhận tiền, trả409. Khi mất response, retry đúng payload/OperationId; không tự tạo mã khác để xác nhận lại khoản tiền.
 
-Khi xác nhận tiền trước khi có lần xuất giao nào, server kiểm đủ toàn bộ hàng theo snapshot đơn dưới khóa. Unique giữ đúng owner được giao tiếp, hàng đã nhả do hết hạn phải được giữ lại đủ; Shared cần nội dung Available. Nếu đủ, Unique qty2 nhận hai snapshot khác nhau; Shared qty2 nhận một snapshot. Shared đổi link sau đó không đổi nội dung khách đã nhận. Đơn chỉ có Unique/Shared hoàn tất tự động; đơn có Physical/ManualExtension vẫn InProgress, Paid không đồng nghĩa đã gửi hàng hoặc đã gia hạn. Với COD đã xuất một phần hoặc toàn bộ, xác nhận chuyển khoản chỉ đối chiếu các shipment đã có và trạng thái hoàn tất; không giữ lại số lượng ban đầu đã xuất, không tạo movement hoặc cấp lại hàng số.
+Khi xác nhận tiền trước khi có lần xuất giao nào, server kiểm đủ toàn bộ hàng theo snapshot đơn dưới khóa. Unique giữ đúng owner được giao tiếp, hàng đã nhả do hết hạn phải được giữ lại đủ; Shared cần nội dung Available. Nếu đủ, Unique qty2 nhận hai snapshot khác nhau; Shared qty2 nhận một snapshot. Shared đổi link sau đó không đổi nội dung khách đã nhận. Đơn chỉ có Unique/Shared hoàn tất tự động; đơn có Physical/ManualExtension vẫn InProgress, Paid không đồng nghĩa đã gửi hàng hoặc đã gia hạn. Mỗi ManualExtension line của đơn Paid không Cancelled có một request, kể cả đang NeedsReview; chỉ thu nhận target trong lúc NeedsReview, chưa cho Claim/Start. Với COD đã xuất một phần hoặc toàn bộ, xác nhận chuyển khoản đối chiếu các shipment đã có và trạng thái hoàn tất; không giữ lại số lượng ban đầu đã xuất, không tạo movement hoặc cấp lại hàng số.
 
 Thanh toán thực sự muộn hoặc thông báo/xác nhận muộn đều đối chiếu tồn hiện tại khi holds đã được nhả. Thiếu một dòng vẫn giữ Paid + NeedsReview, không tạo phần giữ hàng/cấp phát mới; holds cũ giữ nguyên. Giải mã/mã hóa snapshot lỗi cũng giữ Paid + NeedsReview, audit metadata `DigitalContentUnavailable`. Sau khi nhập thêm hàng hoặc khôi phục đúng key, nhân viên dùng retry-fulfillment với Version mới; không xác nhận tiền lần nữa. Đơn Cancelled nhận tiền vẫn Cancelled + Paid + NeedsReview, không tự hồi sinh hoặc cho retry giao; hoàn tiền/xử lý hủy sau nhận tiền là mốc sau.
 
@@ -196,7 +196,37 @@ Status shipment chuyển Dispatched=1 → Delivered=2, thời điểm do server 
 
 Chỉ khi tổng số lượng Delivered của từng dòng vật lý đã đủ mới xét hoàn tất. Đơn mixed còn cần đủ snapshot Unique/Shared; có ManualExtension thì vẫn InProgress. COD giao đủ mà chưa nhận tiền có FulfillmentStatus.Completed, PaymentStatus.Unpaid, OrderStatus.AwaitingProcessing. Sau đối chiếu thực nhận đủ, gửi payment-confirmations với `source:"ManualCOD"`; lúc đó mới Paid và Order.Completed. Nếu khách chuyển khoản trước khi giao đủ COD, dùng ManualBankTransfer; các lần xuất/nhận sau tiếp tục trên lịch sử đã có. Không tự Paid từ tracking/delivered.
 
-Đã xuất dù một phần thì API cancel đơn cũ trả409, kể cả COD chưa trả tiền. Lát này chưa có sửa/xóa shipment, hủy chuyến, trả hàng/nhập bù hoặc refund; không nhả reservation, bật lại tồn hay sửa ledger để giả lập các nghiệp vụ đó. Chưa có API carrier/webhook; nhân viên lưu kết quả vận chuyển thực tế.
+Đã xuất dù một phần thì API cancel đơn cũ trả409, kể cả COD chưa trả tiền. Lát này chưa có sửa/xóa shipment, hủy chuyến, trả hàng/nhập bù hoặc refund; không nhả reservation, bật lại tồn hay sửa ledger để giả lập các nghiệp vụ đó. Chưa có API carrier/webhook; nhân viên lưu kết quả vận chuyển thực tế. Đơn mixed chỉ hoàn tất khi đủ shipment Delivered, snapshot hàng số và mọi request ManualExtension Completed.
+
+### Gia hạn thủ công có claim và xác minh
+
+[Hồ sơ renewal](features/manual-renewals.md) ghi thiết kế/trạng thái kiểm chứng; phần này mô tả hợp đồng code, không xác nhận deployment hoặc thao tác dịch vụ ngoài đã nghiệm thu. Mọi response renewal no-store. API được bật cùng Catalog; khi module tắt, routes bị loại nhưng dữ liệu vẫn giữ. Owner chỉ truy cập đúng Order.CustomerId, đơn khác trả404. Admin kiểm quyền tại cả controller và service, không suy từ Order.View/Payment.Confirm.
+
+| Endpoint | Request/kết quả | Quyền |
+|---|---|---|
+| GET `/api/orders/{orderId}/renewals` | Mảng RenewalDto của đơn; GET không tạo request | Authenticated owner |
+| PUT `/api/orders/{orderId}/renewals/{id}/target` | `{version,operationId,accountIdentifier}` → RenewalDto | Owner của đơn Paid, AwaitingTarget/Ready và chưa từng Start |
+| GET `/api/orders/{orderId}/renewals/{id}/target` | `{id,content}` chứa định danh của mình, Read audit | Owner của đơn Paid |
+| GET `/api/admin/renewals?page=1&size=20&status=2` | Page RenewalAdminDto; page≥1, size1..100; status tùy chọn1..5 | Renewal.View |
+| GET `/api/admin/renewals/{id}` | RenewalAdminDto chi tiết | Renewal.View |
+| POST `/api/admin/orders/{orderId}/renewals/provision` | `{orderVersion}` → mảng RenewalDto; tạo những request thiếu | Renewal.Process; Paid, không Cancelled/Expired |
+| POST `/api/admin/renewals/{id}/claim` | `{version,operationId}` → RenewalAdminDto | Renewal.Process |
+| POST `/api/admin/renewals/{id}/release` | `{version,operationId,claimToken}` → RenewalAdminDto | Renewal.Process, đúng holder/token/lease |
+| POST `/api/admin/renewals/{id}/start` | `{version,operationId,claimToken}` → PendingVerification + attempt metadata | Renewal.Process, đúng holder/token/lease |
+| POST `/api/admin/renewals/{id}/verify` | `{version,operationId,attemptId,applied,newExpiresAtUtc,note,evidence}` → RenewalAdminDto | Renewal.Verify |
+| GET `/api/admin/renewals/{id}/target` | `{id,content}` định danh đã giải mã; Read audit | Renewal.Reveal |
+| GET `/api/admin/renewals/{id}/attempts/{attemptId}/evidence` | `{id,content}`; content là chuỗi JSON chứa Note/Evidence đã giải mã; Read audit | Renewal.Verify |
+| GET `/api/admin/renewals/{id}/history` | OperationId/Action/ActorId/StatusAfter/OccurredAtUtc | Renewal.View |
+
+RenewalDto gồm Id/OrderId/OrderItemId/Version/Status, snapshot Name/Sku/OptionDescription/Quantity, TargetPreview dạng mask, CompletedAtUtc/VerifiedExpiresAtUtc nullable. RenewalAdminDto bọc Renewal, ClaimedBy/ClaimUntilUtc/ClaimToken nullable và Attempts metadata (Id/OperationId/StartedBy/StartedAtUtc/Outcome/VerifiedBy/VerifiedAtUtc/NewExpiresAtUtc). List không trả token; detail và response thao tác chỉ trả ClaimToken cho chính holder trong claim còn hạn. Owner DTO không có token/attempt evidence. Không DTO thường nào trả full target, TargetKey, ciphertext, note hoặc evidence; đọc nội dung chỉ qua endpoint chuyên biệt và audit commit trước khi trả.
+
+Target nhận1–256ký tự sau trim, giữ nguyên case thật và chặn control character; không nhập mật khẩu. Có thể sửa khi AwaitingTarget=1 hoặc Ready=2 và chưa từng Start. Claim chuyển Claimed=3, lease mặc định15phút, cấu hình `Ordering__RenewalClaimMinutes` từ1–120. Hai request cùng canonical target bị tuần tự hóa toàn shop; claim còn hạn hoặc PendingVerification của request khác trả409. Claim hết hạn chưa Start có thể reclaim và được ghi lịch sử. Release đúng claim còn hạn trở Ready; token cũ không dùng được sau reclaim.
+
+Start phải thành công trước khi nhân viên thao tác ngoài: server ghi attempt Pending=1 và request PendingVerification=4 trong transaction rồi trả. ClaimToken/lease bị xóa; target khóa vĩnh viễn sau lần Start đầu. Mất kết nối, restart hoặc thời gian trôi qua không mở lại yêu cầu này. Nếu response Start bị mất, retry đúng OperationId hoặc đọc lại metadata/history trước khi quyết định hành động; không thực hiện bên ngoài lần nữa khi chưa đối chiếu kết quả lần trước.
+
+Verify không yêu cầu cùng nhân viên Start nhưng phải có Renewal.Verify. Note bắt buộc sau trim, tối đa1200ký tự; Evidence tùy chọn tối đa1800ký tự. Applied=true cần NewExpiresAtUtc UTC (`Z`) thực tế lớn hơn thời điểm xác minh của server; thành Outcome Applied=2/Request Completed=5. Applied=false bắt buộc expiry null, thành Outcome NotApplied=3/Request Ready; cần claim/start mới để thử ngoài lần mới. Không sửa kết quả cũ hoặc đổi target sau NotApplied. Note/Evidence được bảo vệ theo AttemptId. Qty2 là số gói đã mua cho cùng target, không tự suy ra ngày hết hạn; nhân viên nhập kết quả thật của dịch vụ.
+
+Các write dùng Renewal.Version, riêng provision dùng Order.Version. OperationId duy nhất toàn bộ renewal operation history; replay đúng actor/request/action/nội dung chuẩn hóa trả trạng thái hiện tại trước kiểm version, không tạo attempt/lịch sử lần hai. Version và ClaimToken không thuộc hash replay. Đổi payload/actor/request/action hoặc version cũ của thao tác mới trả409. Dữ liệu sai kiểu/giới hạn trả400. Process/Start chờ đơn Paid và hết NeedsReview; Verify lưu kết quả thực tế đã xảy ra rồi reconcile nếu đơn đủ điều kiện. Chỉ khi đủ mọi physical/digital/renewal line thì đơn mới Completed; tạo request hoặc thanh toán không tự hoàn tất gia hạn. Provision cho đơn Paid cũ là thao tác operator rõ ràng, GET hoặc replay receipt không tự backfill.
 
 ### Tồn kho
 
@@ -228,7 +258,7 @@ Sau proxy, đặt `ReverseProxy__Enabled=true` và `ReverseProxy__KnownProxies__
 
 Worker log định kỳ backlog, oldestAgeSeconds, deadLetters; cảnh báo nếu backlog/tuổi tăng kéo dài hoặc deadLetters >0. API outbox trả trạng thái để operator điều tra/replay sau khi sửa nguyên nhân. Replay giữ nguyên message identity và có audit. File missing được coi là đã xóa; permission denied/offline phải retry/dead-letter.
 
-Backup database, media và Data Protection key ring cùng cửa sổ vận hành. Receipt/digital delivery/shipment/stock movement/consumption/stock owner phải cùng recovery point; sau restore cũ cần đối chiếu tiền ngân hàng/COD, hàng đã xuất và mã đã giao ngoài cửa sổ backup trước khi mở cấp phát lại. PhysicalShipping Down chặn toàn bộ receipt/delivery/Paid/holds và lịch sử xuất giao trước DDL; không dùng downgrade để dọn giao dịch. Tạm dừng write/worker khi lấy snapshot nhất quán; kiểm thử restore trên installation cô lập, chạy migration/preflight/health, thử đọc media, nội dung kho số/snapshot giao và session/token. Không dùng cache làm nguồn giá, kho hoặc authorization. Chỉ bật adapter SMTP/blob/OAuth/Redis sau smoke với cấu hình thực của môi trường.
+Backup database, media và Data Protection key ring cùng cửa sổ vận hành. Receipt/digital delivery/shipment/stock movement/consumption/stock owner/renewal requests-attempts-operations phải cùng recovery point; sau restore cũ cần đối chiếu tiền ngân hàng/COD, hàng đã xuất, mã đã giao và gia hạn đã thao tác ngoài cửa sổ backup trước khi mở cấp phát lại. Renewal dùng purpose `Boilerate.Renewals.Target.v1` + RequestId và `Boilerate.Renewals.Evidence.v1` + AttemptId; giữ cùng application name/key ring. ManualRenewals Down chặn renewal hoặc commerce history/holds trước DDL, PhysicalShipping có guard riêng; không dùng downgrade để dọn giao dịch. Tạm dừng write/worker khi lấy snapshot nhất quán; kiểm thử restore trên installation cô lập, chạy migration/preflight/health, thử đọc media, nội dung kho số/snapshot giao/target/evidence và session/token. Không dùng cache làm nguồn giá, kho hoặc authorization. Chỉ bật adapter SMTP/blob/OAuth/Redis sau smoke với cấu hình thực của môi trường.
 
 ## Kiểm chứng
 

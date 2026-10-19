@@ -2,7 +2,7 @@
 
 Cập nhật: 2026-10-18, Asia/Saigon. Nguồn: câu trả lời của người dùng trong [phỏng vấn nghiệp vụ](../features/business-discovery.md). Đây là quy tắc đã xác nhận cho các kịch bản được nêu, **chưa phải luồng đã triển khai hoặc danh sách bắt buộc của MVP**.
 
-Trạng thái code mới nhất: đã có [cấu hình cách giao và quản lý kho số](../features/digital-inventory.md), gồm mã hóa/quyền/audit. Cấp phát sau thanh toán, Đơn hàng của tôi/email và xử lý yêu cầu gia hạn chưa được triển khai; không đồng nhất kho số với luồng bán hàng hoàn chỉnh.
+Trạng thái code mới nhất: đã có [kho số](../features/digital-inventory.md), [giỏ/đơn/giữ hàng](../features/ordering-checkout.md), [nhận tiền/giao Unique/Shared/email outbox](../features/payment-digital-delivery.md) và [giao vật lý/COD](../features/physical-shipping.md), có bằng chứng local riêng. [Gia hạn thủ công](../features/manual-renewals.md) đang triển khai/kiểm chứng; runtime/adapter thật chưa nghiệm thu. Các đoạn quy tắc dưới đây giữ quyết định nghiệp vụ; không tự coi mọi kịch bản là đã được nghiệm thu.
 
 ## Nội dung khách nhận và số lượng
 
@@ -13,11 +13,11 @@ Trạng thái code mới nhất: đã có [cấu hình cách giao và quản lý
 | Tài khoản có sẵn | Unique: mỗi tài khoản chỉ cấp một lần | Hai tài khoản khác nhau |
 | Gói gia hạn tài khoản | Extension: yêu cầu gia hạn cho cùng tài khoản | Nếu dịch vụ cho cộng dồn, 2 × 30 ngày tương đương thêm 60 ngày; kết quả thực tế phải được xác minh |
 
-Unique/Shared/Extension là nhãn mô tả nghiệp vụ, chưa phải enum hoặc database schema. Không suy ra Shared có giá bằng 0 khi tăng số lượng, bán không giới hạn hoặc có hai chỗ học; các chính sách đó còn mở.
+Code dùng ProductFulfillmentKind Physical/DigitalUnique/DigitalShared/ManualExtension, một cách giao bất biến cho mỗi Product, SKU kế thừa. Shared tính tiền UnitPrice × Quantity nhưng giao một snapshot/link; sửa link trong kho không đổi nội dung đã giao. Không suy ra hai chỗ học hoặc quyền khác ngoài mô tả gói shop bán.
 
-Sau thanh toán thành công, mã/link/tài khoản có sẵn được lấy từ kho hàng số, gán cho đơn, hiển thị trong **Đơn hàng của tôi** và gửi email thông báo. Nội dung email chưa chốt; chưa mặc định gửi toàn bộ thông tin đăng nhập qua email.
+Sau xác nhận tiền, mã/link/tài khoản được lấy từ kho số, gán snapshot cho đơn và đọc qua API **Đơn hàng của tôi** chỉ bởi khách đã đăng nhập sở hữu đơn, có Read audit. Email qua outbox chỉ thông báo đã giao, không chứa credentials; SMTP thật chưa nghiệm thu.
 
-Không xây LMS và không tích hợp API cấp quyền bên ngoài cho những kịch bản này. Đã chốt đơn có hàng số phải trả trước toàn bộ, kể cả đơn chung với hàng vật lý; COD chỉ dành cho đơn thuần vật lý. Cách xác nhận thanh toán và payment provider vẫn chưa được chọn. Xem [đơn mua chung](product-flexibility.md).
+Không xây LMS hoặc API cấp quyền bên ngoài. Đơn có hàng số trả trước toàn bộ, kể cả đơn chung vật lý; COD chỉ thuần vật lý. Mốc hiện tại nhận tiền bằng xác nhận chuyển khoản thực nhận có quyền, hoặc COD sau giao đủ; chưa chọn gateway tự động. Xem [đơn mua chung](product-flexibility.md).
 
 ## Gia hạn do nhân viên thực hiện
 
@@ -33,21 +33,21 @@ Tình huống: nhân viên A đã thao tác trên dịch vụ ngoài nhưng mấ
 
 **Đã chốt:** đưa yêu cầu vào `PendingVerification` (Chờ xác minh). Tuyệt đối không được thực hiện gia hạn lại khi chưa xác định được kết quả thao tác trước. Việc hết phiên xử lý hoặc bàn giao không được hiểu là bằng chứng lần trước chưa thực hiện.
 
-Đây là tên trạng thái nghiệp vụ được người dùng xác nhận; chưa có state machine/API/persistence tương ứng trong code.
+Thiết kế [gia hạn thủ công](../features/manual-renewals.md) hiện lưu PendingVerification ngay khi nhân viên bấm Start, trước hành động ngoài. Lease chỉ dành cho bước nhận việc chưa Start. Verify riêng mới được kết luận Applied hoặc NotApplied; chưa coi mất kết nối hoặc hết lease là bằng chứng thất bại.
 
 ## Quyết định còn mở
 
 | Chủ đề | Cần làm rõ trước khi triển khai |
 |---|---|
-| Kho Unique | Đã chốt giữ lúc tạo đơn, trả trước mặc định 30 phút/cấu hình và trả muộn kiểm tra giữ lại toàn bộ; chi tiết hết hạn/cấp phát/nhả sẽ thiết kế cùng Order |
-| Shared | Cách tính tiền theo số lượng, quyền nhận được, giới hạn bán và thay link sau khi đã giao |
-| Gia hạn | Nhận diện tài khoản đích; tài khoản hết hạn; hai đơn gia hạn khác nhau cho cùng tài khoản; kết quả thiếu/một phần/thất bại và hoàn tiền |
-| Quyền xử lý | Ai được xác minh, xác nhận kết quả, bàn giao hoặc cho phép thực hiện tiếp sau đối chiếu; chưa mặc định chỉ quản lý |
-| Truy cập | Có bắt buộc đăng nhập không; nội dung email; quyền xem lại và bảo vệ nội dung hàng số |
-| Thanh toán | Phương thức, nguồn xác nhận tiền, thời điểm cấp phát và ngoại lệ thanh toán |
+| Kho Unique | Đã triển khai giữ30phút/cấu hình, nhả hết hạn và trả muộn giữ lại toàn bộ; mã đã giao không tự trả về Available |
+| Shared | Đã có giá theo Quantity và snapshot một link; quyền ngoài dịch vụ theo mô tả gói, chưa tích hợp xác minh |
+| Gia hạn | Thu định danh sau Paid; serialize cùng canonical target; lưu expiry thực tế còn hiệu lực; kết quả thiếu/một phần hoặc hoàn tiền cần review ở mốc refund |
+| Quyền xử lý | Process/Verify/Reveal riêng; Verify có thể đối chiếu của người khác, không hardcode quản lý; thao tác mới chỉ sau NotApplied có chứng cứ |
+| Truy cập | Dùng khách đăng nhập/owner-only, API reveal audit, email thông báo không credentials; frontend My Orders chưa triển khai trong BE slice |
+| Thanh toán | Chuyển khoản/COD xác nhận có quyền đã có; gateway/webhook/refund và adapters thật còn mở |
 
 ## Bước tiếp theo và kiểm chứng
 
 Đã chốt [mức cấu hình quản trị, giỏ/đơn chung và cam kết hàng](product-flexibility.md). Theo chỉ dẫn shop nhỏ, chuyển sang [MVP gọn](../features/shop-mvp.md), thiết kế/code từng lát thay vì tiếp tục hỏi sâu mọi ngoại lệ. Trước khi đổi database/API vẫn ghi rõ use case, cardinality/ownership/constraints, quyền, transaction/idempotency và ca nghiệm thu. ProductType hiện hành quyết định bộ trường nhập liệu; không đồng nhất nó với cách giao hàng.
 
-Hiện chỉ đối chiếu tài liệu với câu trả lời. Chưa có code, migration, kiểm thử hoặc nghiệm thu runtime cho các luồng giao hàng số/gia hạn này. Các kiểm thử Catalog trước đây không xác nhận chúng.
+Theo dõi kết quả thực tế trong từng feature plan và docs/verification. Bằng chứng local cho các bước trước không tự nghiệm thu code gia hạn mới, gateway/SMTP hoặc Linux/Docker deployment.

@@ -43,7 +43,7 @@ Trước khi code mỗi lát, bổ sung thiết kế tối thiểu theo [mẫu f
 | 1 | Chọn cách giao và kho hàng số | Dùng Catalog hiện có; cấu hình hành vi được hỗ trợ, nhập/quản lý mã/link/tài khoản; bảo vệ nội dung; thiết kế DB/API trước code | Đã triển khai/kiểm chứng local theo [hồ sơ](digital-inventory.md); deployment chưa nghiệm thu |
 | 2 | Giỏ, checkout, đơn và giữ hàng | Tổng tiền/địa chỉ/phí ship được xác định trước khi trả; snapshot; đơn chung; đơn trả trước giữ 30 phút/cấu hình, hết hạn/nhả; khách xem đơn | Đã triển khai/kiểm chứng local, regression222/222; [hồ sơ](ordering-checkout.md) |
 | 3 | Nhận tiền và giao hàng số | Xác nhận khoản chuyển khoản thực nhận, chống trùng; giao Unique/Shared qua My Orders; email thông báo; Extension chờ nhân viên | Đã triển khai/kiểm local, regression276/276; chưa nghiệm thu SMTP thật, [hồ sơ](payment-digital-delivery.md) |
-| 4 | Quản trị đơn và giao vật lý | Xem/tìm đơn; cập nhật xử lý/vận chuyển; hủy/ghi nhận hoàn tiền; gia hạn có lịch sử/bằng chứng và PendingVerification | [4A shipping/COD](physical-shipping.md) đã triển khai/kiểm local326/326; gia hạn/refund chưa bắt đầu |
+| 4 | Quản trị đơn và giao vật lý | Xem/tìm đơn; cập nhật xử lý/vận chuyển; hủy/ghi nhận hoàn tiền; gia hạn có lịch sử/bằng chứng và PendingVerification | [4A shipping/COD](physical-shipping.md) local326/326; [4B gia hạn](manual-renewals.md) targeted52/52 nền và34/34 API đạt, regression chung đang chạy; refund/returns chưa triển khai |
 | 5 | Kiểm chứng và chuẩn bị chạy thật | Luồng mua trọn vẹn, retry/concurrency/quyền trên hai DB; docs/OpenAPI; hoàn tất các gate runtime/adapter trước vận hành thật | Chưa triển khai, phụ thuộc 1–4 |
 
 Mỗi lát có docs/history và commit riêng, giữ các thay đổi model/API/migration liên quan trong một commit build được. Bước tiếp theo là quản trị giao vật lý/gia hạn/hủy-hoàn; không coi các bước đó hoàn tất từ trạng thái Paid.
@@ -74,6 +74,8 @@ Các dòng trên là mục tiêu kiểm chứng, chưa phải kết quả test. 
 2026-10-18: hoàn tất [4A shipping/COD](physical-shipping.md) local: partial shipments, consume phần đã giữ, ledger, owner/admin API, COD tách đã giao/đã thu. Regression đầu324/325 phát hiện precision timestamp PostgreSQL, đã sửa và chạy lại326/326 đạt; [báo cáo](../verification/2026-10-18-physical-shipping.md). Phần gia hạn/returns/refund của bước4 chưa triển khai; carrier/gateway/SMTP/runtime thật chưa nghiệm thu.
 
 Catalog và vận hành đã kiểm chứng trước đó có [báo cáo riêng](../verification/2026-10-17-commerce.md); chúng không xác nhận MVP Order/Payment/fulfillment. Linux/Docker/CI thật và adapter vẫn là các gate mở trong roadmap.
+
+2026-10-19: triển khai [4B gia hạn thủ công](manual-renewals.md): request sau Paid, target sau mua, claim/Start/PendingVerification, Verify riêng, expiry thực tế, lịch sử và order reconcile. Targeted52/52 nền,34/34 API đạt trên hai DB; [bằng chứng](../verification/2026-10-19-manual-renewals.md). Regression chung đang chạy; refund/returns và runtime/adapter thật còn mở.
 
 ## 6. Lịch sử commit
 

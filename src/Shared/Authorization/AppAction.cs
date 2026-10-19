@@ -23,5 +23,7 @@ public static class AppAction
     public const string Fulfill = nameof(Fulfill);
     public const string Dispatch = nameof(Dispatch);
     public const string Deliver = nameof(Deliver);
+    public const string Process = nameof(Process);
+    public const string Verify = nameof(Verify);
     public const string Send = nameof(Send);
 }
