@@ -35,6 +35,8 @@ Theo chỉ dẫn mới nhất ngày 2026-10-18, ưu tiên **shop nhỏ, đủ lu
 | 9. Shipping | Shipment/ShipmentItem có số lượng, giao từng phần, trạng thái riêng; thu COD độc lập | **Đã triển khai/kiểm local4A; regression326/326 đạt**, [hồ sơ](features/physical-shipping.md), [bằng chứng](verification/2026-10-18-physical-shipping.md) | Gia hạn bổ sung ở mốc10; refund/returns, carrier/callback và deployment còn mở |
 | 10. Gia hạn thủ công | Request/claim/start/PendingVerification/kết quả và bằng chứng, hoàn tất đơn độc lập Paid | **Đã triển khai/kiểm chứng local4B; regression398/398 đạt**, targeted52/52 nền và34/34 API; [hồ sơ](features/manual-renewals.md), [bằng chứng](verification/2026-10-19-manual-renewals.md) | Refund/returns, provider tự động và nghiệm thu deployment ở lát riêng |
 
+Mốc11 đang triển khai: [hoàn tiền/nhận hàng trả4C](features/refunds-returns.md). Thiết kế đã ghi trước code; chưa có kết quả kiểm chứng mới.
+
 Các mốc 2–6 có phần triển khai song song. Tồn tại code ở mốc sau không làm các điều kiện nghiệm thu của mốc trước tự hoàn tất.
 
 ## Việc ưu tiên tiếp theo
