@@ -100,4 +100,4 @@ Targeted domain/migration52/52, API34/34 và regression398/398 đạt local; t�
 
 ## 7. Còn lại
 
-Refund/returns và các gate runtime/adapter thật là mốc riêng; bản này không tự đổi chính sách bồi hoàn hoặc tự thực hiện gia hạn ngoài hệ thống.
+Refund/returns bổ sung tại [4C hậu mãi](refunds-returns.md); các gate runtime/adapter thật vẫn là mốc riêng. Full refund đóng Order, chặn target/provision/Claim/Start mới và release claim chưa Start; PendingVerification chỉ được mở khóa bằng Verify kết quả thực tế, không hồi sinh Closed. Owner vẫn đọc target/nội dung đã giao. Bản gia hạn không tự quyết chính sách bồi hoàn hoặc thực hiện gia hạn ngoài hệ thống.

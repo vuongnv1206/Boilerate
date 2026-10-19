@@ -1,6 +1,6 @@
 # Hoàn tiền và nhận hàng trả về — MVP4C
 
-Bắt đầu/cập nhật: 2026-10-19, Asia/Saigon. Trạng thái: đã có code, đang kiểm chứng local. Tiếp nối [gia hạn4B](manual-renewals.md), [MVP](shop-mvp.md), [roadmap](../roadmap.md).
+Bắt đầu/cập nhật: 2026-10-19, Asia/Saigon. Trạng thái: đã triển khai/kiểm chứng local, chưa nghiệm thu deployment. Tiếp nối [gia hạn4B](manual-renewals.md), [MVP](shop-mvp.md), [roadmap](../roadmap.md).
 
 ## 1. Mục tiêu và phạm vi
 
@@ -13,12 +13,12 @@ Nhân viên ghi nhận khoản tiền đã hoàn thực tế và hàng vật lý
 
 Tiêu chí local:
 
-- [ ] Refund đúng receipt/order/currency, amount>0, tổng không vượt đã thu; retry/race không trùng/vượt cap.
-- [ ] Full refund đóng fulfillment, nhả đúng phần chưa xuất/chưa giao; Paid giữ lịch sử đã thu. Partial refund không tự dừng giao.
-- [ ] PendingVerification không bị refund mở khóa; Verify kết quả thật không hồi sinh Closed; Unique Delivered không quay về Available.
-- [ ] Return đúng shipment/order/SKU, tổng không vượt đã xuất; restock0..Quantity, movement dương đúng balance gốc, nguyên tử.
-- [ ] COD chưa thu chỉ đóng phần còn lại khi đã nhận đủ phần đã xuất và chọn rõ trong return cuối; không tạo tiền giả.
-- [ ] Owner/ACL/no-store/audit, rollback/race/replay, migrations và regression cả SQL Server/PostgreSQL.
+- [x] Refund đúng receipt/order/currency, amount>0, tổng không vượt đã thu; retry/race không trùng/vượt cap.
+- [x] Full refund đóng fulfillment, nhả đúng phần chưa xuất/chưa giao; Paid giữ lịch sử đã thu. Partial refund không tự dừng giao.
+- [x] PendingVerification không bị refund mở khóa; Verify kết quả thật không hồi sinh Closed; Unique Delivered không quay về Available.
+- [x] Return đúng shipment/order/SKU, tổng không vượt đã xuất; restock0..Quantity, movement dương đúng balance gốc, nguyên tử.
+- [x] COD chưa thu chỉ đóng phần còn lại khi đã nhận đủ phần đã xuất và chọn rõ trong return cuối; không tạo tiền giả.
+- [x] Owner/ACL/no-store/audit, rollback/race/replay, migrations và regression cả SQL Server/PostgreSQL.
 
 ## 2. Thiết kế
 
@@ -75,9 +75,9 @@ Ngày19 chọn ledger khoản đã hoàn thay attempt, giữ Paid; full refund d
 |---|---|---|
 | 1 | Thiết kế trước code | Đã ghi |
 | 2 | Domain/DB/migrations/guards/tests nền |32 domain đạt;6 migration đạt sau sửa setup/assertion test |
-| 3 | Service/API/ACL/dừng fulfillment/return |32 integration đạt local trên hai DB; chuẩn bị commit riêng |
-| 4 | Hai DB rollback/race/replay/privacy/regression | Targeted có kết quả, regression chung đang chạy |
-| 5 | Docs/history/runbook/roadmap/commit nhỏ | Cập nhật song song |
+| 3 | Service/API/ACL/dừng fulfillment/return |32 integration đạt local trên hai DB, commit riêng9b2fe73 |
+| 4 | Hai DB rollback/race/replay/privacy/regression | Regression468/468 đạt,0 fail/skip; giữ kết quả lỗi ban đầu trong báo cáo |
+| 5 | Docs/history/runbook/roadmap/commit nhỏ | Đã cập nhật từng bước; thiết kế/nền/API/tổng kết có commit riêng |
 
 ## 4. Nhật ký/kiểm chứng
 
@@ -85,8 +85,10 @@ Ngày19 chọn ledger khoản đã hoàn thay attempt, giữ Paid; full refund d
 
 2026-10-19: thêm domain/mappings/API, scaffold migration8 hai DB; [history nền](../history/2026-10-19-05-aftersales-domain-database.md), [báo cáo](../verification/2026-10-19-aftersales.md). Host/test builds đạt; targeted đầu86/90,4 lỗi chuẩn bị/assertion migration đã sửa, đang kiểm lại. Không coi32 integration pass là nghiệm thu tiền/return bên ngoài.
 
-2026-10-19: build sau sửa và rerun migration6/6 đạt; không đổi production guards để né failures. Regression chung đang chạy; chưa đánh dấu toàn bộ lát được nghiệm thu.
+2026-10-19: build sau sửa và rerun migration6/6 đạt; không đổi production guards để né failures. Sau đó bắt đầu regression chung; kết quả cuối ghi ở bước tiếp theo.
+
+2026-10-19: regression cuối468/468 đạt trên hai DB,0 fail/skip, gồm70 ca hậu mãi mới. [Tổng kết](../history/2026-10-19-07-aftersales-regression-docs.md) ghi việc đồng bộ docs và bước tiếp theo; cluster PostgreSQL test đã dừng sạch. Hoàn tất local4C, chưa nghiệm thu runtime/adapter/giao dịch bên ngoài.
 
 ## 5. Commit/còn lại
 
-`935cd97`: thiết kế trước code. `113f1f5`: domain/database/migrations và kiểm chứng nền. Các commit tiếp nối chỉ ghi hash sau khi tồn tại. Gateway/refund attempts, RMA frontend, đổi hàng và runtime/adapters ở lát riêng; không tự nghiệm thu toàn bộ MVP từ code này.
+`935cd97`: thiết kế trước code. `113f1f5`: domain/database/migrations và kiểm chứng nền. `9b2fe73`: API/use case/ACL và integration tests. Commit tổng kết tra `git log -- docs/history/2026-10-19-07-aftersales-regression-docs.md`. Gateway/refund attempts, RMA frontend, đổi hàng và runtime/adapters ở lát riêng; không tự nghiệm thu toàn bộ MVP từ code này.

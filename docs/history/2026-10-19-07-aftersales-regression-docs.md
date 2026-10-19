@@ -1,0 +1,7 @@
+# 2026-10-19 — Tổng kết hậu mãi và bước nghiệm thu tiếp theo
+
+- Thiết kế được lưu trước code tại `935cd97`; domain/database tại `113f1f5`; API/use case tại `9b2fe73`. Mỗi commit có hồ sơ/history tương ứng, không giả lập lịch sử hoặc ghi hash trước khi tồn tại.
+- Targeted đầu86/90,4fail do seed COD/assertion casing; đã sửa đúng domain và parse JSON cụ thể, giữ nguyên ràng buộc production. Rerun migration6/6 đạt;32 domain và32 API hậu mãi đạt trong targeted đầu. [Báo cáo](../verification/2026-10-19-aftersales.md) giữ nguyên lệnh/failures và phân biệt các lượt trùng.
+- Regression chung source9b2fe73 đạt **468/468,0 fail/skip**,9phút, gồm70 ca hậu mãi mới và398 ca hiện hữu. Đã đối chiếu TRX, giữ cả4 ca từng lỗi; PostgreSQL test port55439 dừng sạch exit0. Review docs chỉ ra ba mô tả cần đồng bộ: renewal không tạo mới khi Closed, refund/return có replay và hai root hậu mãi nằm trong audit chung. Đã sửa hợp đồng, không thay code để né tests.
+- Kiểm tra docs cuối69 tệp/394 liên kết nội bộ đạt, không có liên kết hỏng; `git diff --check` đạt. Raw logs/TRX/keys không đưa vào Git. Các kết quả cũ giữ riêng theo source, không cộng trùng các lượt.
+- Tiếp theo là kiểm chứng luồng MVP đầy đủ và runtime/adapter thật theo runbook. Giao dịch hiện được nhân viên đối chiếu/ghi nhận; gateway/RMA frontend/đổi hàng chưa thuộc lát này. Không coi local build/test là nghiệm thu tiền/hàng thực tế hoặc deployment.
