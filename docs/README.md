@@ -25,6 +25,7 @@ Tài liệu được cập nhật cùng phần code liên quan. Mỗi tính năn
 17. [Nhận tiền và tự động giao hàng số](features/payment-digital-delivery.md): receipt chuyển khoản xác nhận thủ công, trạng thái độc lập, giao Unique/Shared, xử lý trả muộn và email outbox; bằng chứng local/deployment theo hồ sơ.
 18. [Giao hàng vật lý và ghi nhận COD](features/physical-shipping.md): shipment có số lượng, xuất từ phần đã giữ, giao từng phần, quyền/version/replay và receipt COD độc lập; đã triển khai, trạng thái kiểm chứng theo hồ sơ.
 19. [Gia hạn thủ công](features/manual-renewals.md): nhận việc có lease, Start lưu PendingVerification, xác minh kết quả thực tế, tài khoản đích/bằng chứng được bảo vệ và hoàn tất đơn độc lập Paid.
+20. [Hoàn tiền và nhận hàng trả](features/refunds-returns.md): ledger tiền đã hoàn, return theo shipment, restock có kiểm chứng, full refund đóng phần giao còn lại và COD trả về; trạng thái local/deployment theo [báo cáo](verification/2026-10-19-aftersales.md).
 
 Hướng dẫn dựng installation mới, cấu hình và các lệnh operator nằm tại [README dự án](../README.md). [plan.md](../plan.md) là bản tóm tắt phạm vi hiện tại; lộ trình chi tiết được theo dõi tại đây.
 

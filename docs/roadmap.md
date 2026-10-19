@@ -35,14 +35,14 @@ Theo chỉ dẫn mới nhất ngày 2026-10-18, ưu tiên **shop nhỏ, đủ lu
 | 9. Shipping | Shipment/ShipmentItem có số lượng, giao từng phần, trạng thái riêng; thu COD độc lập | **Đã triển khai/kiểm local4A; regression326/326 đạt**, [hồ sơ](features/physical-shipping.md), [bằng chứng](verification/2026-10-18-physical-shipping.md) | Gia hạn bổ sung ở mốc10; refund/returns, carrier/callback và deployment còn mở |
 | 10. Gia hạn thủ công | Request/claim/start/PendingVerification/kết quả và bằng chứng, hoàn tất đơn độc lập Paid | **Đã triển khai/kiểm chứng local4B; regression398/398 đạt**, targeted52/52 nền và34/34 API; [hồ sơ](features/manual-renewals.md), [bằng chứng](verification/2026-10-19-manual-renewals.md) | Refund/returns, provider tự động và nghiệm thu deployment ở lát riêng |
 
-Mốc11 đang triển khai: [hoàn tiền/nhận hàng trả4C](features/refunds-returns.md). Thiết kế đã ghi trước code; chưa có kết quả kiểm chứng mới.
+Mốc11 đang triển khai: [hoàn tiền/nhận hàng trả4C](features/refunds-returns.md), [báo cáo](verification/2026-10-19-aftersales.md).32 domain/32 integration đạt,6 migration đạt sau sửa test setup/assertion; regression chung đang chạy. Không nghiệm thu tiền/hàng bên ngoài từ test local.
 
 Các mốc 2–6 có phần triển khai song song. Tồn tại code ở mốc sau không làm các điều kiện nghiệm thu của mốc trước tự hoàn tất.
 
 ## Việc ưu tiên tiếp theo
 
 1. **MVP cho shop nhỏ — đang ưu tiên:** đã có [kế hoạch gọn](features/shop-mvp.md) từ các quyết định được ghi nhận. Dừng mở rộng phỏng vấn; triển khai các luồng bán hàng/admin thông thường và xử lý chi tiết khi tới bước liên quan. Chưa đưa rule builder/page builder/PC BOM hoặc nhiều adapter vào MVP.
-2. **Bước BE tiếp theo:** hoàn tiền/trả hàng đơn giản sau thanh toán, tiếp nối [giao vật lý/COD](features/physical-shipping.md) và [gia hạn4B](features/manual-renewals.md) đã kiểm chứng local. Hiện nhận tiền bằng xác nhận chuyển khoản hoặc COD có quyền; chưa có provider/webhook tự động. Mỗi lát ghi cardinality/ownership/cột/constraints/concurrency/xóa, API/quyền và migrations hai DB theo [mẫu](templates/feature-plan.md). Giữ DDD có chọn lọc; không để handler tự bỏ qua quy tắc tồn/cấp phát/trạng thái.
+2. **Đang hoàn thiện4C:** [hoàn tiền/trả hàng](features/refunds-returns.md) sau thanh toán, tiếp nối shipping/gia hạn local. Sau regression, ưu tiên kiểm chứng toàn luồng MVP/triển khai trước khi mở thêm gateway/RMA/đổi hàng. Nhận tiền và hoàn tiền hiện là nhân viên xác nhận thực tế; chưa có provider/webhook tự động. Mỗi lát giữ thiết kế/DDD/transaction/quyền và migrations hai DB theo [mẫu](templates/feature-plan.md).
 3. **Nghiệm thu runtime trước vận hành thật:** chạy Linux CI và container non-root trên SQL Server/PostgreSQL theo [runbook](operations-runbook.md); kiểm operator CLI, volume media/Data Protection keys, health và thay container. Local proxy đã đạt, nhưng chưa chứng minh cấu hình proxy của deployment cụ thể.
 4. **Vận hành/adapter trước vận hành thật:** [native recovery drill local](verification/2026-10-18-operations.md) đã đạt trên hai DB; tiếp tục staging restore/RPO/RTO/session policy và smoke các adapter được bật bằng cấu hình thật.
 

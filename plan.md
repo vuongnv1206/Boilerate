@@ -8,6 +8,7 @@ Kế hoạch được quản lý song song với code trong [docs index](docs/RE
 - [Nhận tiền và tự động giao hàng số](docs/features/payment-digital-delivery.md).
 - [Giao hàng vật lý từng phần và ghi nhận tiền COD](docs/features/physical-shipping.md).
 - [Gia hạn thủ công có nhận việc và xác minh kết quả](docs/features/manual-renewals.md).
+- [Hoàn tiền và nhận hàng trả theo shipment](docs/features/refunds-returns.md).
 - [Lịch sử từng bước và commit](docs/history/README.md).
 - [Quy trình phát triển tài liệu cùng tính năng](docs/development-workflow.md).
 - [Bằng chứng kiểm chứng và giới hạn nghiệm thu](docs/verification/2026-10-17-commerce.md).

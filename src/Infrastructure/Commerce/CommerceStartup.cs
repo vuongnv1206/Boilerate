@@ -29,6 +29,7 @@ public static class CommerceStartup
         services.AddScoped<IPaymentService>(sp => sp.GetRequiredService<OrderingService>());
         services.AddScoped<IShippingService>(sp => sp.GetRequiredService<OrderingService>());
         services.AddScoped<IRenewalService>(sp => sp.GetRequiredService<OrderingService>());
+        services.AddScoped<IAfterSalesService>(sp => sp.GetRequiredService<OrderingService>());
         services.AddScoped<OutboxProcessor>();
         services.AddSingleton(new LocalFileStorageService(Path.GetFullPath(config["Storage:Root"] ?? "Files")));
         services.AddSingleton<IFileStorageService>(sp => sp.GetRequiredService<LocalFileStorageService>());

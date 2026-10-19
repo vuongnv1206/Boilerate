@@ -77,7 +77,7 @@ public sealed partial class OrderingService
             await EnsureRenewalRequests(order, ct);
             if (order.PhysicalDispatchStarted)
                 await ReconcileOrderFulfillment(order, ct);
-            else if (order.Status != OrderStatus.Cancelled)
+            else if (order.Status is not (OrderStatus.Cancelled or OrderStatus.Closed))
                 await FulfillPaidOrder(order, ct);
             return MapOrder(order);
         }, ct);
@@ -92,7 +92,7 @@ public sealed partial class OrderingService
             var order = await Orders().SingleOrDefaultAsync(o => o.Id == orderId, ct)
                 ?? throw new NotFoundException("Order not found.");
             CheckVersion(r.Version, order.Version);
-            if (order.PaymentStatus != OrderPaymentStatus.Paid || order.Status == OrderStatus.Cancelled)
+            if (order.PaymentStatus != OrderPaymentStatus.Paid || order.Status is OrderStatus.Cancelled or OrderStatus.Closed)
                 throw new ConflictException("Only paid, non-cancelled orders can resume fulfillment.");
             await EnsureRenewalRequests(order, ct);
             if (order.FulfillmentStatus == OrderFulfillmentStatus.NeedsReview)
@@ -109,6 +109,7 @@ public sealed partial class OrderingService
     // Check every line first: a failed late-payment reacquisition must not retain new partial holds.
     private async Task FulfillPaidOrder(Order order, CancellationToken ct)
     {
+        if (order.Status == OrderStatus.Closed) throw new ConflictException("Closed orders cannot resume fulfillment.");
         await LockProducts(order.Items.Select(i => i.ProductId), ct);
         var physicalIds = order.Items.Where(i => i.FulfillmentKind == ProductFulfillmentKind.Physical).Select(i => i.VariantId).ToArray();
         var balanceIds = await db.InventoryItems.Where(i => physicalIds.Contains(i.VariantId) &&

@@ -1,0 +1,9 @@
+# 2026-10-19 — API hoàn tiền/nhận hàng trả và đóng fulfillment
+
+- Thêm summary owner/admin, ConfirmRefund và ReceiveReturn. Ghi tiền đã hoàn thực tế, cap tổng receipt dưới ordering Gate, actor/payload/reference replay, Order.Version và audit trong cùng transaction. Không thực hiện chuyển tiền hoặc tự tính refund từ quantity.
+- Full refund đóng Closed/Stopped, nhả đúng physical Remaining và Unique Reserved, release claim chưa Start; giữ Delivered content/PendingVerification. Partial refund không tự dừng giao. Deliver/Verify và bank receipt muộn vẫn lưu sự thật, không hồi sinh Closed. Owner còn đọc nội dung đã giao/target của mình.
+- Return theo đúng shipment/order/item/SKU, cap cumulative quantity, restock bằng movement dương trên balance gốc; phần không bán được vẫn có receipt với restock0. COD Unpaid có thể đóng trong return cuối nếu chọn rõ và đã nhận đủ mọi phần đã xuất; không tạo tiền giả.
+- Quyền AfterSales.View/Refund.Confirm/Return.Receive riêng, restock>0 cần thêm Inventory.Adjust; controller/service cùng kiểm, GET owner404/no-store. GET summary dùng transaction/gate ngắn cho version/totals nhất quán. Capabilities chỉ đăng ký/cấp qua operator CLI rõ ràng.
+-32 integration cases đạt cả hai provider trong targeted đầu;6 migration đạt sau sửa test setup/assertion (lượt đầu có4 fail được giữ trong báo cáo). Regression chung đang chạy. [Báo cáo](../verification/2026-10-19-aftersales.md) và [kế hoạch](../features/refunds-returns.md) ghi lệnh/phạm vi, không coi test local là nghiệm thu tiền/hàng bên ngoài.
+- File: AfterSalesContracts, OrderingAfterSales, controllers, DI/ACL/bootstrap, guards trong payment/shipping/renewal, AfterSalesIntegrationTests, docs API/database/runbook/index/roadmap/MVP. Commit nền đã tồn tại `113f1f5`; use case và tổng kết kiểm chứng có commit riêng.
+- Tiếp theo: hoàn tất regression/tổng kết; chuẩn bị nghiệm thu toàn luồng MVP và runtime/adapter thật, không mở thêm gateway/RMA/đổi hàng trong lát này.

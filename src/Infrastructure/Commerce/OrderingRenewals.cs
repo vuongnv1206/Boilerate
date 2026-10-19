@@ -44,7 +44,7 @@ public sealed partial class OrderingService
     // Runs in the receipt/provision transaction, never as a side effect of reading or replaying a receipt.
     private async Task EnsureRenewalRequests(Order order, CancellationToken ct)
     {
-        if (order.PaymentStatus != OrderPaymentStatus.Paid || order.Status == OrderStatus.Cancelled) return;
+        if (order.PaymentStatus != OrderPaymentStatus.Paid || order.Status is OrderStatus.Cancelled or OrderStatus.Closed) return;
         var existing = await db.RenewalRequests.Where(r => r.OrderId == order.Id).Select(r => r.OrderItemId).ToListAsync(ct);
         foreach (var item in order.Items.Where(i => i.FulfillmentKind == ProductFulfillmentKind.ManualExtension && !existing.Contains(i.Id)))
         {
@@ -60,7 +60,7 @@ public sealed partial class OrderingService
 
     private static void RequireRenewalOrder(Order order, bool processing = false)
     {
-        if (order.PaymentStatus != OrderPaymentStatus.Paid || order.Status is OrderStatus.Cancelled or OrderStatus.Expired ||
+        if (order.PaymentStatus != OrderPaymentStatus.Paid || order.Status is OrderStatus.Cancelled or OrderStatus.Expired or OrderStatus.Closed ||
             (processing && order.FulfillmentStatus == OrderFulfillmentStatus.NeedsReview))
             throw new ConflictException("Renewals require a paid, non-cancelled order; resolve fulfillment review before processing.");
     }
@@ -233,7 +233,8 @@ public sealed partial class OrderingService
         Customer();
         return await work.ExecuteAsync(async () =>
         {
-            RequireRenewalOrder(await RenewalOrder(orderId, true, ct));
+            if ((await RenewalOrder(orderId, true, ct)).PaymentStatus != OrderPaymentStatus.Paid)
+                throw new ConflictException("Renewal history is available after payment.");
             var request = await db.RenewalRequests.SingleOrDefaultAsync(r => r.Id == id && r.OrderId == orderId, ct)
                 ?? throw new NotFoundException("Renewal not found.");
             return RevealTarget(request);

@@ -20,7 +20,7 @@ using Microsoft.AspNetCore.DataProtection;
 namespace Boilerate.Infrastructure.Commerce;
 
 public sealed partial class OrderingService(ApplicationDbContext db, CommerceUnitOfWork work, ICurrentUser actor,
-    IUserService users, IOptions<OrderingSettings> settings, TimeProvider clock, IDataProtectionProvider protection) : IOrderingService, IPaymentService, IShippingService, IRenewalService
+    IUserService users, IOptions<OrderingSettings> settings, TimeProvider clock, IDataProtectionProvider protection) : IOrderingService, IPaymentService, IShippingService, IRenewalService, IAfterSalesService
 {
     private DateTime Now => clock.GetUtcNow().UtcDateTime;
     private Guid Customer()

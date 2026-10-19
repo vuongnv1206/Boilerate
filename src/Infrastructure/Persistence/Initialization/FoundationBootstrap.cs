@@ -39,6 +39,9 @@ public sealed class FoundationBootstrap : IScopedService
             yield return ("Payment", new[] { "Confirm" });
             yield return ("Shipping", new[] { "View", "Dispatch", "Deliver" });
             yield return ("Renewal", new[] { "View", "Process", "Verify", "Reveal" });
+            yield return ("AfterSales", new[] { "View" });
+            yield return ("Refund", new[] { "Confirm" });
+            yield return ("Return", new[] { "Receive" });
             yield return ("Outbox", new[] { "View", "Replay" });
             yield return ("Category", new[] { "View", "Create", "Update", "Delete" });
         }

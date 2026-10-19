@@ -53,7 +53,7 @@ public sealed partial class OrderingService
             var order = await Orders().SingleOrDefaultAsync(o => o.Id == orderId, ct)
                 ?? throw new NotFoundException("Order not found.");
             CheckVersion(r.OrderVersion, order.Version);
-            if (order.Status is OrderStatus.Cancelled or OrderStatus.Expired || order.FulfillmentStatus == OrderFulfillmentStatus.NeedsReview ||
+            if (order.Status is OrderStatus.Cancelled or OrderStatus.Expired or OrderStatus.Closed || order.FulfillmentStatus == OrderFulfillmentStatus.NeedsReview ||
                 (order.PaymentStatus != OrderPaymentStatus.Paid && order.PaymentMethod != OrderPaymentMethod.CashOnDelivery))
                 throw new ConflictException("Only ready paid orders or physical COD orders can dispatch stock.");
             var physical = order.Items.Where(i => i.FulfillmentKind == ProductFulfillmentKind.Physical).ToDictionary(i => i.Id);
@@ -137,6 +137,11 @@ public sealed partial class OrderingService
 
     private async Task ReconcileOrderFulfillment(Order order, CancellationToken ct)
     {
+        if (order.Status == OrderStatus.Closed)
+        {
+            order.Touch(); // Record late delivery/verification facts without reopening fulfillment.
+            return;
+        }
         var complete = !order.Items.Any(i => i.FulfillmentKind == ProductFulfillmentKind.Physical) || await AllPhysicalDelivered(order, ct);
         // Materialize before evaluating status so verification in this transaction is visible.
         var renewals = await db.RenewalRequests.Where(r => r.OrderId == order.Id).ToListAsync(ct);

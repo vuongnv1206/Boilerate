@@ -89,4 +89,4 @@ Ngày19 chọn ledger khoản đã hoàn thay attempt, giữ Paid; full refund d
 
 ## 5. Commit/còn lại
 
-`935cd97`: thiết kế trước code. Các commit tiếp nối chỉ ghi hash sau khi tồn tại. Gateway/refund attempts, RMA frontend, đổi hàng và runtime/adapters ở lát riêng; không tự nghiệm thu toàn bộ MVP từ code này.
+`935cd97`: thiết kế trước code. `113f1f5`: domain/database/migrations và kiểm chứng nền. Các commit tiếp nối chỉ ghi hash sau khi tồn tại. Gateway/refund attempts, RMA frontend, đổi hàng và runtime/adapters ở lát riêng; không tự nghiệm thu toàn bộ MVP từ code này.

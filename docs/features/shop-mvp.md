@@ -1,7 +1,7 @@
 # Shop MVP — hoàn chỉnh luồng bán hàng cho một shop nhỏ
 
-Ngày bắt đầu/cập nhật: 2026-10-18, Asia/Saigon.
-Trạng thái: bước1 kho số, bước2 Ordering, bước3 payment/giao số và [4A shipping/COD](physical-shipping.md) đã triển khai/kiểm local; regression mới nhất326/326 đạt. Gia hạn/refund và nghiệm thu deployment/adapter thật còn mở, MVP toàn bộ chưa hoàn tất.
+Ngày bắt đầu: 2026-10-18. Cập nhật: 2026-10-19, Asia/Saigon.
+Trạng thái: bước1 kho số,2 Ordering,3 payment/giao số, [4A shipping/COD](physical-shipping.md) và [4B gia hạn](manual-renewals.md) đã kiểm chứng local; regression renewal398/398. [4C hậu mãi](refunds-returns.md) đã có code, targeted và regression đang được tổng kết. Deployment/adapter thật và nghiệm thu toàn bộ MVP chưa hoàn tất.
 Mốc roadmap: [Ordering, Payment và Fulfillment](../roadmap.md).
 
 ## 1. Mục tiêu và phạm vi
@@ -43,7 +43,7 @@ Trước khi code mỗi lát, bổ sung thiết kế tối thiểu theo [mẫu f
 | 1 | Chọn cách giao và kho hàng số | Dùng Catalog hiện có; cấu hình hành vi được hỗ trợ, nhập/quản lý mã/link/tài khoản; bảo vệ nội dung; thiết kế DB/API trước code | Đã triển khai/kiểm chứng local theo [hồ sơ](digital-inventory.md); deployment chưa nghiệm thu |
 | 2 | Giỏ, checkout, đơn và giữ hàng | Tổng tiền/địa chỉ/phí ship được xác định trước khi trả; snapshot; đơn chung; đơn trả trước giữ 30 phút/cấu hình, hết hạn/nhả; khách xem đơn | Đã triển khai/kiểm chứng local, regression222/222; [hồ sơ](ordering-checkout.md) |
 | 3 | Nhận tiền và giao hàng số | Xác nhận khoản chuyển khoản thực nhận, chống trùng; giao Unique/Shared qua My Orders; email thông báo; Extension chờ nhân viên | Đã triển khai/kiểm local, regression276/276; chưa nghiệm thu SMTP thật, [hồ sơ](payment-digital-delivery.md) |
-| 4 | Quản trị đơn và giao vật lý | Xem/tìm đơn; cập nhật xử lý/vận chuyển; hủy/ghi nhận hoàn tiền; gia hạn có lịch sử/bằng chứng và PendingVerification | [4A shipping/COD](physical-shipping.md) local326/326; [4B gia hạn](manual-renewals.md) local398/398 regression đạt; refund/returns chưa triển khai |
+| 4 | Quản trị đơn và giao vật lý | Xem/tìm đơn; cập nhật xử lý/vận chuyển; hủy/ghi nhận hoàn tiền; gia hạn có lịch sử/bằng chứng và PendingVerification |4A/4B đạt local; [4C hậu mãi](refunds-returns.md)32 integration và6 migration đạt sau sửa test setup/assertion, regression đang chạy |
 | 5 | Kiểm chứng và chuẩn bị chạy thật | Luồng mua trọn vẹn, retry/concurrency/quyền trên hai DB; docs/OpenAPI; hoàn tất các gate runtime/adapter trước vận hành thật | Chưa triển khai, phụ thuộc 1–4 |
 
 Mỗi lát có docs/history và commit riêng, giữ các thay đổi model/API/migration liên quan trong một commit build được. Bước tiếp theo là quản trị giao vật lý/gia hạn/hủy-hoàn; không coi các bước đó hoàn tất từ trạng thái Paid.

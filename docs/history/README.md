@@ -25,6 +25,7 @@
 - 2026-10-19: [Regression và đồng bộ docs gia hạn](2026-10-19-03-renewal-regression-docs.md).
 - 2026-10-19: [Thiết kế hoàn tiền và nhận hàng trả](2026-10-19-04-refunds-returns-design.md).
 - 2026-10-19: [Domain/database hậu mãi](2026-10-19-05-aftersales-domain-database.md).
+- 2026-10-19: [API hoàn tiền/nhận hàng trả](2026-10-19-06-aftersales-api.md).
 
 - 2026-10-18: [Lập kế hoạch nghiệm thu vận hành](2026-10-18-01-operations-plan.md).
 - 2026-10-18: [Gate runtime và trusted proxy](2026-10-18-02-runtime-gates.md).
