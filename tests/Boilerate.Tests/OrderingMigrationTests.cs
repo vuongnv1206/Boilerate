@@ -61,7 +61,7 @@ public sealed class OrderingMigrationTests
         var migrator = db.GetService<IMigrator>();
         var previous = db.Database.GetMigrations().Single(name => name.EndsWith("_DigitalInventory", StringComparison.Ordinal));
         var appliedBefore = (await db.Database.GetAppliedMigrationsAsync()).ToArray();
-        Assert.EndsWith("_ManualRenewals", appliedBefore.Last());
+        Assert.EndsWith("_RefundsReturns", appliedBefore.Last());
 
         var blocked = await Record.ExceptionAsync(() => migrator.MigrateAsync(previous));
         Assert.True(blocked is Microsoft.Data.SqlClient.SqlException { Number: 51000 } ||

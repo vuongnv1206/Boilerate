@@ -33,9 +33,10 @@ internal static class OrderingModel
         var order = m.Entity<Order>();
         order.ToTable("Orders", "Ordering", t =>
         {
-            t.HasCheckConstraint("CK_Order_Status", "\"Status\" IN (1,2,3,4,5)");
+            t.HasCheckConstraint("CK_Order_Status", "\"Status\" IN (1,2,3,4,5,6)");
             t.HasCheckConstraint("CK_Order_PaymentStatus", "\"PaymentStatus\" IN (1,2)");
-            t.HasCheckConstraint("CK_Order_FulfillmentStatus", "\"FulfillmentStatus\" IN (1,2,3,4)");
+            t.HasCheckConstraint("CK_Order_FulfillmentStatus", "\"FulfillmentStatus\" IN (1,2,3,4,5)");
+            t.HasCheckConstraint("CK_Order_Closure", "(\"Status\" = 6 AND \"FulfillmentStatus\" = 5 AND (\"PaymentStatus\" = 2 OR \"PaymentMethod\" = 2)) OR (\"Status\" <> 6 AND \"FulfillmentStatus\" <> 5)");
             t.HasCheckConstraint("CK_Order_PaidAt", "(\"PaymentStatus\" = 1 AND \"PaidAtUtc\" IS NULL) OR (\"PaymentStatus\" = 2 AND \"PaidAtUtc\" IS NOT NULL)");
             t.HasCheckConstraint("CK_Order_Completion", "\"Status\" <> 5 OR (\"PaymentStatus\" = 2 AND \"FulfillmentStatus\" = 4)");
             t.HasCheckConstraint("CK_Order_PaymentMethod", "\"PaymentMethod\" IN (1,2)");
@@ -85,7 +86,7 @@ internal static class OrderingModel
         reservation.ToTable("PhysicalStockReservations", "Ordering", t =>
         {
             t.HasCheckConstraint("CK_PhysicalStockReservation_Quantity", "\"Quantity\" > 0");
-            t.HasCheckConstraint("CK_PhysicalStockReservation_State", "(\"State\" = 1 AND \"ConsumedQuantity\" < \"Quantity\") OR (\"State\" = 2 AND \"ConsumedQuantity\" = 0) OR (\"State\" = 3 AND \"ConsumedQuantity\" = \"Quantity\")");
+            t.HasCheckConstraint("CK_PhysicalStockReservation_State", "(\"State\" IN (1,4) AND \"ConsumedQuantity\" < \"Quantity\") OR (\"State\" = 2 AND \"ConsumedQuantity\" = 0) OR (\"State\" = 3 AND \"ConsumedQuantity\" = \"Quantity\")");
             t.HasCheckConstraint("CK_PhysicalStockReservation_Consumed", "\"ConsumedQuantity\" >= 0 AND \"ConsumedQuantity\" <= \"Quantity\"");
         });
         reservation.Property(x => x.ConsumedQuantity).HasDefaultValue(0);

@@ -21,7 +21,7 @@ public sealed class FreshBaselineMigrationTests
         await db.Database.MigrateAsync();
 
         var migrations = (await db.Database.GetAppliedMigrationsAsync()).ToArray();
-        Assert.Equal(7,migrations.Length);
+        Assert.Equal(8,migrations.Length);
         Assert.EndsWith("_InitialFoundation",migrations[0],StringComparison.Ordinal);
         Assert.EndsWith("_CommerceCatalog",migrations[1],StringComparison.Ordinal);
         Assert.EndsWith("_DigitalInventory",migrations[2],StringComparison.Ordinal);
@@ -29,6 +29,7 @@ public sealed class FreshBaselineMigrationTests
         Assert.EndsWith("_PaymentDigitalDelivery",migrations[4],StringComparison.Ordinal);
         Assert.EndsWith("_PhysicalShipping",migrations[5],StringComparison.Ordinal);
         Assert.EndsWith("_ManualRenewals",migrations[6],StringComparison.Ordinal);
+        Assert.EndsWith("_RefundsReturns",migrations[7],StringComparison.Ordinal);
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
         Assert.False(db.Database.HasPendingModelChanges());
         Assert.Empty(await db.Users.ToListAsync());
@@ -69,6 +70,9 @@ public sealed class FreshBaselineMigrationTests
         Assert.Contains("Renewals.RenewalRequests.ProtectedTarget", columns);
         Assert.Contains("Renewals.RenewalAttempts.ProtectedEvidence", columns);
         Assert.Contains("Renewals.RenewalOperations.RequestHash", columns);
+        Assert.Contains("Payments.Refunds.ReceiptId", columns);
+        Assert.Contains("Shipping.PhysicalReturns.CloseRemainingCod", columns);
+        Assert.Contains("Shipping.PhysicalReturnItems.RestockQuantity", columns);
     }
 
     [Theory, Trait("Category", "ProviderIntegration")]

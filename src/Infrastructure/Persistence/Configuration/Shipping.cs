@@ -36,6 +36,7 @@ internal static class ShippingModel
             t.HasCheckConstraint("CK_ShipmentItem_FulfillmentKind", "\"FulfillmentKind\" = 1");
         });
         item.HasKey(x => new { x.ShipmentId, x.OrderItemId });
+        item.HasAlternateKey(x => new { x.ShipmentId, x.OrderItemId, x.OrderId, x.VariantId });
         item.HasOne<Shipment>().WithMany(x => x.Items)
             .HasForeignKey(x => new { x.ShipmentId, x.OrderId })
             .HasPrincipalKey(x => new { x.Id, x.OrderId }).OnDelete(DeleteBehavior.Restrict);

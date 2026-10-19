@@ -105,6 +105,16 @@ public sealed class RenewalRequest : CommerceEntity, IAggregateRoot
         return true;
     }
 
+    public bool ReleaseUnstarted()
+    {
+        if (Status != RenewalStatus.Claimed)
+            return false;
+        Status = RenewalStatus.Ready;
+        ClearClaim();
+        Touch();
+        return true;
+    }
+
     public RenewalAttempt Start(Guid actor, Guid token, Guid operationId, DateTime now)
     {
         RequireClaim(actor, token, now);

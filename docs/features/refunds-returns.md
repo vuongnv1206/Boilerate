@@ -1,6 +1,6 @@
 # Hoàn tiền và nhận hàng trả về — MVP4C
 
-Bắt đầu/cập nhật: 2026-10-19, Asia/Saigon. Trạng thái: thiết kế trước code. Tiếp nối [gia hạn4B](manual-renewals.md), [MVP](shop-mvp.md), [roadmap](../roadmap.md).
+Bắt đầu/cập nhật: 2026-10-19, Asia/Saigon. Trạng thái: đã có code, đang kiểm chứng local. Tiếp nối [gia hạn4B](manual-renewals.md), [MVP](shop-mvp.md), [roadmap](../roadmap.md).
 
 ## 1. Mục tiêu và phạm vi
 
@@ -63,7 +63,7 @@ SaveChanges chặn update/delete cả ba entity; mọi FK Restrict. Audit ghi me
 | POST /api/admin/orders/{orderId}/refunds | OrderVersion,OperationId,Reference,Amount,Currency,RefundedAtUtc,Reason,Source→RefundResult(Refund,OrderVersion,Closed) | Refund.Confirm; ghi đã hoàn, không chuyển tiền |
 | POST /api/admin/orders/{orderId}/returns | OrderVersion,OperationId,Reference,Reason,CloseRemainingCod,Items[{ShipmentId,OrderItemId,Quantity,RestockQuantity}]→ReturnResult(Return,OrderVersion,Closed) | Return.Receive; restock>0 thêm Inventory.Adjust |
 
-No-store; ACL controller/service, không suy từ Payment.Confirm/Shipping.Deliver. RefundedAtUtc UTC không tương lai/không trước receipt; ReceivedAtUtc dùng clock server microseconds. Đăng ký/cấp capability qua operator CLI; restart không auto-grant. Backup DB/key/media cùng recovery point; restore không đảo tiền/nhập hàng bên ngoài. Chưa nghiệm thu adapter/runtime thật.
+No-store; ACL controller/service, không suy từ Payment.Confirm/Shipping.Deliver. RefundedAtUtc UTC không tương lai/không trước receipt sau khi cùng chuẩn hóa microsecond (SQL Server receipt cũ có thể giữ tick100ns); ReceivedAtUtc dùng clock server microseconds. Kiểm amount nguyên đồng trước hash/replay, tránh làm tròn payload lẻ thành hash giống khoản hợp lệ. Đăng ký/cấp capability qua operator CLI; restart không auto-grant. Backup DB/key/media cùng recovery point; restore không đảo tiền/nhập hàng bên ngoài. Chưa nghiệm thu adapter/runtime thật.
 
 ### Quyết định
 
@@ -74,15 +74,19 @@ Ngày19 chọn ledger khoản đã hoàn thay attempt, giữ Paid; full refund d
 | Bước | Đầu ra | Trạng thái |
 |---|---|---|
 | 1 | Thiết kế trước code | Đã ghi |
-| 2 | Domain/DB/migrations/guards/tests nền | Chưa bắt đầu |
-| 3 | Service/API/ACL/dừng fulfillment/return | Chưa bắt đầu |
-| 4 | Hai DB rollback/race/replay/privacy/regression | Chưa chạy |
+| 2 | Domain/DB/migrations/guards/tests nền |32 domain đạt;6 migration đạt sau sửa setup/assertion test |
+| 3 | Service/API/ACL/dừng fulfillment/return |32 integration đạt local trên hai DB; chuẩn bị commit riêng |
+| 4 | Hai DB rollback/race/replay/privacy/regression | Targeted có kết quả, regression chung đang chạy |
 | 5 | Docs/history/runbook/roadmap/commit nhỏ | Cập nhật song song |
 
 ## 4. Nhật ký/kiểm chứng
 
 2026-10-19: đọc source/roadmap và review thiết kế; [history](../history/2026-10-19-04-refunds-returns-design.md) trước code. Chưa chạy tests lát này;398/398 renewal là bằng chứng lịch sử riêng.
 
+2026-10-19: thêm domain/mappings/API, scaffold migration8 hai DB; [history nền](../history/2026-10-19-05-aftersales-domain-database.md), [báo cáo](../verification/2026-10-19-aftersales.md). Host/test builds đạt; targeted đầu86/90,4 lỗi chuẩn bị/assertion migration đã sửa, đang kiểm lại. Không coi32 integration pass là nghiệm thu tiền/return bên ngoài.
+
+2026-10-19: build sau sửa và rerun migration6/6 đạt; không đổi production guards để né failures. Regression chung đang chạy; chưa đánh dấu toàn bộ lát được nghiệm thu.
+
 ## 5. Commit/còn lại
 
-Chỉ ghi hash sau commit. Gateway/refund attempts, RMA frontend, đổi hàng và runtime/adapters ở lát riêng; không tự nghiệm thu toàn bộ MVP từ code này.
+`935cd97`: thiết kế trước code. Các commit tiếp nối chỉ ghi hash sau khi tồn tại. Gateway/refund attempts, RMA frontend, đổi hàng và runtime/adapters ở lát riêng; không tự nghiệm thu toàn bộ MVP từ code này.

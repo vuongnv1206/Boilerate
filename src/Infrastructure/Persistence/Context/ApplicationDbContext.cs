@@ -42,6 +42,9 @@ public class ApplicationDbContext : BaseDbContext
     public DbSet<Boilerate.Domain.Renewals.RenewalRequest> RenewalRequests => Set<Boilerate.Domain.Renewals.RenewalRequest>();
     public DbSet<Boilerate.Domain.Renewals.RenewalAttempt> RenewalAttempts => Set<Boilerate.Domain.Renewals.RenewalAttempt>();
     public DbSet<Boilerate.Domain.Renewals.RenewalOperation> RenewalOperations => Set<Boilerate.Domain.Renewals.RenewalOperation>();
+    public DbSet<Boilerate.Domain.Payments.Refund> Refunds => Set<Boilerate.Domain.Payments.Refund>();
+    public DbSet<Boilerate.Domain.Shipping.PhysicalReturn> PhysicalReturns => Set<Boilerate.Domain.Shipping.PhysicalReturn>();
+    public DbSet<Boilerate.Domain.Shipping.PhysicalReturnItem> PhysicalReturnItems => Set<Boilerate.Domain.Shipping.PhysicalReturnItem>();
 
     // Auditing
     public DbSet<Trail> Trails => Set<Trail>();

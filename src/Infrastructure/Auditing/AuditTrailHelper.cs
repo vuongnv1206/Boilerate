@@ -22,7 +22,7 @@ public static class AuditTrailHelper
         var trailEntries = new List<AuditTrail>();
 
         foreach (var entry in changeTracker.Entries().Where(e => e.Entity is IAuditableEntity ||
-            e.Entity is Boilerate.Domain.Ordering.CartItem or Boilerate.Domain.Ordering.OrderItem or Boilerate.Domain.Shipping.ShipmentItem or Boilerate.Domain.Renewals.RenewalAttempt ||
+            e.Entity is Boilerate.Domain.Ordering.CartItem or Boilerate.Domain.Ordering.OrderItem or Boilerate.Domain.Shipping.ShipmentItem or Boilerate.Domain.Shipping.PhysicalReturnItem or Boilerate.Domain.Renewals.RenewalAttempt ||
             (e.Entity.GetType().Namespace == "Boilerate.Domain.Catalog" && e.Entity is not Boilerate.Domain.Catalog.CommerceEntity)))
         {
             if (entry.State is EntityState.Detached or EntityState.Unchanged)

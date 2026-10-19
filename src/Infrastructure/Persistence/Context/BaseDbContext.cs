@@ -57,6 +57,7 @@ public abstract class BaseDbContext : IdentityDbContext<
         Boilerate.Infrastructure.Persistence.Configuration.PaymentModel.Configure(modelBuilder, Database.IsNpgsql());
         Boilerate.Infrastructure.Persistence.Configuration.ShippingModel.Configure(modelBuilder, Database.IsNpgsql());
         Boilerate.Infrastructure.Persistence.Configuration.RenewalModel.Configure(modelBuilder, Database.IsNpgsql());
+        Boilerate.Infrastructure.Persistence.Configuration.AfterSalesModel.Configure(modelBuilder, Database.IsNpgsql());
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -83,6 +84,10 @@ public abstract class BaseDbContext : IdentityDbContext<
         }
 
         ChangeTracker.DetectChanges();
+        if (ChangeTracker.Entries<Boilerate.Domain.Payments.Refund>().Any(e => e.State is EntityState.Modified or EntityState.Deleted) ||
+            ChangeTracker.Entries<Boilerate.Domain.Shipping.PhysicalReturn>().Any(e => e.State is EntityState.Modified or EntityState.Deleted) ||
+            ChangeTracker.Entries<Boilerate.Domain.Shipping.PhysicalReturnItem>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Refunds and physical returns are append-only after-sales history.");
         if (ChangeTracker.Entries<Boilerate.Domain.Renewals.RenewalRequest>().Any(e => e.State == EntityState.Deleted) ||
             ChangeTracker.Entries<Boilerate.Domain.Renewals.RenewalAttempt>().Any(e => e.State == EntityState.Deleted))
             throw new InvalidOperationException("Retain renewal requests and attempts instead of deleting fulfillment history.");

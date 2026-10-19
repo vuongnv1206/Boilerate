@@ -1623,11 +1623,13 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         {
                             t.HasCheckConstraint("CK_Order_Amounts", "\"Currency\" = 'VND' AND \"Subtotal\" >= 0 AND \"Subtotal\" = FLOOR(\"Subtotal\") AND \"ShippingAmount\" >= 0 AND \"ShippingAmount\" = FLOOR(\"ShippingAmount\") AND \"Total\" >= 0 AND \"Total\" = FLOOR(\"Total\") AND \"Total\" = \"Subtotal\" + \"ShippingAmount\"");
 
+                            t.HasCheckConstraint("CK_Order_Closure", "(\"Status\" = 6 AND \"FulfillmentStatus\" = 5 AND (\"PaymentStatus\" = 2 OR \"PaymentMethod\" = 2)) OR (\"Status\" <> 6 AND \"FulfillmentStatus\" <> 5)");
+
                             t.HasCheckConstraint("CK_Order_Completion", "\"Status\" <> 5 OR (\"PaymentStatus\" = 2 AND \"FulfillmentStatus\" = 4)");
 
                             t.HasCheckConstraint("CK_Order_Expiry", "(\"Status\" <> 1 OR \"ExpiresAt\" IS NOT NULL) AND (\"PaymentMethod\" <> 2 OR \"ExpiresAt\" IS NULL)");
 
-                            t.HasCheckConstraint("CK_Order_FulfillmentStatus", "\"FulfillmentStatus\" IN (1,2,3,4)");
+                            t.HasCheckConstraint("CK_Order_FulfillmentStatus", "\"FulfillmentStatus\" IN (1,2,3,4,5)");
 
                             t.HasCheckConstraint("CK_Order_PaidAt", "(\"PaymentStatus\" = 1 AND \"PaidAtUtc\" IS NULL) OR (\"PaymentStatus\" = 2 AND \"PaidAtUtc\" IS NOT NULL)");
 
@@ -1635,7 +1637,7 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
 
                             t.HasCheckConstraint("CK_Order_PaymentStatus", "\"PaymentStatus\" IN (1,2)");
 
-                            t.HasCheckConstraint("CK_Order_Status", "\"Status\" IN (1,2,3,4,5)");
+                            t.HasCheckConstraint("CK_Order_Status", "\"Status\" IN (1,2,3,4,5,6)");
                         });
                 });
 
@@ -1753,7 +1755,7 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
 
                             t.HasCheckConstraint("CK_PhysicalStockReservation_Quantity", "\"Quantity\" > 0");
 
-                            t.HasCheckConstraint("CK_PhysicalStockReservation_State", "(\"State\" = 1 AND \"ConsumedQuantity\" < \"Quantity\") OR (\"State\" = 2 AND \"ConsumedQuantity\" = 0) OR (\"State\" = 3 AND \"ConsumedQuantity\" = \"Quantity\")");
+                            t.HasCheckConstraint("CK_PhysicalStockReservation_State", "(\"State\" IN (1,4) AND \"ConsumedQuantity\" < \"Quantity\") OR (\"State\" = 2 AND \"ConsumedQuantity\" = 0) OR (\"State\" = 3 AND \"ConsumedQuantity\" = \"Quantity\")");
                         });
                 });
 
@@ -1839,6 +1841,103 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                             t.HasCheckConstraint("CK_PaymentReceipt_Amount", "\"Amount\" >= 0 AND \"Amount\" = FLOOR(\"Amount\") AND \"Currency\" = 'VND'");
 
                             t.HasCheckConstraint("CK_PaymentReceipt_Source", "\"Source\" IN ('ManualBankTransfer','ManualCOD')");
+                        });
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Payments.Refund", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(3)");
+
+                    b.Property<Guid>("LastModifiedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("LastModifiedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NormalizedReference")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("ReceiptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("RefundedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperationId")
+                        .IsUnique();
+
+                    b.HasIndex("Source", "NormalizedReference")
+                        .IsUnique();
+
+                    b.HasIndex("OrderId", "RefundedAtUtc", "Id");
+
+                    b.HasIndex("ReceiptId", "OrderId", "Currency");
+
+                    b.ToTable("Refunds", "Payments", t =>
+                        {
+                            t.HasCheckConstraint("CK_Refund_Amount", "\"Amount\" > 0 AND \"Amount\" = FLOOR(\"Amount\") AND \"Currency\" = 'VND'");
+
+                            t.HasCheckConstraint("CK_Refund_Source", "\"Source\" IN ('ManualBankTransfer','ManualCash')");
                         });
                 });
 
@@ -2036,6 +2135,124 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                             t.HasCheckConstraint("CK_RenewalRequest_Target", "(\"Status\" = 1 AND \"ProtectedTarget\" IS NULL AND \"TargetKey\" IS NULL AND \"TargetPreview\" IS NULL) OR (\"Status\" <> 1 AND \"ProtectedTarget\" IS NOT NULL AND \"TargetKey\" IS NOT NULL AND \"TargetPreview\" IS NOT NULL)");
 
                             t.HasCheckConstraint("CK_RenewalRequest_TargetLock", "(\"Status\" <> 1 OR NOT \"TargetLocked\") AND (\"Status\" NOT IN (4,5) OR \"TargetLocked\")");
+                        });
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Shipping.PhysicalReturn", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("CloseRemainingCod")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("LastModifiedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("LastModifiedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NormalizedReference")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("ReceivedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedReference")
+                        .IsUnique();
+
+                    b.HasIndex("OperationId")
+                        .IsUnique();
+
+                    b.HasIndex("OrderId", "ReceivedAtUtc", "Id");
+
+                    b.ToTable("PhysicalReturns", "Shipping");
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Shipping.PhysicalReturnItem", b =>
+                {
+                    b.Property<Guid>("ReturnId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ShipmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrderItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("RestockQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("StockMovementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("ReturnId", "ShipmentId", "OrderItemId");
+
+                    b.HasIndex("StockMovementId")
+                        .IsUnique()
+                        .HasFilter("\"StockMovementId\" IS NOT NULL");
+
+                    b.HasIndex("ReturnId", "OrderId");
+
+                    b.HasIndex("ShipmentId", "OrderItemId", "OrderId", "VariantId");
+
+                    b.ToTable("PhysicalReturnItems", "Shipping", t =>
+                        {
+                            t.HasCheckConstraint("CK_PhysicalReturnItem_Movement", "(\"RestockQuantity\" = 0 AND \"StockMovementId\" IS NULL) OR (\"RestockQuantity\" > 0 AND \"StockMovementId\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_PhysicalReturnItem_Quantity", "\"Quantity\" BETWEEN 1 AND 999 AND \"RestockQuantity\" >= 0 AND \"RestockQuantity\" <= \"Quantity\"");
                         });
                 });
 
@@ -2593,6 +2810,16 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Boilerate.Domain.Payments.Refund", b =>
+                {
+                    b.HasOne("Boilerate.Domain.Payments.PaymentReceipt", null)
+                        .WithMany()
+                        .HasForeignKey("ReceiptId", "OrderId", "Currency")
+                        .HasPrincipalKey("Id", "OrderId", "Currency")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Boilerate.Domain.Renewals.RenewalAttempt", b =>
                 {
                     b.HasOne("Boilerate.Domain.Renewals.RenewalRequest", null)
@@ -2617,6 +2844,37 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         .WithMany()
                         .HasForeignKey("OrderItemId", "OrderId", "VariantId", "FulfillmentKind")
                         .HasPrincipalKey("Id", "OrderId", "VariantId", "FulfillmentKind")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Shipping.PhysicalReturn", b =>
+                {
+                    b.HasOne("Boilerate.Domain.Ordering.Order", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Shipping.PhysicalReturnItem", b =>
+                {
+                    b.HasOne("Boilerate.Domain.Inventory.StockMovement", null)
+                        .WithMany()
+                        .HasForeignKey("StockMovementId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Boilerate.Domain.Shipping.PhysicalReturn", null)
+                        .WithMany("Items")
+                        .HasForeignKey("ReturnId", "OrderId")
+                        .HasPrincipalKey("Id", "OrderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Boilerate.Domain.Shipping.ShipmentItem", null)
+                        .WithMany()
+                        .HasForeignKey("ShipmentId", "OrderItemId", "OrderId", "VariantId")
+                        .HasPrincipalKey("ShipmentId", "OrderItemId", "OrderId", "VariantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -2751,6 +3009,11 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
             modelBuilder.Entity("Boilerate.Domain.Renewals.RenewalRequest", b =>
                 {
                     b.Navigation("Attempts");
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Shipping.PhysicalReturn", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("Boilerate.Domain.Shipping.Shipment", b =>

@@ -6,7 +6,7 @@ namespace Boilerate.Domain.Ordering;
 
 public enum HoldState
 {
-    Held = 1, Released = 2, Consumed = 3
+    Held = 1, Released = 2, Consumed = 3, Closed = 4
 }
 
 public sealed class PhysicalStockReservation : CommerceEntity, IAggregateRoot
@@ -17,7 +17,7 @@ public sealed class PhysicalStockReservation : CommerceEntity, IAggregateRoot
     public int Quantity { get; private set; }
     public int ConsumedQuantity { get; private set; }
     [NotMapped]
-    public int Remaining => Quantity - ConsumedQuantity;
+    public int Remaining => State == HoldState.Closed ? 0 : Quantity - ConsumedQuantity;
     public HoldState State { get; private set; } = HoldState.Held;
 
     private PhysicalStockReservation()
@@ -36,6 +36,8 @@ public sealed class PhysicalStockReservation : CommerceEntity, IAggregateRoot
 
     public bool Release()
     {
+        if (State == HoldState.Closed)
+            throw new DomainException("A closed reservation cannot be released or reopened.");
         if (ConsumedQuantity > 0)
             throw new DomainException("Dispatched stock cannot be released through reservation cancellation.");
         if (State == HoldState.Released)
@@ -47,6 +49,8 @@ public sealed class PhysicalStockReservation : CommerceEntity, IAggregateRoot
 
     public bool Reacquire()
     {
+        if (State == HoldState.Closed)
+            throw new DomainException("A closed reservation cannot be reacquired.");
         if (ConsumedQuantity > 0)
             throw new DomainException("Dispatched stock cannot be reacquired as a new reservation.");
         if (State == HoldState.Held)
@@ -54,6 +58,16 @@ public sealed class PhysicalStockReservation : CommerceEntity, IAggregateRoot
         State = HoldState.Held;
         Touch();
         return true;
+    }
+
+    public int CloseRemainder()
+    {
+        if (State != HoldState.Held || Remaining == 0)
+            return 0;
+        var remaining = Remaining;
+        State = HoldState.Closed;
+        Touch();
+        return remaining;
     }
 
     public void Consume(int quantity)

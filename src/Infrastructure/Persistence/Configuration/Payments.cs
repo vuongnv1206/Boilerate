@@ -19,6 +19,7 @@ internal static class PaymentModel
         }
 
         var receipt = m.Entity<PaymentReceipt>();
+        receipt.HasAlternateKey(x => new { x.Id, x.OrderId, x.Currency });
         receipt.ToTable("PaymentReceipts", "Payments", t =>
         {
             t.HasCheckConstraint("CK_PaymentReceipt_Amount", "\"Amount\" >= 0 AND \"Amount\" = FLOOR(\"Amount\") AND \"Currency\" = 'VND'");

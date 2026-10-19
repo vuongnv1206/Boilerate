@@ -172,7 +172,7 @@ public sealed class RenewalMigrationTests
         var migrator = db.GetService<IMigrator>();
         var previous = db.Database.GetMigrations().Single(x => x.EndsWith("_PhysicalShipping", StringComparison.Ordinal));
         var before = (await db.Database.GetAppliedMigrationsAsync()).ToArray();
-        Assert.EndsWith("_ManualRenewals", before.Last());
+        Assert.EndsWith("_RefundsReturns", before.Last());
         await migrator.MigrateAsync(previous);
         Assert.Equal(previous, (await db.Database.GetAppliedMigrationsAsync()).Last());
         await migrator.MigrateAsync();

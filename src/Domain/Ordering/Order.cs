@@ -6,7 +6,7 @@ namespace Boilerate.Domain.Ordering;
 
 public enum OrderStatus
 {
-    PendingPayment = 1, AwaitingProcessing = 2, Cancelled = 3, Expired = 4, Completed = 5
+    PendingPayment = 1, AwaitingProcessing = 2, Cancelled = 3, Expired = 4, Completed = 5, Closed = 6
 }
 
 public enum OrderPaymentMethod
@@ -21,7 +21,7 @@ public enum OrderPaymentStatus
 
 public enum OrderFulfillmentStatus
 {
-    Pending = 1, NeedsReview = 2, InProgress = 3, Completed = 4
+    Pending = 1, NeedsReview = 2, InProgress = 3, Completed = 4, Stopped = 5
 }
 
 public sealed class Order : CommerceEntity, IAggregateRoot
@@ -130,6 +130,11 @@ public sealed class Order : CommerceEntity, IAggregateRoot
             throw new DomainException("An unpaid order and a UTC payment receipt time are required.");
         PaymentStatus = OrderPaymentStatus.Paid;
         PaidAtUtc = receivedAtUtc;
+        if (Status == OrderStatus.Closed)
+        {
+            Touch();
+            return;
+        }
         FulfillmentStatus = OrderFulfillmentStatus.NeedsReview;
         if (Status != OrderStatus.Cancelled)
             Status = OrderStatus.AwaitingProcessing;
@@ -138,7 +143,7 @@ public sealed class Order : CommerceEntity, IAggregateRoot
 
     public void CompleteFulfillment(bool automaticDeliveryComplete)
     {
-        if (PaymentStatus != OrderPaymentStatus.Paid || Status == OrderStatus.Cancelled)
+        if (PaymentStatus != OrderPaymentStatus.Paid || Status is OrderStatus.Cancelled or OrderStatus.Closed)
             throw new DomainException("Only a paid, non-cancelled order can be fulfilled.");
         FulfillmentStatus = automaticDeliveryComplete ? OrderFulfillmentStatus.Completed : OrderFulfillmentStatus.InProgress;
         Status = automaticDeliveryComplete ? OrderStatus.Completed : OrderStatus.AwaitingProcessing;
@@ -147,7 +152,7 @@ public sealed class Order : CommerceEntity, IAggregateRoot
 
     public void MarkFulfillmentReview()
     {
-        if (PaymentStatus != OrderPaymentStatus.Paid)
+        if (PaymentStatus != OrderPaymentStatus.Paid || Status == OrderStatus.Closed)
             throw new DomainException("Only paid orders can await fulfillment review.");
         FulfillmentStatus = OrderFulfillmentStatus.NeedsReview;
         Touch();
@@ -156,12 +161,24 @@ public sealed class Order : CommerceEntity, IAggregateRoot
     public void RegisterPhysicalShipment(bool allItemsFulfilled)
     {
         if (!_items.Any(i => i.FulfillmentKind == ProductFulfillmentKind.Physical) ||
-            Status is OrderStatus.Cancelled or OrderStatus.Expired ||
+            Status is OrderStatus.Cancelled or OrderStatus.Expired or OrderStatus.Closed ||
             (PaymentStatus != OrderPaymentStatus.Paid && PaymentMethod != OrderPaymentMethod.CashOnDelivery))
             throw new DomainException("Physical shipping requires a valid paid or COD order containing physical items.");
         PhysicalDispatchStarted = true;
         FulfillmentStatus = allItemsFulfilled ? OrderFulfillmentStatus.Completed : OrderFulfillmentStatus.InProgress;
         Status = allItemsFulfilled && PaymentStatus == OrderPaymentStatus.Paid ? OrderStatus.Completed : OrderStatus.AwaitingProcessing;
+        Touch();
+    }
+
+    public void CloseFulfillment()
+    {
+        if (Status == OrderStatus.Closed)
+            return;
+        if (PaymentStatus != OrderPaymentStatus.Paid &&
+            !(PaymentMethod == OrderPaymentMethod.CashOnDelivery && PhysicalDispatchStarted))
+            throw new DomainException("Only paid orders or dispatched unpaid COD orders can stop fulfillment.");
+        Status = OrderStatus.Closed;
+        FulfillmentStatus = OrderFulfillmentStatus.Stopped;
         Touch();
     }
 }
