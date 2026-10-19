@@ -1,8 +1,8 @@
 # Giao hàng số và gia hạn — quyết định nghiệp vụ
 
-Cập nhật: 2026-10-18, Asia/Saigon. Nguồn: câu trả lời của người dùng trong [phỏng vấn nghiệp vụ](../features/business-discovery.md). Đây là quy tắc đã xác nhận cho các kịch bản được nêu, **chưa phải luồng đã triển khai hoặc danh sách bắt buộc của MVP**.
+Cập nhật: 2026-10-19, Asia/Saigon. Nguồn: câu trả lời của người dùng trong [phỏng vấn nghiệp vụ](../features/business-discovery.md). Đây là nguồn quyết định nghiệp vụ; trạng thái triển khai và kiểm chứng được theo dõi trong từng hồ sơ tính năng, không suy ra từ việc ghi quy tắc.
 
-Trạng thái code mới nhất: đã có [kho số](../features/digital-inventory.md), [giỏ/đơn/giữ hàng](../features/ordering-checkout.md), [nhận tiền/giao Unique/Shared/email outbox](../features/payment-digital-delivery.md) và [giao vật lý/COD](../features/physical-shipping.md), có bằng chứng local riêng. [Gia hạn thủ công](../features/manual-renewals.md) đang triển khai/kiểm chứng; runtime/adapter thật chưa nghiệm thu. Các đoạn quy tắc dưới đây giữ quyết định nghiệp vụ; không tự coi mọi kịch bản là đã được nghiệm thu.
+Trạng thái code mới nhất: đã có [kho số](../features/digital-inventory.md), [giỏ/đơn/giữ hàng](../features/ordering-checkout.md), [nhận tiền/giao Unique/Shared/email outbox](../features/payment-digital-delivery.md) và [giao vật lý/COD](../features/physical-shipping.md), có bằng chứng local riêng. [Gia hạn thủ công](../features/manual-renewals.md) đã triển khai và kiểm chứng local theo [báo cáo](../verification/2026-10-19-manual-renewals.md); runtime/adapter thật chưa nghiệm thu. Các đoạn quy tắc dưới đây giữ quyết định nghiệp vụ; không tự coi mọi kịch bản là đã được nghiệm thu.
 
 ## Nội dung khách nhận và số lượng
 

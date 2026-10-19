@@ -22,6 +22,7 @@
 - 2026-10-18: [Thiết kế gia hạn có claim/xác minh](2026-10-18-24-manual-renewals-design.md).
 - 2026-10-19: [Hoàn thiện domain/database gia hạn](2026-10-19-01-renewal-domain-database.md).
 - 2026-10-19: [API gia hạn và kiểm chứng theo bước](2026-10-19-02-renewal-api-verification.md).
+- 2026-10-19: [Regression và đồng bộ docs gia hạn](2026-10-19-03-renewal-regression-docs.md).
 
 - 2026-10-18: [Lập kế hoạch nghiệm thu vận hành](2026-10-18-01-operations-plan.md).
 - 2026-10-18: [Gate runtime và trusted proxy](2026-10-18-02-runtime-gates.md).

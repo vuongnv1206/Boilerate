@@ -43,7 +43,7 @@ Trước khi code mỗi lát, bổ sung thiết kế tối thiểu theo [mẫu f
 | 1 | Chọn cách giao và kho hàng số | Dùng Catalog hiện có; cấu hình hành vi được hỗ trợ, nhập/quản lý mã/link/tài khoản; bảo vệ nội dung; thiết kế DB/API trước code | Đã triển khai/kiểm chứng local theo [hồ sơ](digital-inventory.md); deployment chưa nghiệm thu |
 | 2 | Giỏ, checkout, đơn và giữ hàng | Tổng tiền/địa chỉ/phí ship được xác định trước khi trả; snapshot; đơn chung; đơn trả trước giữ 30 phút/cấu hình, hết hạn/nhả; khách xem đơn | Đã triển khai/kiểm chứng local, regression222/222; [hồ sơ](ordering-checkout.md) |
 | 3 | Nhận tiền và giao hàng số | Xác nhận khoản chuyển khoản thực nhận, chống trùng; giao Unique/Shared qua My Orders; email thông báo; Extension chờ nhân viên | Đã triển khai/kiểm local, regression276/276; chưa nghiệm thu SMTP thật, [hồ sơ](payment-digital-delivery.md) |
-| 4 | Quản trị đơn và giao vật lý | Xem/tìm đơn; cập nhật xử lý/vận chuyển; hủy/ghi nhận hoàn tiền; gia hạn có lịch sử/bằng chứng và PendingVerification | [4A shipping/COD](physical-shipping.md) local326/326; [4B gia hạn](manual-renewals.md) targeted52/52 nền và34/34 API đạt, regression chung đang chạy; refund/returns chưa triển khai |
+| 4 | Quản trị đơn và giao vật lý | Xem/tìm đơn; cập nhật xử lý/vận chuyển; hủy/ghi nhận hoàn tiền; gia hạn có lịch sử/bằng chứng và PendingVerification | [4A shipping/COD](physical-shipping.md) local326/326; [4B gia hạn](manual-renewals.md) local398/398 regression đạt; refund/returns chưa triển khai |
 | 5 | Kiểm chứng và chuẩn bị chạy thật | Luồng mua trọn vẹn, retry/concurrency/quyền trên hai DB; docs/OpenAPI; hoàn tất các gate runtime/adapter trước vận hành thật | Chưa triển khai, phụ thuộc 1–4 |
 
 Mỗi lát có docs/history và commit riêng, giữ các thay đổi model/API/migration liên quan trong một commit build được. Bước tiếp theo là quản trị giao vật lý/gia hạn/hủy-hoàn; không coi các bước đó hoàn tất từ trạng thái Paid.
@@ -75,7 +75,7 @@ Các dòng trên là mục tiêu kiểm chứng, chưa phải kết quả test. 
 
 Catalog và vận hành đã kiểm chứng trước đó có [báo cáo riêng](../verification/2026-10-17-commerce.md); chúng không xác nhận MVP Order/Payment/fulfillment. Linux/Docker/CI thật và adapter vẫn là các gate mở trong roadmap.
 
-2026-10-19: triển khai [4B gia hạn thủ công](manual-renewals.md): request sau Paid, target sau mua, claim/Start/PendingVerification, Verify riêng, expiry thực tế, lịch sử và order reconcile. Targeted52/52 nền,34/34 API đạt trên hai DB; [bằng chứng](../verification/2026-10-19-manual-renewals.md). Regression chung đang chạy; refund/returns và runtime/adapter thật còn mở.
+2026-10-19: hoàn tất local [4B gia hạn thủ công](manual-renewals.md): request sau Paid, target sau mua, claim/Start/PendingVerification, Verify riêng, expiry thực tế, lịch sử và order reconcile. Targeted52/52 nền,34/34 API và regression398/398 đạt trên hai DB; [bằng chứng](../verification/2026-10-19-manual-renewals.md). Refund/returns và runtime/adapter thật còn mở; toàn bộ bước4/MVP chưa hoàn tất.
 
 ## 6. Lịch sử commit
 
@@ -88,6 +88,6 @@ Các quyết định nền đã được lưu tại `2cd1120` (cấp phát/gia h
 | Cách giao đã chọn ở Product, mọi SKU kế thừa; một mode/Product trong lát kho số; bảo vệ nội dung bằng mã hóa/quyền riêng. Thay mode sau tạo hoặc nhiều mode/Product để sau nếu có nhu cầu | [1: đã có thiết kế/code](digital-inventory.md) |
 | Bước2 dùng khách đăng nhập, ship phẳng cấu hìnhserver, COD khôngTTLtrảtrước, snapshotgiá và hủyđơnchờ; thay đổi chính sách sau này ghi theo usecase | [2](ordering-checkout.md) |
 | Đã có xác nhận chuyển khoản do nhân viên, late payment, quyền Payment.Confirm/Order.Fulfill và email chỉ thông báo; provider/webhook tự động và SMTP thật chưa nghiệm thu | [3](payment-digital-delivery.md) |
-| Hủy/hoàn từng phần, quyền xác minh gia hạn/bàn giao, chính sách hàng đã giao | 4 |
+| Gia hạn dùng Verify riêng, claim chỉ bàn giao trước Start theo [4B](manual-renewals.md); hủy/hoàn từng phần và chính sách hàng đã giao còn ở lát sau | 4 |
 
 Không cần mở tiếp vòng phỏng vấn tổng thể cho mọi chi tiết trong bảng. Khi triển khai, ghi đề xuất tối giản cùng trường hợp sử dụng; chỉ hỏi lại những quyết định thực sự ảnh hưởng trải nghiệm/chính sách của shop và chưa có căn cứ để chọn.

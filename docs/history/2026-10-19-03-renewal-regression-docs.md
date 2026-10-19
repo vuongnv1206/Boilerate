@@ -1,0 +1,7 @@
+# 2026-10-19 — Gia hạn: regression và đồng bộ tài liệu
+
+- Sau targeted52/52 nền và34/34 API, regression chung đạt **398/398,0 fail/skip**,6m29s trên SQL Server LocalDB và PostgreSQL16. [Báo cáo](../verification/2026-10-19-manual-renewals.md) ghi lệnh/source/phạm vi; không cộng test trùng giữa các lượt. Đã đối chiếu counters TRX và dừng sạch cluster PostgreSQL test port55439, exit0.
+- Rà soát docs/code độc lập phát hiện hai mô tả cũ: README còn xếp gia hạn vào mốc tương lai và đoạn shipping API nói mọi đơn có ManualExtension luôn InProgress. Đã sửa thành trạng thái theo request thực tế, đủ mọi dòng mới hoàn tất; thêm ManualRenewals và quyền Renewal vào hướng dẫn cài đặt. Không đổi code để né kiểm thử.
+- Cập nhật feature plan, roadmap, MVP, API/database/runbook và lịch sử theo từng bước; phân biệt kiểm chứng local với nghiệm thu dịch vụ ngoài/deployment. Kiểm tra ban đầu62 tệp Markdown/354 liên kết nội bộ đạt; kiểm cuối sau thêm tổng kết **63 tệp/361 liên kết,0 hỏng**, `git diff --check` đạt.
+- Commits đã tồn tại: `e06fafc` thiết kế trước code; `3d2f152` domain/database/migrations; `33f0310` use case/API/payment/order reconciliation. Commit tổng kết này chỉ ghi kết quả và đồng bộ tài liệu, không ghi hash của chính nó trước khi tồn tại.
+- Phạm vi tiếp theo là hoàn tiền/trả hàng đơn giản theo hồ sơ riêng và đóng các gate runtime/adapter trước vận hành thật. Gia hạn ngoài hệ thống vẫn do nhân viên thực hiện/xác minh, không có provider API hoặc LMS.

@@ -1,6 +1,6 @@
 # Gia hạn thủ công có claim và xác minh
 
-Ngày bắt đầu: 2026-10-18. Cập nhật: 2026-10-19, Asia/Saigon. Trạng thái: **đã có code, đang kiểm chứng local**.
+Ngày bắt đầu: 2026-10-18. Cập nhật: 2026-10-19, Asia/Saigon. Trạng thái: **đã triển khai và kiểm chứng local; chưa nghiệm thu deployment**.
 Mốc: bước4B [Shop MVP](shop-mvp.md), [roadmap](../roadmap.md).
 
 ## 1. Mục tiêu và phạm vi
@@ -14,12 +14,12 @@ Sau nhận tiền, mỗi dòng ManualExtension có một yêu cầu gia hạn. K
 
 Tiêu chí:
 
-- [ ] Một Paid/non-Cancelled ManualExtension line có đúng một request, retry payment/provision không tạo trùng; đơn Unpaid không tạo việc.
-- [ ] Hai nhân viên hoặc hai đơn cùng target không có hai quyền bắt đầu đồng thời; lease chỉ áp dụng trước Start.
-- [ ] Start lưu PendingVerification trước hành động ngoài. Mất response/restart/hết lease không mở lại thực hiện. Chỉ Verify có bằng chứng/ghi chú mới kết luận Applied hoặc NotApplied.
-- [ ] Applied lưu hạn mới UTC thực tế còn hiệu lực và hoàn tất request; NotApplied trở Ready để nhận/làm lần mới rõ ràng, không tự chạy lại; lịch sử các lần giữ nguyên.
-- [ ] Qty không tự tăng expiry; không đổi target sau Start; hoàn tất đơn cần đủ physical/digital/renewal.
-- [ ] Target/evidence/token không lọt DTO thường/audit/outbox; owner-only và ACL cả controller/service, no-store; rollback/race/replay và hai DB được kiểm chứng.
+- [x] Một Paid/non-Cancelled ManualExtension line có đúng một request, retry payment/provision không tạo trùng; đơn Unpaid không tạo việc.
+- [x] Hai nhân viên hoặc hai đơn cùng target không có hai quyền bắt đầu đồng thời; lease chỉ áp dụng trước Start.
+- [x] Start lưu PendingVerification trước hành động ngoài. Mất response/restart/hết lease không mở lại thực hiện. Chỉ Verify có ghi chú xác minh mới kết luận Applied hoặc NotApplied; evidence tùy chọn.
+- [x] Applied lưu hạn mới UTC thực tế còn hiệu lực và hoàn tất request; NotApplied trở Ready để nhận/làm lần mới rõ ràng, không tự chạy lại; lịch sử các lần giữ nguyên.
+- [x] Qty không tự tăng expiry; không đổi target sau Start; hoàn tất đơn cần đủ physical/digital/renewal.
+- [x] Full target/evidence không lọt DTO thường/audit/outbox; token chỉ trả holder còn lease qua detail/action. Owner-only, ACL cả controller/service, no-store, rollback/race/replay đã kiểm trên hai DB.
 
 ## 2. Thiết kế
 
@@ -35,7 +35,7 @@ Renewals sở hữu request/attempt/operation. OrderItem giữ snapshot gói, op
 
 | Bảng/cột | Kiểu/constraints/index | Ownership/concurrency |
 |---|---|---|
-| Renewals.RenewalRequests | Id GUID PK; OrderId/OrderItemId/VariantId GUID; FulfillmentKind4; Status AwaitingTarget1/Ready2/Claimed3/PendingVerification4/Completed5; ProtectedTarget? max4000; TargetKey? ASCII64; TargetPreview?100; TargetLocked bool; ClaimedBy?/ClaimToken? GUID; ClaimUntilUtc?; CompletedAtUtc?/VerifiedExpiresAtUtc?; audit/Version32 | UQ OrderItemId; index(Status,CreatedOn,Id); filtered UQ TargetKey khi Status IN(3,4); trạng thái ràng buộc target/lease/claim/completion bằng check |
+| Renewals.RenewalRequests | Id GUID PK; OrderId/OrderItemId/VariantId GUID; FulfillmentKind4; Status AwaitingTarget1/Ready2/Claimed3/PendingVerification4/Completed5; ProtectedTarget? max4000; TargetKey? ASCII64; TargetPreview?100; TargetLocked bool; ClaimedBy?/ClaimToken? GUID; ClaimUntilUtc?; CompletedAtUtc?/VerifiedExpiresAtUtc?; audit/Version32 | UQ OrderItemId; index OrderId; index(Status,CreatedOn,Id); filtered UQ TargetKey khi Status IN(3,4); trạng thái ràng buộc target/lease/claim/completion bằng check |
 | Renewals.RenewalAttempts | Id GUID PK; RequestId/OperationId/StartedBy GUID; StartedAtUtc; Outcome Pending1/Applied2/NotApplied3; VerifiedBy?/VerifiedAtUtc?/NewExpiresAtUtc?; ProtectedEvidence? max32000 | Identity/start bất biến; chỉ pending được resolve một lần; Applied cần verified expiry > verified time, NotApplied không có expiry; không delete hoặc sửa kết quả đã chốt |
 | Renewals.RenewalOperations | Id GUID PK; RequestId/OperationId/ActorId GUID; Action ASCII32; RequestHash ASCII64; StatusAfter int1..5; OccurredAtUtc | Append-only; không lưu target/evidence/token/payload rõ; replay hash gồm request/action/actor/nội dung chuẩn hóa, bỏ version/token |
 
@@ -81,8 +81,8 @@ Mọi response no-store. API thường không mang ciphertext/full target/eviden
 | 1 | Thiết kế domain/DB/API/history trước code | Đã ghi |
 | 2 | Domain/mappings/migrations/domain tests | Đạt targeted52/52 local (gồm32 domain và6 renewal migration); deployment chưa nghiệm thu |
 | 3 | Payment provisioning, owner/admin claim/start/verify và order reconcile | Đạt34/34 API integration local trên hai DB |
-| 4 | Hai DB: replay/race/lease/restart/rollback/ACL/privacy/fulfillment/migration | Targeted đạt; regression chung đang chạy |
-| 5 | Docs/runbook/roadmap/bằng chứng và commit nhỏ | Cập nhật song song |
+| 4 | Hai DB: replay/race/lease/restart/rollback/ACL/privacy/fulfillment/migration | Regression398/398 đạt local, không fail/skip |
+| 5 | Docs/runbook/roadmap/bằng chứng và commit nhỏ | Đã đồng bộ theo từng bước; foundation/API commit riêng, tổng kết docs riêng |
 
 ## 4. Nhật ký
 
@@ -90,13 +90,13 @@ Mọi response no-store. API thường không mang ciphertext/full target/eviden
 
 ## 5. Kiểm chứng
 
-2026-10-19: tiếp tục kiểm chứng source hoàn thiện; sửa biên domain32000/32001 cho khớp dung lượng Unicode. [History nền](../history/2026-10-19-01-renewal-domain-database.md), [history API](../history/2026-10-19-02-renewal-api-verification.md), [báo cáo từng lượt](../verification/2026-10-19-manual-renewals.md). Targeted domain/migration52/52 và API34/34 đạt; regression chung đang chạy. Không coi kiểm thử local là nghiệm thu gia hạn ngoài hoặc deployment.
+2026-10-19: tiếp tục kiểm chứng source hoàn thiện; sửa biên domain32000/32001 cho khớp dung lượng Unicode. [History nền](../history/2026-10-19-01-renewal-domain-database.md), [history API](../history/2026-10-19-02-renewal-api-verification.md), [tổng kết](../history/2026-10-19-03-renewal-regression-docs.md), [báo cáo từng lượt](../verification/2026-10-19-manual-renewals.md). Targeted domain/migration52/52, API34/34 và regression398/398 đạt. PostgreSQL test đã dừng sạch; raw logs/TRX không đưa vào Git. Không coi kiểm thử local là nghiệm thu gia hạn ngoài hoặc deployment.
 
-Targeted domain/migration52/52 và API34/34 đạt; regression chung đang chạy. Build và từng lượt được ghi riêng trong báo cáo, không cộng trùng.326/326 thuộc source Shipping trước đó, không chứng minh renewal. Chưa có provider/SMTP/deployment được nghiệm thu từ thay đổi này. Quy trình thủ công không chứng minh exactly-once trên dịch vụ ngoài nếu nhân viên bỏ qua Start/verification hoặc dùng alias khác; phải đối chiếu thực tế.
+Targeted domain/migration52/52, API34/34 và regression398/398 đạt local; tất cả0 fail/skip. Build và từng lượt được ghi riêng trong báo cáo, không cộng trùng. Regression gồm72 ca renewal mới (32 domain,6 migration,34 integration) cùng326 ca hiện hữu. Chưa có provider/SMTP/deployment được nghiệm thu từ thay đổi này. Quy trình thủ công không chứng minh exactly-once trên dịch vụ ngoài nếu nhân viên bỏ qua Start/verification hoặc dùng alias khác; phải đối chiếu thực tế.
 
 ## 6. Commit
 
-`e06fafc`: thiết kế trước code. `3d2f152`: domain, persistence, migrations hai DB và kiểm chứng nền. Các commit tiếp nối chỉ ghi hash sau khi tồn tại.
+`e06fafc`: thiết kế trước code. `3d2f152`: domain, persistence, migrations hai DB và kiểm chứng nền. `33f0310`: payment provisioning, owner/admin API, order reconcile, integration tests và docs tương ứng. Commit tổng kết tra bằng `git log -- docs/history/2026-10-19-03-renewal-regression-docs.md`.
 
 ## 7. Còn lại
 
