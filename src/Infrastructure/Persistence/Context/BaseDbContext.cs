@@ -56,6 +56,7 @@ public abstract class BaseDbContext : IdentityDbContext<
         Boilerate.Infrastructure.Persistence.Configuration.OrderingModel.Configure(modelBuilder, Database.IsNpgsql());
         Boilerate.Infrastructure.Persistence.Configuration.PaymentModel.Configure(modelBuilder, Database.IsNpgsql());
         Boilerate.Infrastructure.Persistence.Configuration.ShippingModel.Configure(modelBuilder, Database.IsNpgsql());
+        Boilerate.Infrastructure.Persistence.Configuration.RenewalModel.Configure(modelBuilder, Database.IsNpgsql());
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -82,6 +83,18 @@ public abstract class BaseDbContext : IdentityDbContext<
         }
 
         ChangeTracker.DetectChanges();
+        if (ChangeTracker.Entries<Boilerate.Domain.Renewals.RenewalRequest>().Any(e => e.State == EntityState.Deleted) ||
+            ChangeTracker.Entries<Boilerate.Domain.Renewals.RenewalAttempt>().Any(e => e.State == EntityState.Deleted))
+            throw new InvalidOperationException("Retain renewal requests and attempts instead of deleting fulfillment history.");
+        if (ChangeTracker.Entries<Boilerate.Domain.Renewals.RenewalOperation>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Renewal operations are append-only history.");
+        foreach (var attempt in ChangeTracker.Entries<Boilerate.Domain.Renewals.RenewalAttempt>().Where(e => e.State == EntityState.Modified))
+        {
+            if (attempt.Property(x => x.Outcome).OriginalValue != Boilerate.Domain.Renewals.RenewalOutcome.Pending ||
+                attempt.Properties.Any(p => p.IsModified && p.Metadata.Name is
+                    "Id" or "RequestId" or "OperationId" or "StartedBy" or "StartedAtUtc"))
+                throw new InvalidOperationException("Renewal attempt starts and verified results are immutable.");
+        }
         if (ChangeTracker.Entries<Boilerate.Domain.Inventory.StockMovement>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
             throw new InvalidOperationException("Stock movements are append-only; use a compensating movement.");
         if (ChangeTracker.Entries<Boilerate.Domain.Catalog.Product>().Any(e => e.State == EntityState.Deleted) ||

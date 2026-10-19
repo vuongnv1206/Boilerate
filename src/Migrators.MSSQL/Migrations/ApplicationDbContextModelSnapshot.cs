@@ -1844,6 +1844,203 @@ namespace Boilerate.Migrators.MSSQL.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Boilerate.Domain.Renewals.RenewalAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("NewExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Outcome")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProtectedEvidence")
+                        .HasMaxLength(32000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("StartedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("VerifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("VerifiedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperationId")
+                        .IsUnique();
+
+                    b.HasIndex("RequestId")
+                        .IsUnique()
+                        .HasFilter("[Outcome] = 1");
+
+                    b.HasIndex("RequestId", "StartedAtUtc", "Id");
+
+                    b.ToTable("RenewalAttempts", "Renewals", t =>
+                        {
+                            t.HasCheckConstraint("CK_RenewalAttempt_Outcome", "\"Outcome\" IN (1,2,3)");
+
+                            t.HasCheckConstraint("CK_RenewalAttempt_Verification", "(\"Outcome\" = 1 AND \"VerifiedBy\" IS NULL AND \"VerifiedAtUtc\" IS NULL AND \"NewExpiresAtUtc\" IS NULL AND \"ProtectedEvidence\" IS NULL) OR (\"Outcome\" = 2 AND \"VerifiedBy\" IS NOT NULL AND \"VerifiedAtUtc\" IS NOT NULL AND \"VerifiedAtUtc\" >= \"StartedAtUtc\" AND \"NewExpiresAtUtc\" IS NOT NULL AND \"NewExpiresAtUtc\" > \"VerifiedAtUtc\" AND \"ProtectedEvidence\" IS NOT NULL) OR (\"Outcome\" = 3 AND \"VerifiedBy\" IS NOT NULL AND \"VerifiedAtUtc\" IS NOT NULL AND \"VerifiedAtUtc\" >= \"StartedAtUtc\" AND \"NewExpiresAtUtc\" IS NULL AND \"ProtectedEvidence\" IS NOT NULL)");
+                        });
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Renewals.RenewalOperation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("StatusAfter")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperationId")
+                        .IsUnique();
+
+                    b.HasIndex("RequestId", "OccurredAtUtc", "Id");
+
+                    b.ToTable("RenewalOperations", "Renewals", t =>
+                        {
+                            t.HasCheckConstraint("CK_RenewalOperation_Status", "\"StatusAfter\" IN (1,2,3,4,5)");
+                        });
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Renewals.RenewalRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ClaimToken")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ClaimUntilUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("ClaimedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("FulfillmentKind")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("LastModifiedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("LastModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrderItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ProtectedTarget")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TargetKey")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<bool>("TargetLocked")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("TargetPreview")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("VerifiedExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("OrderItemId")
+                        .IsUnique();
+
+                    b.HasIndex("TargetKey")
+                        .IsUnique()
+                        .HasFilter("[Status] IN (3,4) AND [TargetKey] IS NOT NULL");
+
+                    b.HasIndex("Status", "CreatedOn", "Id");
+
+                    b.HasIndex("OrderItemId", "OrderId", "VariantId", "FulfillmentKind");
+
+                    b.ToTable("RenewalRequests", "Renewals", t =>
+                        {
+                            t.HasCheckConstraint("CK_RenewalRequest_Claim", "(\"Status\" = 3 AND \"ClaimedBy\" IS NOT NULL AND \"ClaimToken\" IS NOT NULL AND \"ClaimUntilUtc\" IS NOT NULL) OR (\"Status\" = 4 AND \"ClaimedBy\" IS NOT NULL AND \"ClaimToken\" IS NULL AND \"ClaimUntilUtc\" IS NULL) OR (\"Status\" IN (1,2,5) AND \"ClaimedBy\" IS NULL AND \"ClaimToken\" IS NULL AND \"ClaimUntilUtc\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_RenewalRequest_Completion", "(\"Status\" = 5 AND \"CompletedAtUtc\" IS NOT NULL AND \"VerifiedExpiresAtUtc\" IS NOT NULL AND \"VerifiedExpiresAtUtc\" > \"CompletedAtUtc\") OR (\"Status\" <> 5 AND \"CompletedAtUtc\" IS NULL AND \"VerifiedExpiresAtUtc\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_RenewalRequest_Kind", "\"FulfillmentKind\" = 4");
+
+                            t.HasCheckConstraint("CK_RenewalRequest_Status", "\"Status\" IN (1,2,3,4,5)");
+
+                            t.HasCheckConstraint("CK_RenewalRequest_Target", "(\"Status\" = 1 AND \"ProtectedTarget\" IS NULL AND \"TargetKey\" IS NULL AND \"TargetPreview\" IS NULL) OR (\"Status\" <> 1 AND \"ProtectedTarget\" IS NOT NULL AND \"TargetKey\" IS NOT NULL AND \"TargetPreview\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("CK_RenewalRequest_TargetLock", "(\"Status\" <> 1 OR \"TargetLocked\" = 0) AND (\"Status\" NOT IN (4,5) OR \"TargetLocked\" = 1)");
+                        });
+                });
+
             modelBuilder.Entity("Boilerate.Domain.Shipping.Shipment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2398,6 +2595,34 @@ namespace Boilerate.Migrators.MSSQL.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Boilerate.Domain.Renewals.RenewalAttempt", b =>
+                {
+                    b.HasOne("Boilerate.Domain.Renewals.RenewalRequest", null)
+                        .WithMany("Attempts")
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Renewals.RenewalOperation", b =>
+                {
+                    b.HasOne("Boilerate.Domain.Renewals.RenewalRequest", null)
+                        .WithMany()
+                        .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Renewals.RenewalRequest", b =>
+                {
+                    b.HasOne("Boilerate.Domain.Ordering.OrderItem", null)
+                        .WithMany()
+                        .HasForeignKey("OrderItemId", "OrderId", "VariantId", "FulfillmentKind")
+                        .HasPrincipalKey("Id", "OrderId", "VariantId", "FulfillmentKind")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Boilerate.Domain.Shipping.Shipment", b =>
                 {
                     b.HasOne("Boilerate.Domain.Ordering.Order", null)
@@ -2523,6 +2748,11 @@ namespace Boilerate.Migrators.MSSQL.Migrations
             modelBuilder.Entity("Boilerate.Domain.Ordering.Order", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Renewals.RenewalRequest", b =>
+                {
+                    b.Navigation("Attempts");
                 });
 
             modelBuilder.Entity("Boilerate.Domain.Shipping.Shipment", b =>
