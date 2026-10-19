@@ -1,46 +1,32 @@
-# Tài liệu phát triển
+# Tài liệu dự án
 
-Ưu tiên làm việc hiện tại: [MVP gọn cho một shop nhỏ](features/shop-mvp.md), từ các quyết định trong [phỏng vấn nghiệp vụ](features/business-discovery.md). Dừng vòng hỏi sâu; triển khai theo từng lát hoàn chỉnh. Các gate vận hành còn mở vẫn được theo dõi trong roadmap.
+Chọn khu vực theo công việc. BE và FE có kế hoạch, lịch sử và bằng chứng riêng; nghiệp vụ và quy trình dùng chung chỉ có một nguồn.
 
-Tài liệu được cập nhật cùng phần code liên quan. Mỗi tính năng có kế hoạch, các bước thực hiện, bằng chứng kiểm chứng và lịch sử thay đổi để người tiếp theo biết dự án đang ở đâu, vì sao chọn thiết kế đó và còn thiếu gì.
+| Khu vực | Bắt đầu ở đâu | Nội dung |
+|---|---|---|
+| Backend — BE | [Index BE](backend/README.md), [roadmap BE](backend/roadmap.md) | Database/ERD, API, domain, feature plans, vận hành, lịch sử và kiểm chứng BE |
+| Frontend — FE | [Index FE](frontend/README.md), [roadmap FE](frontend/roadmap.md) | Lộ trình giao diện và tích hợp; hiện mới chuẩn bị tài liệu, chưa triển khai FE |
+| Dùng chung | [Index shared](shared/README.md) | Nghiệp vụ đã chốt, nguồn quyết định, phối hợp BE–FE, workflow và mẫu kế hoạch |
 
-## Đọc theo thứ tự
+## Luồng đọc
 
-1. [Lộ trình dự án](roadmap.md): phạm vi từng mốc, trạng thái và điều kiện nghiệm thu.
-2. [Quy trình phát triển](development-workflow.md): cách đi từ yêu cầu đến code, kiểm thử, tài liệu và commit.
-3. [Mẫu kế hoạch tính năng](templates/feature-plan.md): sao chép khi bắt đầu tính năng mới hoặc thay đổi hành vi đáng kể.
-4. [Hồ sơ Catalog v1](features/catalog-v1.md): kế hoạch và trạng thái triển khai theo từng bước.
-5. [Thiết kế database commerce](commerce-database.md): cardinality, cột, FK, unique/check/index, transaction và quy tắc xóa.
-6. [API và vận hành commerce](commerce-api.md): khởi tạo, quyền, request/response và vận hành.
-7. [Review commerce ngày 2026-10-17](commerce-review.md): lỗi đã sửa, cách kiểm chứng và giới hạn còn lại.
-8. [Lịch sử phát triển](history/README.md): các phần việc và commit đã thực hiện.
-9. [Kiểm chứng Catalog v1](verification/2026-10-17-commerce.md): kết quả từng lượt, phạm vi source và phần chưa nghiệm thu.
-10. [Nghiệm thu vận hành Catalog](features/operations-acceptance.md): bước đang triển khai trước checkout.
-11. [Runbook vận hành/phục hồi](operations-runbook.md) và [kiểm chứng ngày 2026-10-18](verification/2026-10-18-operations.md).
-12. [Phỏng vấn nghiệp vụ](features/business-discovery.md) và [quy tắc giao hàng số/gia hạn](business/digital-fulfillment.md): nguồn quyết định nghiệp vụ; trạng thái code được theo dõi riêng trong từng hồ sơ tính năng.
-13. [Sản phẩm linh hoạt và đơn mua chung](business/product-flexibility.md): mức tự cấu hình của shop, ví dụ tham khảo và chính sách thanh toán vật lý + số.
-14. [MVP shop nhỏ](features/shop-mvp.md): phạm vi gọn, thứ tự BE, tiêu chí nghiệm thu và các đề xuất cần xử lý khi tới bước liên quan.
-15. [Cách giao và kho hàng số](features/digital-inventory.md): thiết kế, bước triển khai và [kiểm chứng](verification/2026-10-18-digital-inventory.md).
-16. [Giỏ hàng, đơn hàng và giữ hàng](features/ordering-checkout.md): cardinality, transaction, API và kiểm chứng bước 2 MVP.
-17. [Nhận tiền và tự động giao hàng số](features/payment-digital-delivery.md): receipt chuyển khoản xác nhận thủ công, trạng thái độc lập, giao Unique/Shared, xử lý trả muộn và email outbox; bằng chứng local/deployment theo hồ sơ.
-18. [Giao hàng vật lý và ghi nhận COD](features/physical-shipping.md): shipment có số lượng, xuất từ phần đã giữ, giao từng phần, quyền/version/replay và receipt COD độc lập; đã triển khai, trạng thái kiểm chứng theo hồ sơ.
-19. [Gia hạn thủ công](features/manual-renewals.md): nhận việc có lease, Start lưu PendingVerification, xác minh kết quả thực tế, tài khoản đích/bằng chứng được bảo vệ và hoàn tất đơn độc lập Paid.
-20. [Hoàn tiền và nhận hàng trả](features/refunds-returns.md): ledger tiền đã hoàn, return theo shipment, restock có kiểm chứng, full refund đóng phần giao còn lại và COD trả về; trạng thái local/deployment theo [báo cáo](verification/2026-10-19-aftersales.md).
+1. Đọc [phạm vi sản phẩm linh hoạt](shared/business/product-flexibility.md) và [giao hàng số/gia hạn](shared/business/digital-fulfillment.md) để hiểu shop cần gì.
+2. Đọc roadmap của phần sắp làm và hồ sơ tính năng liên quan; trạng thái triển khai nằm ở đó.
+3. Khi tích hợp, đọc [hướng dẫn BE–FE](shared/contracts/frontend-backend.md) rồi dùng [API BE hiện hành](backend/commerce-api.md). Không lấy ERD làm hợp đồng request/response.
+4. Phát triển theo [quy trình chung](shared/development-workflow.md), cập nhật feature plan/history/verification trong đúng khu vực.
 
-Hướng dẫn dựng installation mới, cấu hình và các lệnh operator nằm tại [README dự án](../README.md). [plan.md](../plan.md) là bản tóm tắt phạm vi hiện tại; lộ trình chi tiết được theo dõi tại đây.
+## Quy ước tài liệu
 
-## Cách tổ chức
+- `backend/` và `frontend/` cùng dùng cấu trúc `features/`, `history/`, `verification/` khi có công việc tương ứng; không tạo báo cáo rỗng để suy ra đã triển khai.
+- `shared/business/` lưu quy tắc nghiệp vụ; `shared/contracts/` lưu cách phối hợp và dẫn tới hợp đồng kỹ thuật chính thức. Không sao chép danh sách endpoint hay bảng tiến độ BE vào tài liệu FE.
+- Thay đổi dùng chung có hồ sơ trong `shared/features/`, history và verification trong `shared/`. Một tính năng chạm cả BE và FE có một hồ sơ điều phối dùng chung, liên kết các bước của hai bên.
+- [Mẫu kế hoạch](shared/templates/feature-plan.md) dùng cho cả ba khu vực. [AGENTS.md](../AGENTS.md) quy định cách duy trì tài liệu của repository.
+- `plan.md` là [điểm điều hướng](../plan.md), không phải một roadmap khác.
 
-| Vị trí | Nội dung |
-|---|---|
-| `docs/roadmap.md` | Các mốc xuyên suốt dự án, phụ thuộc và điều kiện nghiệm thu |
-| `docs/features/<ma-tinh-nang>.md` | Kế hoạch và tiến độ từng bước của một tính năng, theo mẫu |
-| `docs/business/` | Quy tắc nghiệp vụ đã xác nhận và quyết định còn mở; trạng thái triển khai được ghi riêng |
-| [docs/history/](history/README.md) | Nhật ký triển khai/review theo ngày, quyết định và liên kết commit |
-| `docs/*-database.md`, `docs/*-api.md` | Hợp đồng hiện hành để lập trình và tích hợp |
-| `docs/verification/` | Báo cáo tóm tắt kiểm chứng được version trong Git, kèm lệnh và môi trường |
-| `artifacts/` | Log/TRX và đầu ra kiểm chứng tại máy chạy; có thể bị bỏ qua bởi Git |
+“Đã triển khai”, “đã kiểm chứng local” và “đã nghiệm thu deployment/adapter” là ba trạng thái khác nhau. Kết quả BE không nghiệm thu FE. Mock hoặc cấu hình CI không chứng minh chạy thật.
 
-Một dòng “đã triển khai” chỉ xác nhận có code. “Đã kiểm chứng” phải kèm môi trường, phạm vi, lệnh và kết quả. “Đã nghiệm thu runtime/adapter” cần bằng chứng chạy thật của runtime/adapter đó. Có workflow CI hoặc dùng mock chưa đủ để đánh dấu nghiệm thu.
+## Tìm tài liệu trước lần tổ chức lại
 
-Không đưa secret, token, dữ liệu khách hàng hoặc connection string thật vào tài liệu và log được commit. Báo cáo trong Git cần đủ thông tin để tái chạy dù các artifact cục bộ không còn.
+Ngày 2026-10-19, tài liệu BE cũ ở `docs/` được chuyển vào `docs/backend/`; nghiệp vụ, discovery, workflow và template được chuyển sang `docs/shared/`. Xem [hồ sơ tổ chức tài liệu](shared/features/documentation-structure.md) và [lịch sử dùng chung](shared/history/README.md).
+
+Tên file của các feature plans, history và verification cũ được giữ. Các lệnh/kết quả đã chạy trong báo cáo cũ giữ đường dẫn tại thời điểm chạy; liên kết đọc tài liệu đã được cập nhật. Dùng `git log --follow -- <đường-dẫn-mới>` để tra lịch sử trước khi di chuyển.
