@@ -8,6 +8,6 @@ Theo yêu cầu giữ đăng nhập khi reload. Không đổi database, refresh 
 4. Refresh dùng rotation/reuse detection hiện có. Không có cookie hoặc refresh bị từ chối trả 401 và xóa cookie; lỗi 5xx không xóa cookie. Logout tìm family qua hash cookie, thu hồi family kể cả access token hết hạn hoặc cookie là phiên đã được thay thế; token lạ không làm lộ trạng thái và logout có thể chạy lại.
 5. Kiểm tra HTTP flags/body/CSRF/restore/logout/legacy, SQL Server family và access bị thu hồi, FE reload và nhiều tab. Raw token/cookie/credentials không đưa vào log, Git hoặc tài liệu.
 
-Không thêm bảng, cột hoặc migration. Cookie có hạn trượt theo chính sách refresh BE hiện có; không thêm chính sách remember-me riêng. Production cần HTTPS và proxy đúng origin; cấu hình không phải bằng chứng đã nghiệm thu deployment. PostgreSQL chưa được kiểm tra trong mốc này.
+Không thêm bảng, cột hoặc migration. Cookie có hạn trượt theo chính sách refresh BE hiện có; không thêm chính sách remember-me riêng. Production cần HTTPS và proxy đúng origin; cấu hình không phải bằng chứng đã nghiệm thu deployment. [Báo cáo](../verification/2026-10-21-browser-session.md) tách local SQL Server và các gate CI SQL Server/PostgreSQL.
 
 Nguồn: [OWASP API CSRF headers](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#employing-custom-request-headers-for-ajaxapi), [ASP.NET Core SameSite](https://learn.microsoft.com/en-us/aspnet/core/security/samesite?view=aspnetcore-10.0). [Hồ sơ FE](../../../../Frontend/docs/features/persistent-session.md).
