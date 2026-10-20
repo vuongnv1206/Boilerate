@@ -42,6 +42,8 @@ Các mốc 2–6 có phần triển khai song song. Tồn tại code ở mốc s
 
 ## Việc ưu tiên tiếp theo
 
+Ngày 21/10, [browser session](features/browser-session.md) bổ sung cookie HttpOnly để FE giữ đăng nhập khi reload, dùng cơ chế phiên/thu hồi hiện có. [Báo cáo](verification/2026-10-21-browser-session.md) ghi HTTP contract và SQL Server local; không thay các gate deployment bên dưới.
+
 1. **MVP cho shop nhỏ — đang ưu tiên:** đã có [kế hoạch gọn](features/shop-mvp.md) từ các quyết định được ghi nhận. Dừng mở rộng phỏng vấn; triển khai các luồng bán hàng/admin thông thường và xử lý chi tiết khi tới bước liên quan. Chưa đưa rule builder/page builder/PC BOM hoặc nhiều adapter vào MVP.
 2. **Bước tiếp theo:** nghiệm thu toàn luồng MVP và triển khai, sau [4C hậu mãi](features/refunds-returns.md) local468/468. Đối chiếu hành trình Catalog→checkout→nhận tiền→giao/gia hạn→refund/return cùng quyền, docs/OpenAPI; xử lý chỗ thiếu trước khi mở gateway/RMA/đổi hàng. Nhận tiền và hoàn tiền hiện là nhân viên xác nhận thực tế; chưa có provider/webhook tự động. Mỗi lát giữ thiết kế/DDD/transaction/quyền và migrations hai DB theo [mẫu](../shared/templates/feature-plan.md).
 3. **Nghiệm thu runtime trước vận hành thật:** chạy Linux CI và container non-root trên SQL Server/PostgreSQL theo [runbook](operations-runbook.md); kiểm operator CLI, volume media/Data Protection keys, health và thay container. Local proxy đã đạt, nhưng chưa chứng minh cấu hình proxy của deployment cụ thể.

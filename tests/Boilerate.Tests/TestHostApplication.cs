@@ -11,15 +11,17 @@ namespace Boilerate.Tests;
 
 internal static class TestHostApplication
 {
-    internal static async Task<WebApplication> StartAsync(FoundationDatabase fixture, bool catalog, bool notifications = true)
+    internal static async Task<WebApplication> StartAsync(FoundationDatabase fixture, bool catalog, bool notifications = true,
+        Action<IServiceCollection>? configureServices = null, string environment = "Production")
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
-            EnvironmentName = "Production",
+            EnvironmentName = environment,
             ApplicationName = typeof(TokensController).Assembly.GetName().Name
         });
         builder.WebHost.UseTestServer();
         fixture.ConfigureServices(builder.Services);
+        configureServices?.Invoke(builder.Services);
         builder.Services.AddRateLimiter(options => options.AddFixedWindowLimiter("authentication", limiter =>
         {
             limiter.PermitLimit = 100;

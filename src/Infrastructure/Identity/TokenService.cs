@@ -83,7 +83,10 @@ internal sealed class TokenService : ITokenService
         foreach (var role in await _users.GetRolesAsync(user)) claims.Add(new(ClaimTypes.Role, role));
         var jwt = new JwtSecurityToken(_jwt.Issuer, _jwt.Audience, claims, DateTime.UtcNow, expires,
             new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Key)), SecurityAlgorithms.HmacSha256));
-        return new TokenResponse(new JwtSecurityTokenHandler().WriteToken(jwt), refresh, session.ExpiresOn, session.Id, expires);
+        return new TokenResponse(new JwtSecurityTokenHandler().WriteToken(jwt), refresh, session.ExpiresOn, session.Id, expires)
+        {
+            UserId = user.Id
+        };
     }
     public async Task<TokenResponse> RefreshTokenAsync(RefreshTokenRequest request, string ipAddress)
     {
@@ -130,6 +133,18 @@ internal sealed class TokenService : ITokenService
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
         await LockUserAsync(userId, ct);
         await _db.UserSessions.Where(x => x.UserId == userId && x.RevokedOn == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedOn, DateTime.UtcNow), ct);
+        await tx.CommitAsync(ct);
+    }
+    public async Task RevokeRefreshTokenAsync(string refreshToken, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken) || refreshToken.Length > 256) return;
+        var hash = Hash(refreshToken);
+        var session = await _db.UserSessions.AsNoTracking().SingleOrDefaultAsync(x => x.RefreshTokenHash == hash, ct);
+        if (session is null) return;
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        await LockUserAsync(session.UserId, ct);
+        await _db.UserSessions.Where(x => x.UserId == session.UserId && x.FamilyId == session.FamilyId && x.RevokedOn == null)
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedOn, DateTime.UtcNow), ct);
         await tx.CommitAsync(ct);
     }

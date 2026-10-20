@@ -11,6 +11,7 @@ public interface ITokenService : ITransientService
     Task<List<SessionDto>> GetSessionsAsync(string userId, CancellationToken ct);
     Task RevokeSessionAsync(string userId, Guid sessionId, CancellationToken ct);
     Task RevokeAllAsync(string userId, CancellationToken ct);
+    Task RevokeRefreshTokenAsync(string refreshToken, CancellationToken ct);
     /// <summary>
     /// Generate tokens khi user login (email + password)
     /// </summary>
