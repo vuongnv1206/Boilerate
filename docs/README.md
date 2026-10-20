@@ -20,8 +20,8 @@ Chọn khu vực theo công việc. BE và FE có kế hoạch, lịch sử và 
 - `backend/` và `frontend/` cùng dùng cấu trúc `features/`, `history/`, `verification/` khi có công việc tương ứng; không tạo báo cáo rỗng để suy ra đã triển khai.
 - `shared/business/` lưu quy tắc nghiệp vụ; `shared/contracts/` lưu cách phối hợp và dẫn tới hợp đồng kỹ thuật chính thức. Không sao chép danh sách endpoint hay bảng tiến độ BE vào tài liệu FE.
 - Thay đổi dùng chung có hồ sơ trong `shared/features/`, history và verification trong `shared/`. Một tính năng chạm cả BE và FE có một hồ sơ điều phối dùng chung, liên kết các bước của hai bên.
-- [Mẫu kế hoạch](shared/templates/feature-plan.md) dùng cho cả ba khu vực. [AGENTS.md](../AGENTS.md) quy định cách duy trì tài liệu của repository.
-- [CLAUDE.md](../CLAUDE.md) là file quy tắc chung, không gắn với stack hoặc nghiệp vụ; AGENTS tham chiếu thay vì sao chép nội dung.
+- [Mẫu kế hoạch](shared/templates/feature-plan.md) dùng cho cả ba khu vực.
+- [AGENTS.md](../AGENTS.md) chứa toàn bộ hướng dẫn agent: phần nguyên tắc chung và phần quy ước riêng của repository. Không duy trì file rule riêng theo công cụ.
 - `plan.md` là [điểm điều hướng](../plan.md), không phải một roadmap khác.
 
 “Đã triển khai”, “đã kiểm chứng local” và “đã nghiệm thu deployment/adapter” là ba trạng thái khác nhau. Kết quả BE không nghiệm thu FE. Mock hoặc cấu hình CI không chứng minh chạy thật.

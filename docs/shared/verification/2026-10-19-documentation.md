@@ -2,6 +2,8 @@
 
 Môi trường: Windows, PowerShell, Python 3.11; workspace repository. Phạm vi: Markdown, điều hướng và nội dung template. Không đổi code/API/database của BE; không có UI FE mới.
 
+Bước 1–2 giữ bằng chứng của cách tổ chức trước khi hợp nhất rule. Hướng dẫn hiện hành dùng AGENTS.md duy nhất; kiểm chứng sau yêu cầu mới được ghi riêng ở bước 3 dưới đây.
+
 ## Bước 1 — Tách BE, FE và shared
 
 - Chuyển 67 file Markdown cũ theo mapping; kiểm tra đích nằm trong workspace trước khi move, không ghi đè file đã có. Mapping cục bộ: `artifacts/docs-standardization/moves.json`.
@@ -73,6 +75,16 @@ if ($LASTEXITCODE) { throw 'Generate failed' }
 Đối chiếu danh sách `$requiredFiles` của runner với các file tương ứng trong `$taskDocsGenerated`; so sánh rule bằng byte. Mở package bằng ZIP để kiểm đích tài liệu và nhóm artifact nêu trong bảng. Chạy lại đoạn kiểm liên kết ở trên từ thư mục sinh ra. Không dùng full runner chỉ để kiểm docs, vì full runner còn yêu cầu hai DB và chạy restore/build/test.
 
 Raw evidence cục bộ: `artifacts/docs-standardization/pack.log`, `template-install.log`, `template-generate.log`, `template-paths.json`, `template-check.json`, `links-step2.json`, `links-template.json`. Source trước khi tổ chức lại: `7a480d0`; commit tổ chức docs: `a696182`. Commit rule được tạo cùng bản ghi bước 2, không ghi hash dự đoán.
+
+## Bước 3 — Hợp nhất toàn bộ rule vào AGENTS.md
+
+- Đối chiếu nguyên tắc chung từ `git show d972293:CLAUDE.md` với phần General working principles trong AGENTS.md (chỉ đổi cấp heading): giữ đủ nội dung. Đối chiếu toàn bộ danh sách quy ước repo từ AGENTS trước sửa: giữ nguyên.
+- Source không còn CLAUDE.md; README/index, manifest pack và runner chỉ dùng AGENTS.md. Tên file cũ còn trong nguồn tham khảo bên ngoài và các bản ghi lịch sử, không còn là chỉ dẫn mở file local.
+- Pack bằng `dotnet pack Boilerate.Template.csproj --no-restore -o artifacts/agents-consolidation/packages --verbosity quiet`: đạt. Install/generate dùng cùng quy trình custom hive ở bước 2, output nằm trong `artifacts/agents-consolidation/template-<guid>/RenamedBackend`.
+- Dự án sinh ra có **17/17 file bắt buộc**, AGENTS giữ nguyên nội dung sau thay tên dự án của template; package/dự án không có CLAUDE.md hoặc PROJECT_RULES.md. Package có 495 entries, không có các nhóm artifact bị cấm đã quét ở bước 2.
+- Link check tại snapshot template: **82 file Markdown, 485 liên kết nội bộ, 0 hỏng**. Source sau khi hoàn thiện history/plan: **82 file Markdown, 487 liên kết nội bộ, 0 hỏng**; dùng cùng checker và phạm vi bước 1.
+- Parse PowerShell runner đạt; diff và staged diff được kiểm tra trước commit. Không chạy full template build/test hoặc hai DB cho thay đổi rule/tài liệu này.
+- Raw evidence riêng: `artifacts/agents-consolidation/pack.log`, `install.log`, `generate.log`, `paths.json`, `template-check.json`, `links-source.json`, `links-template.json`.
 
 ## Phạm vi chưa chạy
 

@@ -25,7 +25,7 @@ try {
     Push-Location $generated
     try {
         $requiredFiles = @(
-            'Dockerfile', 'compose.yaml', '.dockerignore', 'README.md', 'AGENTS.md', 'CLAUDE.md',
+            'Dockerfile', 'compose.yaml', '.dockerignore', 'README.md', 'AGENTS.md',
             'plan.md', '.editorconfig', 'RenamedBackend.sln', 'docs/README.md',
             'docs/backend/README.md', 'docs/backend/roadmap.md',
             'docs/frontend/README.md', 'docs/frontend/roadmap.md', 'docs/shared/README.md',

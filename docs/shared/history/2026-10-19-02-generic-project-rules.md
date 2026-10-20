@@ -1,7 +1,7 @@
 # 2026-10-19 — Quy tắc generic và tài liệu trong template
 
 - Nguồn yêu cầu: bổ sung một file quy tắc dùng chung từ [tham khảo người dùng gửi](https://github.com/multica-ai/andrej-karpathy-skills/blob/main/CLAUDE.md); xem [hồ sơ](../features/documentation-structure.md).
-- Thêm [CLAUDE.md](../../../CLAUDE.md) ở root với nội dung diễn đạt riêng theo bốn chủ đề: làm rõ kết quả, giải pháp vừa đủ, giới hạn phạm vi sửa và kiểm chứng kết quả. Không chứa stack, mô hình commerce, tên dự án hoặc đường dẫn nghiệp vụ; quy ước riêng vẫn ở AGENTS.
+- Thêm file CLAUDE.md ở root với nội dung diễn đạt riêng theo bốn chủ đề: làm rõ kết quả, giải pháp vừa đủ, giới hạn phạm vi sửa và kiểm chứng kết quả. Không chứa stack, mô hình commerce, tên dự án hoặc đường dẫn nghiệp vụ; quy ước riêng khi đó ở AGENTS. Theo yêu cầu tiếp theo, nội dung nay được hợp nhất vào [AGENTS.md](../../../AGENTS.md); xem [bản ghi hợp nhất](2026-10-19-03-agents-consolidation.md).
 - AGENTS, root README và các index dẫn tới một file canonical, không sao chép rule sang BE/FE. Quy tắc cho phép tự xử lý lựa chọn thường lệ có thể đảo lại; chỉ hỏi khi quyết định còn thiếu làm thay đổi đáng kể kết quả.
 - Template project thêm CLAUDE.md vào nội dung pack; runner template kiểm tra file rule và các điểm vào docs mới trong dự án sinh ra. Không đổi chức năng hoặc migration BE.
 - File ảnh hưởng: CLAUDE.md, AGENTS.md, README.md, docs index/shared index, Boilerate.Template.csproj, scripts/verify-template.ps1 và hồ sơ/báo cáo này.
