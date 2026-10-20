@@ -12,7 +12,9 @@ Log.Information("Server Booting Up...");
 
 try
 {
-    var operatorFlags = new[] { "--bootstrap-admin", "--register-capabilities", "--grant-admin-capabilities", "--preflight" };
+    var operatorFlags = new[] { "--bootstrap-admin", "--register-capabilities", "--grant-admin-capabilities", "--preflight", "--seed-dev" };
+    if (args.Contains("--seed-dev") && args.Any(argument => argument != "--seed-dev" && operatorFlags.Contains(argument)))
+        throw new InvalidOperationException("Run --seed-dev separately from foundation bootstrap/preflight commands.");
     var builder = WebApplication.CreateBuilder(args.Where(a => !operatorFlags.Contains(a)).ToArray());
 
     builder.AddConfigurations().RegisterSerilog();
@@ -80,6 +82,28 @@ try
 
 
     var app = builder.Build();
+
+    if (args.Contains("--seed-dev"))
+    {
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(app.Lifetime.ApplicationStopping);
+        ConsoleCancelEventHandler cancelSeed = (_, cancellationEvent) =>
+        {
+            cancellationEvent.Cancel = true;
+            cancellation.Cancel();
+        };
+        Console.CancelKeyPress += cancelSeed;
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            await scope.ServiceProvider.GetRequiredService<Boilerate.Infrastructure.Persistence.Initialization.CustomSeederRunner>()
+                .RunAsync(cancellation.Token);
+        }
+        finally
+        {
+            Console.CancelKeyPress -= cancelSeed;
+        }
+        return;
+    }
 
     if (app.Environment.IsDevelopment())
     {

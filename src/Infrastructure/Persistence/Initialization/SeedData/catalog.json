@@ -1,0 +1,181 @@
+{
+  "description": "Thiết kế tinh giản, chất liệu được lựa chọn kỹ lưỡng. Một món đồ nhỏ cho nhịp sống có chủ đích và những khoảnh khắc thường ngày.",
+  "types": [
+    {
+      "code": "DEMO-ESSENTIALS",
+      "name": "Đồ dùng thiết yếu"
+    },
+    {
+      "code": "DEMO-ELECTRONICS",
+      "name": "Thiết bị công nghệ"
+    }
+  ],
+  "categories": [
+    {
+      "slug": "phu-kien",
+      "name": "Phụ kiện"
+    },
+    {
+      "slug": "khong-gian-song",
+      "name": "Không gian sống"
+    },
+    {
+      "slug": "cong-nghe",
+      "name": "Công nghệ"
+    },
+    {
+      "slug": "noi-that",
+      "name": "Nội thất"
+    },
+    {
+      "slug": "thoi-trang",
+      "name": "Thời trang"
+    },
+    {
+      "slug": "van-phong-pham",
+      "name": "Văn phòng phẩm"
+    }
+  ],
+  "products": [
+    {
+      "name": "Túi Everyday Tote",
+      "slug": "tui-everyday-tote",
+      "categorySlug": "phu-kien",
+      "typeCode": "DEMO-ESSENTIALS",
+      "sku": "DEMO-ACC-001",
+      "price": 690000.0,
+      "stock": 12,
+      "status": "Published"
+    },
+    {
+      "name": "Đèn bàn Studio",
+      "slug": "den-ban-studio",
+      "categorySlug": "khong-gian-song",
+      "typeCode": "DEMO-ESSENTIALS",
+      "sku": "DEMO-LIV-002",
+      "price": 1290000.0,
+      "stock": 19,
+      "status": "Published"
+    },
+    {
+      "name": "Tai nghe Quiet Hours",
+      "slug": "tai-nghe-quiet-hours",
+      "categorySlug": "cong-nghe",
+      "typeCode": "DEMO-ELECTRONICS",
+      "sku": "DEMO-TEC-003",
+      "price": 2490000.0,
+      "stock": 26,
+      "status": "Draft"
+    },
+    {
+      "name": "Ghế Form Lounge",
+      "slug": "ghe-form-lounge",
+      "categorySlug": "noi-that",
+      "typeCode": "DEMO-ESSENTIALS",
+      "sku": "DEMO-FUR-004",
+      "price": 4590000.0,
+      "stock": 33,
+      "status": "Published"
+    },
+    {
+      "name": "Bình gốm Organic",
+      "slug": "binh-gom-organic",
+      "categorySlug": "khong-gian-song",
+      "typeCode": "DEMO-ESSENTIALS",
+      "sku": "DEMO-LIV-005",
+      "price": 450000.0,
+      "stock": 40,
+      "status": "Published"
+    },
+    {
+      "name": "Máy ảnh Pocket Film",
+      "slug": "may-anh-pocket-film",
+      "categorySlug": "cong-nghe",
+      "typeCode": "DEMO-ELECTRONICS",
+      "sku": "DEMO-TEC-006",
+      "price": 3690000.0,
+      "stock": 47,
+      "status": "Draft"
+    },
+    {
+      "name": "Giày Daily Runner",
+      "slug": "giay-daily-runner",
+      "categorySlug": "thoi-trang",
+      "typeCode": "DEMO-ESSENTIALS",
+      "sku": "DEMO-FAS-007",
+      "price": 1590000.0,
+      "stock": 54,
+      "status": "Published"
+    },
+    {
+      "name": "Sổ tay Field Notes",
+      "slug": "so-tay-field-notes",
+      "categorySlug": "van-phong-pham",
+      "typeCode": "DEMO-ESSENTIALS",
+      "sku": "DEMO-STA-008",
+      "price": 190000.0,
+      "stock": 61,
+      "status": "Published"
+    },
+    {
+      "name": "Túi Weekender Canvas",
+      "slug": "tui-weekender-canvas",
+      "categorySlug": "phu-kien",
+      "typeCode": "DEMO-ESSENTIALS",
+      "sku": "DEMO-ACC-009",
+      "price": 1190000.0,
+      "stock": 68,
+      "status": "Draft"
+    },
+    {
+      "name": "Đèn đọc sách Arc",
+      "slug": "den-doc-sach-arc",
+      "categorySlug": "khong-gian-song",
+      "typeCode": "DEMO-ESSENTIALS",
+      "sku": "DEMO-LIV-010",
+      "price": 890000.0,
+      "stock": 75,
+      "status": "Published"
+    },
+    {
+      "name": "Bình gốm Still",
+      "slug": "binh-gom-still",
+      "categorySlug": "khong-gian-song",
+      "typeCode": "DEMO-ESSENTIALS",
+      "sku": "DEMO-LIV-011",
+      "price": 590000.0,
+      "stock": 82,
+      "status": "Archived"
+    },
+    {
+      "name": "Ghế gỗ Sunday",
+      "slug": "ghe-go-sunday",
+      "categorySlug": "noi-that",
+      "typeCode": "DEMO-ESSENTIALS",
+      "sku": "DEMO-FUR-012",
+      "price": 3290000.0,
+      "stock": 89,
+      "status": "Draft"
+    },
+    {
+      "name": "Sổ tay Morning Pages",
+      "slug": "so-tay-morning-pages",
+      "categorySlug": "van-phong-pham",
+      "typeCode": "DEMO-ESSENTIALS",
+      "sku": "DEMO-STA-013",
+      "price": 250000.0,
+      "stock": 96,
+      "status": "Published"
+    },
+    {
+      "name": "Tai nghe Studio Pro",
+      "slug": "tai-nghe-studio-pro",
+      "categorySlug": "cong-nghe",
+      "typeCode": "DEMO-ELECTRONICS",
+      "sku": "DEMO-TEC-014",
+      "price": 3290000.0,
+      "stock": 103,
+      "status": "Draft"
+    }
+  ]
+}

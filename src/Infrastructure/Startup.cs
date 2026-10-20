@@ -29,6 +29,7 @@ public static class Startup
             .AddDeploymentRuntime(config)
             .AddPersistence()
             .AddCommerce(config)
+            .AddDevelopmentSeeders(config)
             .AddIdentity(config)
             .AddAuth(config)
             .AddCaching(config)
