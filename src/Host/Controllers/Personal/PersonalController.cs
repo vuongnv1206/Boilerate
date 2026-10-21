@@ -104,6 +104,15 @@ public class PersonalController : BaseApiController
         return Ok(permissions);
     }
 
+    [HttpGet("authorization")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<ActionResult<AuthorizationContextDto>> GetAuthorizationAsync(CancellationToken cancellationToken)
+    {
+        var userId = User.GetUserId();
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+        return Ok(await _userService.GetAuthorizationAsync(userId, cancellationToken));
+    }
+
     /// <summary>
     /// Lấy audit logs của current logged-in user (lịch sử thay đổi)
     /// </summary>

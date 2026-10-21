@@ -5,6 +5,7 @@ namespace Boilerate.Application.Identity.Roles;
 /// </summary>
 public class FunctionDto
 {
+    public Guid GroupId { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Version { get; set; } = string.Empty;
     public bool IsActive { get; set; }

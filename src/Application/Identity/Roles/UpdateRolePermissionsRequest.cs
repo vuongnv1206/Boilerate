@@ -12,7 +12,8 @@ public class UpdateRolePermissionsRequest
     /// <summary>
     /// Role ID (required)
     /// </summary>
-    public string RoleId { get; set; } = default!;
+    // The HTTP route supplies this before service validation; omitted body IDs must bind.
+    public string RoleId { get; set; } = string.Empty;
 
     /// <summary>
     /// List of permissions (Function + Action combinations)

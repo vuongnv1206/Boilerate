@@ -52,6 +52,7 @@ public class ApplicationDbContext : BaseDbContext
     // Permission system DbSets
     public DbSet<Domain.Identity.Action> Actions => Set<Domain.Identity.Action>();
     public DbSet<Function> Functions => Set<Function>();
+    public DbSet<FunctionGroup> FunctionGroups => Set<FunctionGroup>();
     public DbSet<ActionInFunction> ActionInFunctions => Set<ActionInFunction>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<Notification> Notifications => Set<Notification>();

@@ -24,7 +24,7 @@ Theo chỉ dẫn mới nhất ngày 2026-10-18, ưu tiên **shop nhỏ, đủ lu
 
 | Mốc | Đầu ra | Trạng thái hiện tại | Điều kiện còn lại |
 |---|---|---|---|
-| 0. Foundation | Identity, Function–Action ACL, sessions, audit, migration/bootstrap/preflight | Có triển khai và kiểm thử trong repo | Giữ regression khi bổ sung capability/use case |
+| 0. Foundation | Identity, Function–Action ACL, sessions, audit, migration/bootstrap/preflight; [nhóm quyền](features/grouped-authorization.md) | Đã bổ sung nhóm và UI quản trị, kiểm chứng SQL Server cô lập | PostgreSQL runtime hoãn theo người dùng; chưa nghiệm thu deployment |
 | 1. Chốt thiết kế commerce | Cardinality, từ điển bảng/cột, FK/unique/check/index, transaction/xóa, API | Đã có [database](commerce-database.md) và [API](commerce-api.md) | Cập nhật cùng mọi thay đổi schema/hành vi tiếp theo |
 | 2. Runtime triển khai | Linux CI, Docker non-root, volume media/keys, health, proxy/restart, migration riêng | Local key/proxy gate 5/5; image gate đã tăng kiểm operator CLI và recreate volume; **chưa nghiệm thu Linux/Docker/CI thật** | Docker daemon/Linux host hoạt động; chạy image trên cả hai DB; lưu run/log kết quả |
 | 3. Transaction/media/outbox | Media lifecycle, DB outbox, lease/retry/dead-letter/replay và cleanup | Đã triển khai; có regression trên hai DB | Nghiệm thu container/volume/restart thật; đo tải sweeper khi backlog lớn |

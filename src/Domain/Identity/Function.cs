@@ -8,6 +8,8 @@ namespace Boilerate.Domain.Identity;
 /// </summary>
 public class Function : BaseEntity
 {
+    public Guid GroupId { get; set; } = FunctionGroup.OtherId;
+    public FunctionGroup Group { get; set; } = null!;
     public string Code { get; set; } = default!;
     public string NormalizedCode { get; set; } = default!;
     public bool IsActive { get; set; } = true;

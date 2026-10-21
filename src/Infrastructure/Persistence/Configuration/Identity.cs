@@ -82,11 +82,27 @@ public class FunctionConfig : IEntityTypeConfiguration<Function>
     {
         builder.ToTable("Functions", SchemaNames.Identity);
         builder.HasKey(f => f.Id);
+        builder.HasOne(f => f.Group).WithMany().HasForeignKey(f => f.GroupId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(f => f.Name).IsRequired().HasMaxLength(100);
         builder.Property(f => f.Code).HasMaxLength(100).IsRequired();
         builder.Property(f => f.NormalizedCode).HasMaxLength(100).IsRequired();
         builder.HasIndex(f => f.NormalizedCode).IsUnique();
         builder.Property(f => f.Version).HasMaxLength(32).IsConcurrencyToken();
+    }
+}
+
+public sealed class FunctionGroupConfig : IEntityTypeConfiguration<FunctionGroup>
+{
+    public void Configure(EntityTypeBuilder<FunctionGroup> builder)
+    {
+        builder.ToTable("FunctionGroups", SchemaNames.Identity, table => table.HasCheckConstraint("CK_FunctionGroups_SortOrder", "\"SortOrder\" >= 0"));
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Code).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.NormalizedCode).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Version).HasMaxLength(32).IsRequired().IsConcurrencyToken();
+        builder.HasIndex(x => x.NormalizedCode).IsUnique();
+        builder.HasData(FunctionGroup.InitialGroups());
     }
 }
 

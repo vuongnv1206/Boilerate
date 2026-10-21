@@ -95,7 +95,9 @@ public sealed class FoundationBootstrap : IScopedService
             var function = await _db.Functions.SingleOrDefaultAsync(f => f.NormalizedCode == definition.Function.ToUpperInvariant(), ct);
             if (function is null)
             {
-                function = new Function { Code = definition.Function, NormalizedCode = definition.Function.ToUpperInvariant(), Name = definition.Function };
+                var groupId = FunctionGroup.InitialGroupFor(definition.Function);
+                if (!await _db.FunctionGroups.AnyAsync(g => g.Id == groupId, ct)) groupId = FunctionGroup.OtherId;
+                function = new Function { GroupId = groupId, Code = definition.Function, NormalizedCode = definition.Function.ToUpperInvariant(), Name = definition.Function };
                 _db.Functions.Add(function);
             }
             foreach (var code in definition.Actions)

@@ -17,7 +17,7 @@ internal sealed class CapabilityService : ICapabilityService
         { Id = a.Id, Code = a.Code, Name = a.Name, IsActive = a.IsActive, Version = a.Version };
     private static FunctionDto Map(Function f) => new()
     {
-        Id = f.Id, Code = f.Code, Name = f.Name, IsActive = f.IsActive, Version = f.Version,
+        Id = f.Id, GroupId = f.GroupId, Code = f.Code, Name = f.Name, IsActive = f.IsActive, Version = f.Version,
         ActionDtos = f.ActionInFunctions.Select(p => new ActionDto
         {
             Id = p.ActionId, Code = p.Action.Code, Name = p.Action.Name, Version = p.Action.Version,
@@ -68,7 +68,7 @@ internal sealed class CapabilityService : ICapabilityService
         await tx.CommitAsync(ct);
         return Map(entity);
     }
-    public async Task<FunctionDto> CreateFunctionAsync(CapabilityRequest request, CancellationToken ct)
+    public async Task<FunctionDto> CreateFunctionAsync(FunctionRequest request, CancellationToken ct)
     {
         Validate(request);
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
@@ -76,9 +76,11 @@ internal sealed class CapabilityService : ICapabilityService
         var code = AclGuard.NormalizeCode(request.Code);
         if (await _db.Functions.AnyAsync(x => x.NormalizedCode == code, ct))
             throw new ConflictException("Function code already exists.");
-        var entity = new Function { Code = request.Code, NormalizedCode = code, Name = request.Name, IsActive = request.IsActive };
+        var groupId = request.GroupId ?? FunctionGroup.OtherId;
+        await RequireGroupAsync(groupId, ct);
+        var entity = new Function { GroupId = groupId, Code = request.Code, NormalizedCode = code, Name = request.Name, IsActive = request.IsActive };
         _db.Functions.Add(entity);
-        _guard.Audit("Functions", entity.Id.ToString(), null, new { entity.Code, entity.Name, entity.IsActive });
+        _guard.Audit("Functions", entity.Id.ToString(), null, new { entity.Code, entity.Name, entity.IsActive, entity.GroupId });
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return Map(entity);
@@ -101,7 +103,7 @@ internal sealed class CapabilityService : ICapabilityService
         await _db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
         return Map(entity);
     }
-    public async Task<FunctionDto> UpdateFunctionAsync(Guid id, CapabilityRequest request, CancellationToken ct)
+    public async Task<FunctionDto> UpdateFunctionAsync(Guid id, FunctionRequest request, CancellationToken ct)
     {
         Validate(request);
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
@@ -112,9 +114,12 @@ internal sealed class CapabilityService : ICapabilityService
         if (request.Code != entity.Code) throw new ConflictException("Code is immutable.");
         if (!request.IsActive && AclGuard.IsManagementFunction(entity.Code))
             throw new ConflictException("An administration function cannot be disabled.");
-        var before = new { entity.Code, entity.Name, entity.IsActive };
+        var groupId = request.GroupId ?? entity.GroupId;
+        await RequireGroupAsync(groupId, ct);
+        var before = new { entity.Code, entity.Name, entity.IsActive, entity.GroupId };
+        entity.GroupId = groupId;
         entity.Name = request.Name; entity.IsActive = request.IsActive; entity.Version = Guid.NewGuid().ToString("N");
-        _guard.Audit("Functions", id.ToString(), before, new { entity.Code, entity.Name, entity.IsActive });
+        _guard.Audit("Functions", id.ToString(), before, new { entity.Code, entity.Name, entity.IsActive, entity.GroupId });
         await _db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
         return Map(entity);
     }
@@ -129,6 +134,11 @@ internal sealed class CapabilityService : ICapabilityService
             throw new ConflictException("Referenced actions must be disabled instead of deleted.");
         _guard.Audit("Actions", id.ToString(), new { entity.Code, entity.Name }, null);
         _db.Actions.Remove(entity); await _db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
+    }
+    private async Task RequireGroupAsync(Guid id, CancellationToken ct)
+    {
+        if (!await _db.FunctionGroups.AnyAsync(x => x.Id == id, ct))
+            throw new FluentValidation.ValidationException("Unknown function group.");
     }
     public async Task DeleteFunctionAsync(Guid id, string version, CancellationToken ct)
     {
@@ -152,7 +162,9 @@ internal sealed class CapabilityService : ICapabilityService
         var entity = await _db.Functions.Include(x => x.ActionInFunctions).ThenInclude(x => x.Action)
             .SingleOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("Function not found.");
         AclGuard.CheckVersion(request.Version, entity.Version);
-        if (await _db.Actions.CountAsync(x => request.ActiveActionIds.Contains(x.Id) && x.IsActive, ct) != request.ActiveActionIds.Count)
+        var allowedActions = await _db.Actions.Where(x => x.IsActive).Select(x => x.Id).ToListAsync(ct);
+        allowedActions.AddRange(entity.ActionInFunctions.Where(x => x.IsActive).Select(x => x.ActionId));
+        if (request.ActiveActionIds.Except(allowedActions).Any())
             throw new FluentValidation.ValidationException("Unknown or inactive action.");
         if (AclGuard.IsManagementFunction(entity.Code) &&
             entity.ActionInFunctions.Any(x => x.IsActive && AclGuard.IsManagementPair(entity.NormalizedCode, x.Action.NormalizedCode) && !request.ActiveActionIds.Contains(x.ActionId)))

@@ -18,6 +18,9 @@ internal static class FoundationPreflight
             .Select(x => new CapabilityCode(x.Id, x.Code, x.NormalizedCode)).ToListAsync(cancellationToken);
         var actionReport = CheckCodes(actions);
         var functionReport = CheckCodes(functions);
+        var groups = await db.FunctionGroups.AsNoTracking()
+            .Select(x => new CapabilityCode(x.Id, x.Code, x.NormalizedCode)).ToListAsync(cancellationToken);
+        var groupReport = CheckCodes(groups);
 
         // Check historical grants as well. A damaged import must never be repaired by inventing
         // new action/function pairs, since that could activate additional permissions.
@@ -30,6 +33,7 @@ internal static class FoundationPreflight
         {
             ["Actions"] = actionReport,
             ["Functions"] = functionReport,
+            ["FunctionGroups"] = groupReport,
             ["InvalidGrantPairs"] = missingPairs.Count,
             ["InvalidGrantPairRows"] = missingPairs,
             ["Identity.Users"] = await db.Users.LongCountAsync(cancellationToken),
@@ -44,7 +48,7 @@ internal static class FoundationPreflight
         };
 
         Console.WriteLine(JsonSerializer.Serialize(report, ReportOptions));
-        if (!actionReport.IsValid || !functionReport.IsValid || missingPairs.Count != 0)
+        if (!actionReport.IsValid || !functionReport.IsValid || !groupReport.IsValid || missingPairs.Count != 0)
         {
             throw new ConflictException("Integrity check failed. Reconcile the reported IDs explicitly; no data was changed.");
         }

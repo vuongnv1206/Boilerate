@@ -23,6 +23,7 @@ public interface IUserService : IScopedService
     Task<string> AssignRolesAsync(string userId, UserRolesRequest request, CancellationToken cancellationToken);
 
     Task<List<string>> GetPermissionsAsync(string userId, CancellationToken cancellationToken);
+    Task<AuthorizationContextDto> GetAuthorizationAsync(string userId, CancellationToken cancellationToken);
     Task<bool> HasPermissionAsync(string userId, string permission, CancellationToken cancellationToken = default);
 
     Task<string> ConfirmEmailAsync(string userId, string code, CancellationToken cancellationToken);

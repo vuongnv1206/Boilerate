@@ -11,8 +11,8 @@ public sealed class FunctionsController(ICapabilityService service) : BaseApiCon
 {
     [HttpGet] [MustHavePermission(AppAction.View, AppFunction.Function)]  public Task<List<FunctionDto>> List(CancellationToken ct) => service.GetFunctionsAsync(ct);
     [HttpGet("{id:guid}")] [MustHavePermission(AppAction.View, AppFunction.Function)]  public Task<FunctionDto> Get(Guid id, CancellationToken ct) => service.GetFunctionAsync(id, ct);
-    [HttpPost] [MustHavePermission(AppAction.Create, AppFunction.Function)]  public Task<FunctionDto> Create(CapabilityRequest request, CancellationToken ct) => service.CreateFunctionAsync(request, ct);
-    [HttpPut("{id:guid}")] [MustHavePermission(AppAction.Update, AppFunction.Function)]  public Task<FunctionDto> Update(Guid id, CapabilityRequest request, CancellationToken ct) => service.UpdateFunctionAsync(id, request, ct);
+    [HttpPost] [MustHavePermission(AppAction.Create, AppFunction.Function)]  public Task<FunctionDto> Create(FunctionRequest request, CancellationToken ct) => service.CreateFunctionAsync(request, ct);
+    [HttpPut("{id:guid}")] [MustHavePermission(AppAction.Update, AppFunction.Function)]  public Task<FunctionDto> Update(Guid id, FunctionRequest request, CancellationToken ct) => service.UpdateFunctionAsync(id, request, ct);
     [HttpPut("{id:guid}/actions")] [MustHavePermission(AppAction.Update, AppFunction.Function)]  public Task<FunctionDto> SetActions(Guid id, FunctionActionsRequest request, CancellationToken ct) => service.UpdateActionsAsync(id, request, ct);
     [HttpDelete("{id:guid}")] [MustHavePermission(AppAction.Delete, AppFunction.Function)]  public async Task<IActionResult> Delete(Guid id, [FromQuery] string version, CancellationToken ct)
         { await service.DeleteFunctionAsync(id, version, ct); return NoContent(); }

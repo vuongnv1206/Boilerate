@@ -1,10 +1,13 @@
 using Boilerate.Domain.Identity;
+using Boilerate.Application.Identity.Users;
 using Boilerate.Shared.Authorization;
 using Microsoft.EntityFrameworkCore;
 namespace Boilerate.Infrastructure.Identity;
 internal partial class UserService
 {
     private readonly Dictionary<string, bool> _permissionDecisions = new(StringComparer.Ordinal);
+    public async Task<AuthorizationContextDto> GetAuthorizationAsync(string userId, CancellationToken cancellationToken) =>
+        new(await GetPermissionsAsync(userId, cancellationToken), await _guard.IsAdminAsync(userId, cancellationToken));
     private IQueryable<Permission> EffectiveGrants(string userId) => _db.Permissions.AsNoTracking().Where(grant =>
         grant.DeletedOn == null && grant.Function.IsActive && grant.Action.IsActive &&
         _db.Users.Any(user => user.Id == userId && user.IsActive) &&

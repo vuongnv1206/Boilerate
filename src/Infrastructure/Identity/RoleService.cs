@@ -43,7 +43,7 @@ internal sealed class RoleService : IRoleService
         var grants = await _db.Permissions.Where(x => x.RoleId == roleId).ToListAsync(cancellationToken);
         return functions.Select(f => new FunctionDto
         {
-            Id = f.Id, Code = f.Code, Name = f.Name, IsActive = f.IsActive, Version = f.Version,
+            Id = f.Id, GroupId = f.GroupId, Code = f.Code, Name = f.Name, IsActive = f.IsActive, Version = f.Version,
             ActionDtos = f.ActionInFunctions.Select(p => new ActionDto
             {
                 Id = p.ActionId, Code = p.Action.Code, Name = p.Action.Name, Version = p.Action.Version,
@@ -88,8 +88,10 @@ internal sealed class RoleService : IRoleService
         var valid = (await _db.ActionInFunctions.Where(p => p.IsActive && p.Action.IsActive && p.Function.IsActive)
             .Select(p => new { p.FunctionId, p.ActionId }).ToListAsync(cancellationToken))
             .Select(p => (p.FunctionId, p.ActionId)).ToHashSet();
-        if (!wanted.IsSubsetOf(valid)) throw new FluentValidation.ValidationException("Unknown or inactive action/function pair.");
         var current = await _db.Permissions.IgnoreQueryFilters().Where(p => p.RoleId == role.Id).ToListAsync(cancellationToken);
+        // Existing inactive grants may be retained or revoked, never newly assigned/reactivated.
+        valid.UnionWith(current.Where(p => p.DeletedOn == null).Select(p => (p.FunctionId, p.ActionId)));
+        if (!wanted.IsSubsetOf(valid)) throw new FluentValidation.ValidationException("Unknown or inactive action/function pair.");
         if (role.NormalizedName == "ADMIN")
         {
             var administrationPairs = (await _db.ActionInFunctions.Where(p => p.IsActive)

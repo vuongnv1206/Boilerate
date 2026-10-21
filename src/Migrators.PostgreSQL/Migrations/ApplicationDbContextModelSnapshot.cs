@@ -881,6 +881,9 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -902,10 +905,91 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("GroupId");
+
                     b.HasIndex("NormalizedCode")
                         .IsUnique();
 
                     b.ToTable("Functions", "Identity");
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Identity.FunctionGroup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("NormalizedCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedCode")
+                        .IsUnique();
+
+                    b.ToTable("FunctionGroups", "Identity", t =>
+                        {
+                            t.HasCheckConstraint("CK_FunctionGroups_SortOrder", "\"SortOrder\" >= 0");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("cd9a1000-0000-4000-8000-000000000001"),
+                            Code = "System",
+                            Name = "Hệ thống",
+                            NormalizedCode = "SYSTEM",
+                            SortOrder = 10,
+                            Version = "initial"
+                        },
+                        new
+                        {
+                            Id = new Guid("cd9a1000-0000-4000-8000-000000000002"),
+                            Code = "Catalog",
+                            Name = "Danh mục và sản phẩm",
+                            NormalizedCode = "CATALOG",
+                            SortOrder = 20,
+                            Version = "initial"
+                        },
+                        new
+                        {
+                            Id = new Guid("cd9a1000-0000-4000-8000-000000000003"),
+                            Code = "Orders",
+                            Name = "Đơn hàng",
+                            NormalizedCode = "ORDERS",
+                            SortOrder = 30,
+                            Version = "initial"
+                        },
+                        new
+                        {
+                            Id = new Guid("cd9a1000-0000-4000-8000-000000000004"),
+                            Code = "Other",
+                            Name = "Chức năng khác",
+                            NormalizedCode = "OTHER",
+                            SortOrder = 99,
+                            Version = "initial"
+                        });
                 });
 
             modelBuilder.Entity("Boilerate.Domain.Identity.Permission", b =>
@@ -2646,6 +2730,17 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Identity.Function", b =>
+                {
+                    b.HasOne("Boilerate.Domain.Identity.FunctionGroup", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Group");
                 });
 
             modelBuilder.Entity("Boilerate.Domain.Identity.Permission", b =>

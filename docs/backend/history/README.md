@@ -52,3 +52,5 @@ Mỗi bước ghi mục tiêu, thay đổi, quyết định, kiểm chứng và 
 Sau đợt này, tạo bản ghi ngay khi thực hiện từng bước và cập nhật feature plan trong cùng thay đổi. Không sửa mất kết quả cũ khi có lượt test mới; bổ sung kết quả mới cùng phạm vi source của nó.
 
 Dùng `git show <hash>` để đọc thay đổi và `git log -- docs/backend/history/ docs/history/` để tra commit của bản ghi tổng hợp cuối. Hash của commit 06 không tự ghi vào nội dung của chính nó.
+
+- 2026-10-21: [Phân quyền theo nhóm](../features/grouped-authorization.md): nhóm chức năng từ database, ngữ cảnh quyền cá nhân và quản trị vai trò/người dùng; giữ grant cũ và bảo vệ CentralAdmin, kiểm chứng SQL Server cô lập.
