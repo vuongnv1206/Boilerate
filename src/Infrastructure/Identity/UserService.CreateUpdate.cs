@@ -81,6 +81,8 @@ internal partial class UserService
             await using var transaction = await _db.Database.BeginTransactionAsync();
             await LockAccountAsync(user.Id);
             await _db.Entry(user).ReloadAsync();
+            if (!string.IsNullOrWhiteSpace(request.Version))
+                AclGuard.CheckVersion(request.Version, user.ConcurrencyStamp);
             var previousPhone = user.PhoneNumber;
             user.FirstName = request.FirstName;
             user.LastName = request.LastName;

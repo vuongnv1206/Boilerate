@@ -5,6 +5,7 @@ namespace Boilerate.Application.Identity.Users;
 public class UpdateUserRequest
 {
     public string Id { get; set; } = default!;
+    public string? Version { get; set; }
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
     public string? PhoneNumber { get; set; }

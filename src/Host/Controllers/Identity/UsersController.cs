@@ -11,7 +11,7 @@ namespace Boilerate.Host.Controllers.Identity;
 
 /// <summary>
 /// Users Controller - User management APIs
-/// Endpoints: List users, Get user, Create user, Assign roles, Email confirmation, Password reset
+/// Endpoints: List users, Get user, Create/update user, Status and role management, Email confirmation, Password reset
 /// </summary>
 [Authorize(Policy = "CentralAdmin")]
 public class UsersController : BaseApiController
@@ -98,6 +98,23 @@ public class UsersController : BaseApiController
     }
 
     /// <summary>
+    /// Cập nhật hồ sơ user (Admin only)
+    /// Requires: Users.Update permission
+    /// </summary>
+    [HttpPut("{id}")]
+    [Consumes("multipart/form-data")]
+    [MustHavePermission(AppAction.Update, AppFunction.User)]
+    [OpenApiOperation("Updates a user's profile.", "")]
+    public async Task<ActionResult> UpdateAsync(
+        string id,
+        [FromForm] UpdateUserRequest request)
+    {
+        request.Id = id;
+        await _userService.UpdateAsync(request, id);
+        return Ok(new { message = "User profile updated successfully" });
+    }
+
+    /// <summary>
     /// Self-registration - User tự tạo tài khoản (Public)
     /// Anonymous endpoint - Không cần authentication
     /// </summary>
@@ -131,6 +148,29 @@ public class UsersController : BaseApiController
 
         await _userService.ToggleStatusAsync(request, cancellationToken);
         return Ok(new { message = "User status updated successfully" });
+    }
+
+    /// <summary>
+    /// Gửi lại liên kết đặt lại mật khẩu cho user
+    /// Requires: Users.Update permission
+    /// </summary>
+    [HttpPost("{id}/password-reset")]
+    [MustHavePermission(AppAction.Update, AppFunction.User)]
+    [OpenApiOperation("Sends a password reset link to a user.", "")]
+    public async Task<ActionResult<string>> RequestPasswordResetAsync(
+        string id,
+        CancellationToken cancellationToken)
+    {
+        var user = await _userService.GetAsync(id, cancellationToken);
+        if (string.IsNullOrWhiteSpace(user.Email))
+        {
+            return BadRequest("User does not have an email address.");
+        }
+
+        var message = await _userService.ForgotPasswordAsync(
+            new ForgotPasswordRequest { Email = user.Email },
+            GetOriginFromRequest());
+        return Ok(message);
     }
 
     /// <summary>
