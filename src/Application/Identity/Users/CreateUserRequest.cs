@@ -43,7 +43,7 @@ public class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
 
         RuleFor(p => p.Password).Cascade(CascadeMode.Stop)
             .NotEmpty()
-            .MinimumLength(12);
+            .MinimumLength(9);
 
         RuleFor(p => p.ConfirmPassword).Cascade(CascadeMode.Stop)
             .NotEmpty()

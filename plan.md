@@ -1,8 +1,8 @@
 # Kế hoạch phát triển
 
-Kế hoạch được quản lý song song với code trong [docs index](docs/README.md). Nguồn tiến độ chính thức là [roadmap BE](docs/backend/roadmap.md) và [roadmap FE](docs/frontend/roadmap.md); mỗi tính năng có kế hoạch theo bước và lịch sử riêng.
+Kế hoạch được quản lý song song với code trong [docs index](docs/README.md). Nguồn tiến độ chính thức là [roadmap BE](docs/backend/roadmap.md) và [roadmap FE](docs/frontend/roadmap.md); tính năng lớn có hồ sơ riêng, lịch sử chỉ lưu mốc tính năng đã triển khai.
 
-- [Frontend: điểm bắt đầu và các quyết định chưa chốt](docs/frontend/README.md).
+- [Frontend: source, quy chuẩn và tích hợp hiện tại](docs/frontend/README.md).
 - [Nghiệp vụ và quy trình dùng chung](docs/shared/README.md).
 - [Phối hợp và hợp đồng tích hợp BE–FE](docs/shared/contracts/frontend-backend.md).
 
@@ -15,7 +15,7 @@ Các hồ sơ BE:
 - [Giao hàng vật lý từng phần và ghi nhận tiền COD](docs/backend/features/physical-shipping.md).
 - [Gia hạn thủ công có nhận việc và xác minh kết quả](docs/backend/features/manual-renewals.md).
 - [Hoàn tiền và nhận hàng trả theo shipment](docs/backend/features/refunds-returns.md).
-- [Lịch sử từng bước và commit](docs/backend/history/README.md).
+- [Lịch sử tính năng BE](docs/backend/history/README.md).
 - [Quy trình phát triển tài liệu cùng tính năng](docs/shared/development-workflow.md).
 - [Bằng chứng kiểm chứng và giới hạn nghiệm thu](docs/backend/verification/2026-10-17-commerce.md).
 

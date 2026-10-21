@@ -13,7 +13,7 @@ public sealed class ResetPasswordRequestValidator : FluentValidation.AbstractVal
     public ResetPasswordRequestValidator()
     {
         RuleFor(x => x.Email).NotEmpty().EmailAddress();
-        RuleFor(x => x.Password).NotEmpty().MinimumLength(12);
+        RuleFor(x => x.Password).NotEmpty().MinimumLength(9);
         RuleFor(x => x.Token).NotEmpty();
     }
 }

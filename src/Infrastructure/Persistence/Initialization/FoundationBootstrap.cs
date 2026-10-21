@@ -68,8 +68,8 @@ public sealed class FoundationBootstrap : IScopedService
             var email = Environment.GetEnvironmentVariable("BOILERATE_BOOTSTRAP_EMAIL");
             var password = Environment.GetEnvironmentVariable("BOILERATE_BOOTSTRAP_PASSWORD");
             if (string.IsNullOrWhiteSpace(email) || !System.Net.Mail.MailAddress.TryCreate(email, out _) ||
-                string.IsNullOrWhiteSpace(password) || password.Length < 12)
-                throw new InvalidOperationException("Supply BOILERATE_BOOTSTRAP_EMAIL and a unique BOILERATE_BOOTSTRAP_PASSWORD of at least 12 characters.");
+                string.IsNullOrWhiteSpace(password) || password.Length < 9)
+                throw new InvalidOperationException("Supply BOILERATE_BOOTSTRAP_EMAIL and a unique BOILERATE_BOOTSTRAP_PASSWORD of at least 9 characters.");
             Check(await _roles.CreateAsync(new ApplicationRole("Admin", "Central security administrators")));
             Check(await _roles.CreateAsync(new ApplicationRole("Basic", "No grants until explicitly assigned")));
             var user = new ApplicationUser { UserName = email, Email = email, EmailConfirmed = true, IsActive = true, FirstName = "Administrator" };

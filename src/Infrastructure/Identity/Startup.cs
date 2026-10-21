@@ -12,7 +12,7 @@ internal static class Startup
         services
             .AddIdentity<ApplicationUser, ApplicationRole>(options =>
             {
-                options.Password.RequiredLength = 12;
+                options.Password.RequiredLength = 9;
                 options.Lockout.AllowedForNewUsers = true;
                 options.Lockout.MaxFailedAccessAttempts = config.GetValue("SecuritySettings:Lockout:MaxFailedAccessAttempts", 5);
                 options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(config.GetValue("SecuritySettings:Lockout:DurationMinutes", 15));

@@ -1,12 +1,12 @@
 # Boilerate
 
-Backend template .NET 10: Identity, quyền Function–Action từ database, nhiều phiên đăng nhập, audit, Catalog tùy chọn và adapters mail/storage/cache/jobs. Có API quản trị; ứng dụng giao diện nằm ở sibling `../Frontend/` trong workspace `BoilerateWorkspace`, chưa được scaffold.
+Backend template .NET 10: Identity, quyền Function–Action từ database, nhiều phiên đăng nhập, audit, Catalog tùy chọn và adapters mail/storage/cache/jobs. Có API quản trị; giao diện Catalog nằm trong repo sibling [Boilerate.Frontend](../Boilerate.Frontend/README.md), có sáu màn Collections và browser session.
 
 ## Kế hoạch và lịch sử phát triển
 
 [AGENTS.md](AGENTS.md) là nguồn hướng dẫn agent duy nhất: gồm nguyên tắc làm việc chung và quy ước tài liệu/phát triển riêng của repository.
 
-Code và tài liệu được phát triển song song theo [quy trình chung](docs/shared/development-workflow.md), có quy ước trong [AGENTS.md](AGENTS.md). [Docs index](docs/README.md) tách [BE](docs/backend/README.md), [FE](docs/frontend/README.md) và [nghiệp vụ/quy trình chung](docs/shared/README.md). Tiến độ BE nằm tại [roadmap BE](docs/backend/roadmap.md), [hồ sơ tính năng](docs/backend/features/shop-mvp.md), [history](docs/backend/history/README.md) và [báo cáo kiểm chứng](docs/backend/verification/2026-10-19-aftersales.md). FE có [lộ trình riêng, chưa triển khai](docs/frontend/roadmap.md). Khi bắt đầu tính năng, dùng [mẫu kế hoạch](docs/shared/templates/feature-plan.md) và đọc [hướng dẫn phối hợp BE–FE](docs/shared/contracts/frontend-backend.md).
+Code và tài liệu được phát triển song song theo [quy trình chung](docs/shared/development-workflow.md), có quy ước trong [AGENTS.md](AGENTS.md). [Docs index](docs/README.md) tách [BE](docs/backend/README.md), [FE](docs/frontend/README.md) và [nghiệp vụ/quy trình chung](docs/shared/README.md). Tiến độ BE nằm tại [roadmap BE](docs/backend/roadmap.md), [hồ sơ tính năng](docs/backend/features/shop-mvp.md), [history](docs/backend/history/README.md) và [báo cáo kiểm chứng](docs/backend/verification/2026-10-19-aftersales.md). FE giữ [quy chuẩn và tài liệu hiện tại trong repo riêng](../Boilerate.Frontend/docs/README.md). Tính năng lớn dùng [mẫu kế hoạch](docs/shared/templates/feature-plan.md); lịch sử chỉ ghi mốc tính năng, chi tiết code tra Git. Đọc [hướng dẫn phối hợp BE–FE](docs/shared/contracts/frontend-backend.md).
 
 ## Cấu trúc và context
 
@@ -29,8 +29,8 @@ $env:SecuritySettings__JwtSettings__Key = "<khóa ngẫu nhiên riêng ít nhấ
 dotnet ef database update --project src/Migrators.PostgreSQL --startup-project src/Host -- --provider postgresql
 # SQL Server tương ứng:
 # dotnet ef database update --project src/Migrators.MSSQL --startup-project src/Host -- --provider mssql
-$env:BOILERATE_BOOTSTRAP_EMAIL = "<email admin đầu tiên>"
-$env:BOILERATE_BOOTSTRAP_PASSWORD = "<password riêng ít nhất 12 ký tự>"
+$env:BOILERATE_BOOTSTRAP_EMAIL = "admin@gmail.com" # local Development default
+$env:BOILERATE_BOOTSTRAP_PASSWORD = "Abcd@1234" # local Development default
 dotnet run --project src/Host --no-launch-profile -- --bootstrap-admin
 Remove-Item Env:BOILERATE_BOOTSTRAP_PASSWORD
 dotnet run --project src/Host --no-launch-profile
@@ -79,7 +79,7 @@ Update definition gửi `{code,name,isActive,version}`; Code giữ nguyên. DELE
 
 POST `/api/tokens/get`: `{email,password}`; POST `/api/tokens/refresh`: `{refreshToken}`. Access 15 phút, refresh 30 ngày mặc định; DB chỉ giữ SHA256. Refresh xoay nguyên tử một lần; reuse revoke family. Mỗi login family độc lập. Access đã phát trong family dùng đến expiry nếu family chưa revoked.
 
-GET `/api/tokens/sessions`, DELETE `/api/tokens/sessions/{id}`, DELETE `/api/tokens/sessions` chỉ thao tác phiên của mình. JWT kiểm tra issuer/audience/sid và account/session DB mỗi request. Disabled/lockout/revoked bị chặn; đổi/reset password revoke all trong transaction. Password mới tối thiểu 12; password hash cũ vẫn dùng được. Lockout mặc định 5 lần/15 phút, cấu hình SecuritySettings:Lockout:MaxFailedAccessAttempts/DurationMinutes; rate limit cấu hình SecuritySettings:AuthenticationRequestsPerMinute theo remote IP. Khi sau proxy, deployment cần trusted forwarded headers, không tin X-Forwarded-For tùy ý.
+GET `/api/tokens/sessions`, DELETE `/api/tokens/sessions/{id}`, DELETE `/api/tokens/sessions` chỉ thao tác phiên của mình. JWT kiểm tra issuer/audience/sid và account/session DB mỗi request. Disabled/lockout/revoked bị chặn; đổi/reset password revoke all trong transaction. Password mới tối thiểu 9; password hash cũ vẫn dùng được. Lockout mặc định 5 lần/15 phút, cấu hình SecuritySettings:Lockout:MaxFailedAccessAttempts/DurationMinutes; rate limit cấu hình SecuritySettings:AuthenticationRequestsPerMinute theo remote IP. Khi sau proxy, deployment cần trusted forwarded headers, không tin X-Forwarded-For tùy ý.
 
 Self-registration/password recovery mặc định tắt. Nếu bật confirm/recovery, cần PublicBaseUrl, SMTP và durable Hangfire. Google ID token kiểm tra audience; Facebook kiểm tra app/user debug_token. Email trùng không tự link account: login account hiện tại rồi gọi `/api/auth/google/link` hoặc `/api/auth/facebook/link`. Account mới nhận Basic không có grants mặc định. Lỗi production ProblemDetails có code/traceId, không exception internals.
 

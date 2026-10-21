@@ -17,7 +17,7 @@ public class ChangePasswordRequestValidator : AbstractValidator<ChangePasswordRe
             .NotEmpty();
 
         RuleFor(p => p.NewPassword)
-            .NotEmpty().MinimumLength(12);
+            .NotEmpty().MinimumLength(9);
 
         RuleFor(p => p.ConfirmNewPassword)
             .Equal(p => p.NewPassword)

@@ -1,13 +1,13 @@
 # Quy trình phát triển cùng tài liệu
 
-Mỗi tính năng được xây dựng song song với tài liệu. Không đợi hoàn tất một module lớn mới viết lại lịch sử. Với sửa lỗi nhỏ, có thể gộp kế hoạch, bước sửa và kiểm chứng trong một mục nhật ký; với thay đổi database, API hoặc nghiệp vụ, tạo hồ sơ tính năng theo [mẫu](templates/feature-plan.md).
+Tài liệu hợp đồng được cập nhật cùng tính năng. Lịch sử chỉ giữ mốc tính năng hoặc thay đổi hành vi đáng kể; Git giữ chi tiết code. Sửa lỗi nhỏ/refactor/format/test không cần nhật ký riêng; với thay đổi database, API hoặc nghiệp vụ, tạo hồ sơ tính năng theo [mẫu](templates/feature-plan.md).
 
 ## Chọn nơi ghi tài liệu
 
 | Công việc | Hồ sơ, lịch sử, bằng chứng | Nguồn tiến độ |
 |---|---|---|
 | Backend | `docs/backend/features/`, `history/`, `verification/` trong cùng khu vực BE | [Roadmap BE](../backend/roadmap.md) |
-| Frontend | `docs/frontend/features/`, `history/`, `verification/` trong cùng khu vực FE | [Roadmap FE](../frontend/roadmap.md) |
+| Frontend | Tài liệu hiện hành trong repo sibling `Boilerate.Frontend/docs/` | [Roadmap FE](../frontend/roadmap.md) |
 | Nghiệp vụ/quy trình hoặc phối hợp cả hai | `docs/shared/features/`, `history/`, `verification/` trong shared; liên kết hồ sơ BE/FE nếu có | Các mốc BE/FE bị ảnh hưởng; không tạo bản sao trạng thái ở shared |
 
 Chỉ tạo thư mục/index khi có nội dung đầu tiên. Mỗi hợp đồng có một nguồn: nghiệp vụ ở shared, API/database ở BE, thiết kế và hành vi giao diện ở FE. Thay đổi đi qua hai bên dùng một hồ sơ điều phối liên kết phần việc và bằng chứng riêng, theo [hướng dẫn tích hợp](contracts/frontend-backend.md).
@@ -68,7 +68,7 @@ Trước mỗi commit, xem diff của code lẫn tài liệu. Tài liệu phải
 - Chia theo thay đổi có ý nghĩa: thiết kế; domain/persistence; use case/API; vận hành; regression và tài liệu tổng kết khi có thể tách độc lập.
 - Mỗi commit giữ repo nhất quán. Nếu tách migration khỏi domain làm build/model sai, giữ chúng trong cùng commit.
 - Dùng thông điệp rõ phạm vi, ví dụ `feat(catalog): support multiple categories per product` hoặc `fix(inventory): prevent duplicate stock adjustments`.
-- Ghi commit thực tế vào nhật ký sau khi Git tạo hash. Có thể ghi bảng tổng kết trong commit tài liệu kế tiếp; không điền hash dự đoán hoặc hash của commit chưa tồn tại.
+- Tra chi tiết commit trong Git; history chỉ tóm tắt năng lực đã triển khai, không giữ bảng commit hoặc nhật ký từng lần chạy.
 - Không commit secret, dữ liệu upload, database test, log máy hoặc kết quả kiểm thử cũ vào template. Báo cáo tóm tắt có chọn lọc và lệnh tái chạy thuộc tài liệu trong Git.
 
 Không sửa lại lịch sử đã ghi chỉ để khiến quá trình trông tuyến tính. Nếu một bước bị làm lại, ghi quyết định thay thế và commit sửa tương ứng.
@@ -76,10 +76,12 @@ Không sửa lại lịch sử đã ghi chỉ để khiến quá trình trông t
 ## Bước 6 — Cập nhật trạng thái và việc còn lại
 
 1. Cập nhật checklist trong hồ sơ tính năng và trạng thái mốc trong roadmap.
-2. Thêm nhật ký theo ngày tại `docs/<area>/history/`, liên kết từ index history của khu vực đó, dẫn hồ sơ/thiết kế/API và các commit đã có.
+2. Chỉ thêm mốc vào history khi hoàn thành tính năng hoặc thay đổi hành vi đáng kể; không tạo dated file sau mỗi bước. Liên kết tài liệu đang sở hữu hành vi.
 3. Nêu rõ đã triển khai, đã kiểm chứng đến đâu, điểm chưa nghiệm thu và điều kiện để hoàn tất chúng.
 4. Báo cho người dùng kết quả, các commit đã tạo và liên kết tài liệu.
 
 Một mốc chỉ hoàn tất khi tiêu chí của mốc được đáp ứng. Nếu Docker, CI hoặc adapter ngoài chưa chạy được thì giữ phần đó ở trạng thái chờ nghiệm thu, dù phần code của tính năng đã có.
 
 Kết quả BE, FE và deployment được ghi riêng theo phạm vi chạy; không dùng số kiểm thử BE để đánh dấu giao diện hoặc tích hợp đã hoàn tất.
+
+Ưu tiên quy ước gọn này khi các mẫu/hồ sơ cũ còn yêu cầu nhật ký sau từng bước. Báo routine checks trong handoff; chỉ giữ một báo cáo tích hợp/nghiệm thu cần thiết cho mốc, raw artifacts ngoài Git. FE duy trì rulebook và evidence trong repo riêng.
