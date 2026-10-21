@@ -1,0 +1,55 @@
+{
+  "scenarios": [
+    {
+      "key": "prepaid-pending-payment",
+      "paymentMethod": "Prepaid",
+      "lines": [{ "sku": "DEMO-ACC-001", "quantity": 1 }],
+      "action": "None"
+    },
+    {
+      "key": "cod-awaiting-processing",
+      "paymentMethod": "CashOnDelivery",
+      "lines": [{ "sku": "DEMO-LIV-002", "quantity": 1 }],
+      "action": "None"
+    },
+    {
+      "key": "prepaid-needs-review",
+      "paymentMethod": "Prepaid",
+      "lines": [{ "sku": "DEMO-FUR-004", "quantity": 1 }],
+      "action": "ConfirmAndReview"
+    },
+    {
+      "key": "completed-cod",
+      "paymentMethod": "CashOnDelivery",
+      "lines": [{ "sku": "DEMO-LIV-005", "quantity": 1 }],
+      "action": "CompleteCod"
+    },
+    {
+      "key": "cancelled-prepaid",
+      "paymentMethod": "Prepaid",
+      "lines": [{ "sku": "DEMO-FAS-007", "quantity": 1 }],
+      "action": "Cancel"
+    },
+    {
+      "key": "expired-prepaid",
+      "paymentMethod": "Prepaid",
+      "lines": [{ "sku": "DEMO-STA-008", "quantity": 1 }],
+      "action": "Expire"
+    },
+    {
+      "key": "multi-line-cod",
+      "paymentMethod": "CashOnDelivery",
+      "lines": [
+        { "sku": "DEMO-ACC-009", "quantity": 1 },
+        { "sku": "DEMO-LIV-010", "quantity": 1 }
+      ],
+      "action": "None"
+    },
+    {
+      "key": "timeline-completed-cod",
+      "paymentMethod": "CashOnDelivery",
+      "lines": [{ "sku": "DEMO-STA-013", "quantity": 1 }],
+      "action": "CompleteCod"
+    }
+  ]
+}

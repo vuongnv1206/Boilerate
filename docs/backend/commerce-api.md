@@ -112,7 +112,8 @@ Lát này dùng đăng nhập Identity hiện có; không nhận CustomerId tron
 | GET `/api/orders/mine?page=1&size=20` | Danh sách đơn của chính khách |
 | GET `/api/orders/{id}` | Chi tiết đơn của khách; sai owner trả404 |
 | POST `/api/orders/{id}/cancel` | `{version}`; hủy/nhả hàng đơn chờ xử lý của khách |
-| GET `/api/admin/orders`, GET `/{id}` | Mọi đơn; Order.View ở controller và service |
+| GET `/api/admin/orders?page=1&size=20&search=&status=&paymentStatus=&fulfillmentStatus=&createdFrom=&createdTo=`, GET `/{id}` | Mọi đơn; Order.View ở controller và service. List search theo number/email/phone, filter server-side và sort ổn định `CreatedOn DESC, Id DESC`; query cũ chỉ page/size vẫn hợp lệ |
+| GET `/api/admin/orders/{id}/history` | Timeline safe DTO từ audit trail; Order.View; không trả raw OldValues/NewValues hoặc protected content |
 | POST `/api/admin/orders/{id}/cancel` | `{version}`; Order.Cancel ở controller và service |
 | POST `/api/admin/orders/{id}/payment-confirmations` | Xác nhận đủ tiền thực nhận, Source mặc định ManualBankTransfer hoặc ManualCOD sau giao đủ; Payment.Confirm ở controller và service |
 | POST `/api/admin/orders/{id}/retry-fulfillment` | `{version}`; Order.Fulfill; thử lại đơn Paid + NeedsReview sau bổ sung kho/khắc phục key |

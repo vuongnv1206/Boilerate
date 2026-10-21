@@ -22,11 +22,33 @@ public sealed record OrderDto(Guid Id, string Number, string Version, OrderStatu
     decimal Subtotal, decimal ShippingAmount, decimal Total, string Currency, DateTime? ExpiresAt,
     string RecipientName, string Email, string Phone, string? ShippingAddress, List<OrderLineDto> Items,
     OrderPaymentStatus PaymentStatus = OrderPaymentStatus.Unpaid,
-    OrderFulfillmentStatus FulfillmentStatus = OrderFulfillmentStatus.Pending, DateTime? PaidAtUtc = null);
+    OrderFulfillmentStatus FulfillmentStatus = OrderFulfillmentStatus.Pending, DateTime? PaidAtUtc = null,
+    DateTime CreatedOn = default, bool PhysicalDispatchStarted = false);
 public sealed record OrderSummary(Guid Id, string Number, OrderStatus Status, OrderPaymentMethod PaymentMethod, decimal Total,
     string Currency, DateTime CreatedOn, DateTime? ExpiresAt,
     OrderPaymentStatus PaymentStatus = OrderPaymentStatus.Unpaid,
-    OrderFulfillmentStatus FulfillmentStatus = OrderFulfillmentStatus.Pending, DateTime? PaidAtUtc = null);
+    OrderFulfillmentStatus FulfillmentStatus = OrderFulfillmentStatus.Pending, DateTime? PaidAtUtc = null,
+    string RecipientName = "", string Email = "", string Phone = "");
+
+public sealed class AdminOrderQuery
+{
+    public int Page { get; init; } = 1;
+    public int Size { get; init; } = 20;
+    public string? Search { get; init; }
+    public OrderStatus? Status { get; init; }
+    public OrderPaymentStatus? PaymentStatus { get; init; }
+    public OrderFulfillmentStatus? FulfillmentStatus { get; init; }
+    public DateTime? CreatedFrom { get; init; }
+    public DateTime? CreatedTo { get; init; }
+}
+
+public sealed record OrderHistoryEntryDto(Guid Id, DateTime OccurredAtUtc, string Action,
+    string? ActorDisplayName, string RelatedEntityType, string SafeSummary);
+
+public interface IOrderHistoryService
+{
+    Task<IReadOnlyList<OrderHistoryEntryDto>> GetOrderHistoryAsync(Guid orderId, CancellationToken ct);
+}
 
 public interface IOrderingService
 {
@@ -35,6 +57,7 @@ public interface IOrderingService
     Task<OrderDto> CheckoutAsync(Checkout request, CancellationToken ct);
     Task<OrderDto> GetOrderAsync(Guid id, bool admin, CancellationToken ct);
     Task<Page<OrderSummary>> OrdersAsync(int page, int size, bool admin, CancellationToken ct);
+    Task<Page<OrderSummary>> OrdersAsync(AdminOrderQuery query, bool admin, CancellationToken ct);
     Task<OrderDto> CancelAsync(Guid id, CancelOrder request, bool admin, CancellationToken ct);
     Task<int> ExpireAsync(CancellationToken ct);
 }

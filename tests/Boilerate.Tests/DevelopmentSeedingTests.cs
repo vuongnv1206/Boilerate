@@ -54,6 +54,15 @@ public sealed class DevelopmentSeedingTests
     }
 
     [Fact]
+    public async Task OrderingDataIsReadFromTheCopiedJsonFile()
+    {
+        var data = await OrderingSeedData.ReadAsync(default);
+        Assert.Equal(8, data.Scenarios.Length);
+        Assert.Contains(data.Scenarios, scenario => scenario.Key == "prepaid-needs-review" && scenario.Action == "ConfirmAndReview");
+        Assert.Contains(data.Scenarios, scenario => scenario.Lines.Length == 2);
+    }
+
+    [Fact]
     public async Task CancellationIsForwardedAndStopsBeforeTheNextSeeder()
     {
         using var cancellation = new CancellationTokenSource();
@@ -92,10 +101,12 @@ public sealed class DevelopmentSeedingTests
         await using var withCatalog = new FoundationDatabase("mssql", catalog: true);
         using var first = withCatalog.Scope();
         using var second = withCatalog.Scope();
-        var seeder = Assert.Single(first.ServiceProvider.GetServices<ICustomSeeder>());
-        Assert.IsType<CatalogDevelopmentSeeder>(seeder);
-        Assert.Same(seeder, Assert.Single(first.ServiceProvider.GetServices<ICustomSeeder>()));
-        Assert.NotSame(seeder, Assert.Single(second.ServiceProvider.GetServices<ICustomSeeder>()));
+        var seeders = first.ServiceProvider.GetServices<ICustomSeeder>().ToArray();
+        Assert.Collection(seeders,
+            item => Assert.IsType<CatalogDevelopmentSeeder>(item),
+            item => Assert.IsType<OrderingDevelopmentSeeder>(item));
+        Assert.Same(seeders[0], first.ServiceProvider.GetServices<ICustomSeeder>().First());
+        Assert.NotSame(seeders[0], second.ServiceProvider.GetServices<ICustomSeeder>().First());
     }
 
     [Theory, Trait("Category", "ProviderIntegration")]

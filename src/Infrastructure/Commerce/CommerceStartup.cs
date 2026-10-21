@@ -26,6 +26,7 @@ public static class CommerceStartup
         services.TryAddSingleton<TimeProvider>(TimeProvider.System);
         services.AddScoped<OrderingService>();
         services.AddScoped<IOrderingService>(sp => sp.GetRequiredService<OrderingService>());
+        services.AddScoped<IOrderHistoryService>(sp => sp.GetRequiredService<OrderingService>());
         services.AddScoped<IPaymentService>(sp => sp.GetRequiredService<OrderingService>());
         services.AddScoped<IShippingService>(sp => sp.GetRequiredService<OrderingService>());
         services.AddScoped<IRenewalService>(sp => sp.GetRequiredService<OrderingService>());

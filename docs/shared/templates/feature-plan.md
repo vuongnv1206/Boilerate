@@ -25,6 +25,24 @@ Tiêu chí chấp nhận:
 - [ ] `<Tình huống không hợp lệ/quyền thiếu và kết quả.>`
 - [ ] `<Concurrency/rollback/idempotency nếu liên quan.>`
 
+## 1A. Invariant của module
+
+> `<Viết một quy tắc bất biến nghiệp vụ duy nhất, có thể kiểm tra được, và nêu rõ phần nào được phép thay đổi qua command.>`
+
+- Enforcement domain/transaction/DB: `<...>`
+- Enforcement API/permission/version: `<...>`
+- Enforcement FE: `<...>`
+- Test chứng minh invariant: `<...>`
+
+## 1B. Seed và chiến lược replay
+
+- File dữ liệu seed: `<...>`
+- Seeder/runner và thứ tự phụ thuộc: `<...>`
+- Operation key/idempotency: `<...>`
+- Quy tắc không ghi đè dữ liệu operator: `<...>`
+- Actor/quyền tối thiểu và điều kiện fail trước khi ghi: `<...>`
+- Test replay/duplicate và provider: `<...>`
+
 ## 2. Quyết định thiết kế
 
 ### Domain và database — khi có thay đổi

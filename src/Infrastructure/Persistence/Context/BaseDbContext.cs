@@ -109,6 +109,14 @@ public abstract class BaseDbContext : IdentityDbContext<
             throw new InvalidOperationException("Disable digital stock items instead of deleting commerce history.");
         if (ChangeTracker.Entries<Boilerate.Domain.Ordering.OrderItem>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
             throw new InvalidOperationException("Order item snapshots are immutable.");
+        var immutableOrderProperties = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "CartId", "CustomerId", "OperationId", "RequestHash", "Number", "PaymentMethod",
+            "Currency", "Subtotal", "ShippingAmount", "Total", "RecipientName", "Email", "Phone", "ShippingAddress"
+        };
+        if (ChangeTracker.Entries<Boilerate.Domain.Ordering.Order>()
+            .Any(e => e.State == EntityState.Modified && e.Properties.Any(p => p.IsModified && immutableOrderProperties.Contains(p.Metadata.Name))))
+            throw new InvalidOperationException("Order snapshots are immutable; use a lifecycle command for state changes.");
         if (ChangeTracker.Entries<Boilerate.Domain.Shipping.ShipmentItem>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
             throw new InvalidOperationException("Shipment items are append-only dispatch history.");
         if (ChangeTracker.Entries<Boilerate.Domain.Shipping.Shipment>().Any(e => e.State == EntityState.Deleted))

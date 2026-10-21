@@ -28,6 +28,7 @@ Tài liệu được cập nhật cùng phần code liên quan. Mỗi tính năn
 18. [Giao hàng vật lý và ghi nhận COD](features/physical-shipping.md): shipment có số lượng, xuất từ phần đã giữ, giao từng phần, quyền/version/replay và receipt COD độc lập; đã triển khai, trạng thái kiểm chứng theo hồ sơ.
 19. [Gia hạn thủ công](features/manual-renewals.md): nhận việc có lease, Start lưu PendingVerification, xác minh kết quả thực tế, tài khoản đích/bằng chứng được bảo vệ và hoàn tất đơn độc lập Paid.
 20. [Hoàn tiền và nhận hàng trả](features/refunds-returns.md): ledger tiền đã hoàn, return theo shipment, restock có kiểm chứng, full refund đóng phần giao còn lại và COD trả về; trạng thái local/deployment theo [báo cáo](verification/2026-10-19-aftersales.md).
+21. [Admin Orders workspace](features/admin-orders.md): danh sách lọc server-side, detail snapshot read-only, lifecycle commands, safe timeline và seed/replay; trạng thái kiểm chứng tại [báo cáo](verification/2026-10-21-admin-orders.md).
 
 Hướng dẫn dựng installation mới, cấu hình và các lệnh operator nằm tại [README dự án](../../README.md). [plan.md](../../plan.md) chỉ điều hướng; tiến độ chính thức nằm trong roadmap và từng hồ sơ BE.
 

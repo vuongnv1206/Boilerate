@@ -20,7 +20,7 @@ using Microsoft.AspNetCore.DataProtection;
 namespace Boilerate.Infrastructure.Commerce;
 
 public sealed partial class OrderingService(ApplicationDbContext db, CommerceUnitOfWork work, ICurrentUser actor,
-    IUserService users, IOptions<OrderingSettings> settings, TimeProvider clock, IDataProtectionProvider protection) : IOrderingService, IPaymentService, IShippingService, IRenewalService, IAfterSalesService
+    IUserService users, IOptions<OrderingSettings> settings, TimeProvider clock, IDataProtectionProvider protection) : IOrderingService, IOrderHistoryService, IPaymentService, IShippingService, IRenewalService, IAfterSalesService
 {
     private DateTime Now => clock.GetUtcNow().UtcDateTime;
     private Guid Customer()
@@ -239,22 +239,46 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
         return MapOrder(order);
     }
     public async Task<Page<OrderSummary>> OrdersAsync(int page, int size, bool admin, CancellationToken ct)
+        => await OrdersAsync(new AdminOrderQuery { Page = page, Size = size }, admin, ct);
+
+    public async Task<Page<OrderSummary>> OrdersAsync(AdminOrderQuery request, bool admin, CancellationToken ct)
     {
         var customer = Customer();
         if (admin) await AuthorizeAdmin("View", ct);
-        CommerceService.ValidatePage(page, size);
+        CommerceService.ValidatePage(request.Page, request.Size);
+        if (request.CreatedFrom.HasValue && request.CreatedTo.HasValue && request.CreatedFrom > request.CreatedTo)
+            throw new DomainException("CreatedFrom must be earlier than CreatedTo.");
+
         var query = db.Orders.AsNoTracking().Where(o => admin || o.CustomerId == customer);
+        if (request.Status.HasValue)
+            query = query.Where(o => o.Status == request.Status.Value);
+        if (request.PaymentStatus.HasValue)
+            query = query.Where(o => o.PaymentStatus == request.PaymentStatus.Value);
+        if (request.FulfillmentStatus.HasValue)
+            query = query.Where(o => o.FulfillmentStatus == request.FulfillmentStatus.Value);
+        if (request.CreatedFrom.HasValue)
+            query = query.Where(o => o.CreatedOn >= request.CreatedFrom.Value);
+        if (request.CreatedTo.HasValue)
+            query = query.Where(o => o.CreatedOn <= request.CreatedTo.Value);
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var search = request.Search.Trim().ToUpperInvariant();
+            query = query.Where(o => o.Number.ToUpper().Contains(search) ||
+                o.Email.ToUpper().Contains(search) || o.Phone.ToUpper().Contains(search));
+        }
+
         var total = await query.CountAsync(ct);
-        var items = await query.OrderByDescending(o => o.CreatedOn).ThenBy(o => o.Id).Skip((page - 1) * size).Take(size)
+        var items = await query.OrderByDescending(o => o.CreatedOn).ThenByDescending(o => o.Id)
+            .Skip((request.Page - 1) * request.Size).Take(request.Size)
             .Select(o => new OrderSummary(o.Id, o.Number, o.Status, o.PaymentMethod, o.Total, o.Currency, o.CreatedOn, o.ExpiresAt,
-                o.PaymentStatus, o.FulfillmentStatus, o.PaidAtUtc)).ToListAsync(ct);
+                o.PaymentStatus, o.FulfillmentStatus, o.PaidAtUtc, o.RecipientName, o.Email, o.Phone)).ToListAsync(ct);
         // SQL Server datetime2 materializes Unspecified; values are stored as UTC.
         // Normalize after paging/materialization so both providers keep a plain SQL projection.
         items = items.Select(o => o with
         {
             CreatedOn = UtcTimestamp(o.CreatedOn), ExpiresAt = UtcTimestamp(o.ExpiresAt), PaidAtUtc = UtcTimestamp(o.PaidAtUtc)
         }).ToList();
-        return new(items, total, page, size);
+        return new(items, total, request.Page, request.Size);
     }
     public async Task<OrderDto> CancelAsync(Guid id, CancelOrder r, bool admin, CancellationToken ct)
     {
@@ -312,7 +336,8 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
     private static OrderDto MapOrder(Order order) => new(order.Id, order.Number, order.Version, order.Status, order.PaymentMethod,
         order.Subtotal, order.ShippingAmount, order.Total, order.Currency, UtcTimestamp(order.ExpiresAt), order.RecipientName, order.Email, order.Phone,
         order.ShippingAddress, order.Items.OrderBy(i => i.Id).Select(i => new OrderLineDto(i.Id, i.ProductId, i.VariantId, i.Name, i.Sku,
-            i.OptionDescription, i.FulfillmentKind, i.UnitPrice, i.Quantity)).ToList(), order.PaymentStatus, order.FulfillmentStatus, UtcTimestamp(order.PaidAtUtc));
+            i.OptionDescription, i.FulfillmentKind, i.UnitPrice, i.Quantity)).ToList(), order.PaymentStatus, order.FulfillmentStatus,
+        UtcTimestamp(order.PaidAtUtc), UtcTimestamp(order.CreatedOn), order.PhysicalDispatchStarted);
 
     private static DateTime UtcTimestamp(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);
     private static DateTime? UtcTimestamp(DateTime? value) => value.HasValue ? UtcTimestamp(value.Value) : null;

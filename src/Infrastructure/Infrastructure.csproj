@@ -62,6 +62,8 @@
     <EmbeddedResource Include="Exporters/Fonts/*.ttf" />
     <Content Include="Persistence/Initialization/SeedData/catalog.json" Link="SeedData/catalog.json"
              CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Persistence/Initialization/SeedData/ordering.json" Link="SeedData/ordering.json"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Exporters/Fonts/OFL.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

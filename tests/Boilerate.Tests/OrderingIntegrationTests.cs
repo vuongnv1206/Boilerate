@@ -335,6 +335,16 @@ public sealed class OrderingIntegrationTests
         Assert.Equal("Product shirt", snapshot.Items.Single(i => i.ProductId == physical.Id).Name);
         Assert.Equal(100, snapshot.Items.Single(i => i.ProductId == physical.Id).UnitPrice);
         Assert.Equal(840, snapshot.Total);
+
+        db.ChangeTracker.Clear();
+        var persistedOrder = await db.Orders.SingleAsync(item => item.Id == order.Id);
+        db.Entry(persistedOrder).Property(item => item.Total).CurrentValue = 999;
+        await Assert.ThrowsAsync<InvalidOperationException>(() => db.SaveChangesAsync());
+        db.ChangeTracker.Clear();
+        var persistedItem = await db.OrderItems.SingleAsync(item => item.OrderId == order.Id);
+        db.Entry(persistedItem).Property(item => item.Quantity).CurrentValue = 99;
+        await Assert.ThrowsAsync<InvalidOperationException>(() => db.SaveChangesAsync());
+
         Assert.False(db.Database.HasPendingModelChanges());
     }
 

@@ -35,7 +35,10 @@ internal static class DevelopmentSeederRegistration
     {
         services.AddScoped<CustomSeederRunner>();
         if (configuration.GetValue<bool>("Modules:Catalog:Enabled"))
+        {
             services.AddScoped<ICustomSeeder, CatalogDevelopmentSeeder>();
+            services.AddScoped<ICustomSeeder, OrderingDevelopmentSeeder>();
+        }
         return services;
     }
 }

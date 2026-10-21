@@ -138,6 +138,7 @@ public sealed class ShippingIntegrationTests
         Assert.Equal(3, movement.QuantityAfter);
         Assert.Equal(movement.Id, (await db.Set<ShipmentItem>().AsNoTracking().SingleAsync()).StockMovementId);
         order = await ordering.GetOrderAsync(order.Id, false, default);
+        Assert.True(order.PhysicalDispatchStarted);
         Assert.Equal(OrderFulfillmentStatus.InProgress, order.FulfillmentStatus);
         Assert.Equal(OrderStatus.AwaitingProcessing, order.Status);
         await Assert.ThrowsAsync<ConflictException>(() => ordering.DispatchShipmentAsync(order.Id, Dispatch(order, (item.Id, 2)), default));

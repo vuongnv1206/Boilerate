@@ -149,6 +149,26 @@ public sealed class RenewalIntegrationTests
 
     [Theory, Trait("Category", "ProviderIntegration")]
     [InlineData("mssql"), InlineData("postgresql")]
+    public async Task AdminOrderHistoryIncludesIndirectRenewalRequestAndAttemptAudit(string provider)
+    {
+        await using var fixture = new FoundationDatabase(provider, true);
+        await fixture.CreateAsync();
+        using var scope = fixture.Scope(Guid.NewGuid());
+        var product = await Product(scope, "renewal-order-history");
+        var ordering = Ordering(scope);
+        var renewal = await PaidRenewal(scope, product);
+        renewal = await ordering.SetRenewalTargetAsync(renewal.OrderId, renewal.Id,
+            new(renewal.Version, Guid.NewGuid(), "renewal-history-account"), default);
+        await Start(ordering, renewal);
+
+        var history = await ordering.GetOrderHistoryAsync(renewal.OrderId, default);
+
+        Assert.Contains(history, entry => entry.RelatedEntityType == "RenewalRequests");
+        Assert.Contains(history, entry => entry.RelatedEntityType == "RenewalAttempts");
+    }
+
+    [Theory, Trait("Category", "ProviderIntegration")]
+    [InlineData("mssql"), InlineData("postgresql")]
     public async Task OnlyOwnerSetsOrReadsTargetAndRegularResponsesAndAuditNeverExposeProtectedContent(string provider)
     {
         await using var fixture = new FoundationDatabase(provider, true);
