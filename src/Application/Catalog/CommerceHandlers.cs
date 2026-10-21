@@ -10,6 +10,14 @@ public sealed class EditProductHandler(ICommerceService service) : IRequestHandl
 {
     public Task<ProductDto> Handle(EditProduct request, CancellationToken ct) => service.EditAsync(request, ct);
 }
+public sealed class SaveProductEditorHandler(ICommerceService service) : IRequestHandler<SaveProductEditor, ProductDto>
+{
+    public Task<ProductDto> Handle(SaveProductEditor request, CancellationToken ct) => service.SaveEditorAsync(request, ct);
+}
+public sealed class BulkProductStatusHandler(ICommerceService service) : IRequestHandler<BulkProductStatus, BulkProductStatusResult>
+{
+    public Task<BulkProductStatusResult> Handle(BulkProductStatus request, CancellationToken ct) => service.BulkStatusAsync(request, ct);
+}
 public sealed class ChangeProductStatusHandler(ICommerceService service) : IRequestHandler<ChangeProductStatus, ProductDto>
 {
     public Task<ProductDto> Handle(ChangeProductStatus request, CancellationToken ct) => service.StatusAsync(request, ct);

@@ -143,6 +143,32 @@ public sealed class Product : CommerceEntity, IAggregateRoot
         }
         Touch();
     }
+    public void ApplyEditorState(IEnumerable<VariantEditorState> variants, IEnumerable<ProductMedia> media, Guid defaultVariantId)
+    {
+        var states = variants.ToList();
+        var gallery = media.ToList();
+        if (states.Count != _variants.Count || states.Select(v => v.Id).Distinct().Count() != states.Count ||
+            states.Any(v => _variants.All(existing => existing.Id != v.Id)))
+            throw new DomainException("Editor state must identify every SKU exactly once.");
+        if (gallery.Count > 30 || gallery.Any(m => m.ProductId != Id) || gallery.Select(m => m.MediaAssetId).Distinct().Count() != gallery.Count)
+            throw new DomainException("Invalid product gallery.");
+        if (!states.Any(v => v.Id == defaultVariantId && v.IsActive))
+            throw new DomainException("Default SKU must be active.");
+        foreach (var state in states)
+        {
+            CatalogRules.Money(state.Price, state.CompareAtPrice);
+            if (state.ImageMediaId.HasValue && gallery.All(m => m.MediaAssetId != state.ImageMediaId))
+                throw new DomainException("Variant image must be in the final product gallery.");
+        }
+        // Validate the whole final state before changing either side of the image/default relationships.
+        foreach (var state in states)
+        {
+            var variant = GetVariant(state.Id);
+            variant.Edit(state.Price, state.CompareAtPrice, state.IsActive, state.ImageMediaId);
+            variant.SetDefault(state.Id == defaultVariantId);
+        }
+        SetMedia(gallery);
+    }
     public void ChangeStatus(ProductStatus status, ProductType type)
     {
         if (!Enum.IsDefined(status))
@@ -168,6 +194,7 @@ public sealed class Product : CommerceEntity, IAggregateRoot
             throw new DomainException("Required product fields are missing.");
     }
 }
+public sealed record VariantEditorState(Guid Id, decimal? Price, decimal? CompareAtPrice, bool IsActive, Guid? ImageMediaId);
 public sealed class ProductCategory
 {
     public Guid ProductId

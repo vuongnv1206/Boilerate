@@ -18,16 +18,19 @@ Giá chỉ nhận VND nguyên đồng. Mọi mã SKU được giữ duy nhất t
 |---|---|---|
 | GET/POST `/api/product-types`, GET/PUT `/{id}` | List, create, schema detail, edit schema | ProductType.View/Create/Update |
 | GET/POST `/api/categories`, PUT/DELETE `/{id}` | Cây danh mục; DELETE có query version | Category.View/Create/Update/Delete |
+| GET `/api/categories/summaries` | `{id,productCount}`: số Product liên kết trực tiếp, mọi trạng thái, không cộng cây con | Category.View |
 | POST `/api/products/search`, GET `/api/products/{id}` | Đọc quản trị gồm mọi trạng thái | Product.View |
 | POST `/api/products` | Tạo Draft + SKU, thêm MAIN=0 nếu Physical | Product.Create; thêm Price.Update khi gửi giá |
 | PUT `/api/products/{id}` | Thay nội dung/categoryIds/fields/gallery | Product.Update |
+| PUT `/api/products/{id}/editor` | Một transaction cho content/gallery/options/SKU mới/giá/ảnh/default | Product.Update; Price.Update khi thực sự đổi hoặc khởi tạo giá |
 | POST `/api/products/{id}/status` | Draft=1, Published=2, Archived=3 | Product.Publish |
+| POST `/api/products/bulk-status` | 1–100 Product id/version; Published hoặc Archived; nguyên lô hoặc rollback | Product.Publish |
 | POST `/api/products/variants/preview` | Preview tổ hợp option, chưa ghi DB | Product.View |
 | POST `/api/products/{id}/variants` | Thêm tổ hợp SKU được chọn | Product.Update; Price.Update nếu gửi giá |
 | PUT `/api/products/{id}/variants/{variantId}` | Giá, trạng thái active, ảnh SKU | Product.Update; Price.Update nếu đổi giá |
 | PUT `/api/products/{id}/default-variant` | Chọn SKU default đang active | Product.Update |
 | PUT `/api/products/{id}/options/{optionId}` | Sửa nhãn/thứ tự, thêm value | Product.Update |
-| GET `/api/inventory?page=1&size=20` | Balance, version theo SKU/kho | Inventory.View |
+| GET `/api/inventory?page=1&size=20&productId={guid}&variantId={guid}` | Balance, version theo SKU/kho; productId/variantId tùy chọn, kết hợp AND trước count/phân trang | Inventory.View |
 | POST `/api/inventory/{id}/adjustments` | Điều chỉnh có operationId | Inventory.Adjust |
 | GET `/api/inventory/{id}/movements` | Lịch sử bất biến, phân trang | Inventory.View |
 | GET `/api/digital-inventory/variants/{variantId}?page=1&size=20` | Metadata kho số; không có nội dung | DigitalInventory.View |
@@ -35,7 +38,7 @@ Giá chỉ nhận VND nguyên đồng. Mọi mã SKU được giữ duy nhất t
 | PUT `/api/digital-inventory/variants/{variantId}/shared-content` | Upsert một nội dung Shared/SKU | DigitalInventory.Update |
 | PUT `/api/digital-inventory/variants/{variantId}/items/{id}/availability` | Bật/tắt Available/Disabled | DigitalInventory.Update |
 | POST `/api/digital-inventory/items/{id}/reveal` | Xem nội dung; audit Read theo actor/item, no-store | DigitalInventory.Reveal |
-| POST `/api/media` | Multipart `file`, JPEG/PNG <=5MiB | Product.Update |
+| POST `/api/media` | Multipart `file`, JPEG/PNG <=5MiB | Product.Create **hoặc** Product.Update |
 | GET `/api/media/{id}` | Xem media quản trị | Product.View |
 | GET `/api/outbox?state=4&page=1&size=20` | Vận hành pending/processing/completed/dead-letter | Outbox.View |
 | POST `/api/outbox/{id}/replay` | Replay dead-letter, có audit | Outbox.Replay |
@@ -82,6 +85,39 @@ Sản phẩm đơn giản dùng `options:[]` và một variant với `options:{}
 PUT Product nhận `{id,version,productTypeVersion,content}`. `categoryIds`, `fields`, `media` là tập mong muốn đầy đủ; mảng rỗng tháo toàn bộ tập tương ứng. Không có giá/SKU trong endpoint này. Tháo ảnh đang được SKU tham chiếu bị từ chối; gỡ ảnh SKU trước qua endpoint variant.
 
 POST status nhận `{id,version,status}`. Không có hard delete/trash/restore cho Product/SKU.
+
+### Catalog workspace và lưu editor
+
+CreateProduct nhận thêm `defaultVariantSku` tùy chọn; nếu bỏ qua giữ hành vi SKU đầu tiên là default. Variant input nhận thêm `isActive` (mặc định true), `imageMediaId` (mặc định null). Cho phép tạo gallery/ảnh SKU và chọn default trong cùng create; ảnh SKU phải thuộc `content.media`, default cuối phải active. ProductTypeId và FulfillmentKind không thay đổi sau create.
+
+PUT `/api/products/{id}/editor`:
+
+```json
+{
+  "id":"<product-id>", "version":"<product-version>", "productTypeVersion":"<type-version>",
+  "content":{"name":"Áo thun","slug":"ao-thun","description":"Cotton","categoryIds":[],"fields":[],"media":[{"mediaAssetId":"<image-id>","sortOrder":0,"altText":"Áo xanh"}]},
+  "optionEdits":[{"optionId":"<color-id>","name":"Màu sắc","sortOrder":0,"addValues":[{"code":"BLUE","label":"Xanh"}],"values":[]}],
+  "variantEdits":[{"variantId":"<red-sku-id>","price":150000,"compareAtPrice":null,"isActive":false,"imageMediaId":null}],
+  "addedVariants":[{"sku":"SHIRT-BLUE","price":160000,"compareAtPrice":180000,"options":{"COLOR":"BLUE"},"isActive":true,"imageMediaId":"<image-id>"}],
+  "defaultVariantSku":"SHIRT-BLUE"
+}
+```
+
+`content` là tập đầy đủ như PUT cũ. Ba mảng `optionEdits`, `variantEdits`, `addedVariants` bắt buộc, là delta; mảng rỗng không thay đổi phần đó, không xóa SKU/options. ID cũ phải thuộc Product/option; không lặp cùng ID trong các edits. Existing SKU/mã option/mã value/selections bất biến. Options sau create chỉ đổi nhãn/thứ tự, thêm values và các tổ hợp SKU được chọn; không sinh toàn bộ Cartesian combinations tự động hoặc thêm/xóa trục.
+
+`defaultVariantSku` bắt buộc, so sánh mã không phân biệt hoa/thường và có thể chỉ SKU mới cùng request. Server sinh IDs mới, response ProductDto đầy đủ cho client reconcile theo SKU, rồi dùng IDs/version mới. Một save có thể đổi default và deactivate SKU cũ, thay ảnh SKU và bỏ ảnh cũ khỏi gallery. Mọi SKU giữ ID cũ; Physical SKU mới có MAIN=0, không chép tồn/movement/secret/reservation/đơn.
+
+Product.Update không đủ để thay giá: service so giá existing với DB và kiểm Price.Update nếu khác hoặc SKU mới gửi giá. Gửi lại giá không đổi không yêu cầu quyền giá. Final state được kiểm sau toàn bộ edits; Published luôn có giá cho SKU active và required fields. Invalid/stale/thiếu quyền rollback cả content/options/SKU/gallery/default/outbox/balance mới. Không gọi inventory adjustment hoặc kho số trong endpoint này. Upload file độc lập tạo asset có TTL; attach vào Product và cleanup ảnh tháo ra thuộc transaction save.
+
+Published được cập nhật công khai ngay sau save; chưa có draft/live revisions, queued publish hoặc PublishedAt. Publish/archive tiếp tục là thao tác riêng có quyền Product.Publish. Các endpoint legacy được giữ.
+
+POST `/api/products/bulk-status` nhận `{"items":[{"id":"<id>","version":"<version>"}],"status":2}` hoặc status=3. Items 1–100, ID không trùng, không có query-wide selection. Khóa types trước products theo thứ tự ID; bất kỳ item không tồn tại/version cũ/publish invalid làm rollback toàn lô. Response `{"items":[{"id":"<id>","status":2,"version":"<new-version>"}]}` giữ thứ tự request. Không đổi kho/lịch sử khi archive. Mất response thì tải lại selection trước thao tác tiếp theo.
+
+Duplicate là clone vào editor chưa lưu ở FE, rồi POST create: cấp tên/slug/SKU mới, mapping options bằng code và ảnh bằng MediaAssetId dùng chung. Product/Option/Value/Variant IDs được tạo mới; category/type/fields/gallery/prices/default/active được copy, stock/secret/lịch sử không copy. Không có endpoint duplicate ngầm hoặc tự publish bản sao; gửi giá vẫn cần Price.Update.
+
+ProductDto thêm `createdOn`, `modifiedOn` UTC; modified là LastModifiedOn hoặc CreatedOn. ProductSummary thêm `productTypeId`, `productTypeName`, `thumbnailMediaId`, `version`, `modifiedOn`. Thumbnail ưu tiên ảnh default SKU, sau đó gallery đầu theo sortOrder/media ID; không có ảnh trả null. Metadata không giả lập thời gian publish.
+
+ProductSearch thêm `fulfillmentKind` (1–4), `sortBy` (`modified`, `name`, `price`) và `sortDirection` (`asc`, `desc`). Mặc định `modified desc`, tie-break ID asc. Price sort dùng giá thấp nhất của SKU active, thiếu giá xếp cuối ở cả hai hướng. Sort/filter chạy trước phân trang cho cả admin/public. CSV/import/export là giai đoạn sau, chưa có endpoint Catalog CSV.
 
 ### Cách giao và kho hàng số
 

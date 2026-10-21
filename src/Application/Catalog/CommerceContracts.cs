@@ -5,7 +5,8 @@ namespace Boilerate.Application.Catalog;
 
 public sealed record ChoiceInput(string Code, string Label);
 public sealed record OptionInput(string Code, string Name, List<ChoiceInput> Values);
-public sealed record VariantInput(string Sku, decimal? Price, decimal? CompareAtPrice, Dictionary<string, string> Options);
+public sealed record VariantInput(string Sku, decimal? Price, decimal? CompareAtPrice, Dictionary<string, string> Options,
+    bool IsActive = true, Guid? ImageMediaId = null);
 public sealed record FieldInput(Guid FieldDefinitionId, ProductFieldType FieldType, string? TextValue = null, decimal? NumberValue = null,
     bool? BooleanValue = null, DateOnly? DateValue = null, Guid? ChoiceId = null)
 {
@@ -14,8 +15,16 @@ public sealed record FieldInput(Guid FieldDefinitionId, ProductFieldType FieldTy
 public sealed record MediaInput(Guid MediaAssetId, int SortOrder, string? AltText);
 public sealed record ProductContent(string Name, string Slug, string? Description, List<Guid> CategoryIds, List<FieldInput> Fields, List<MediaInput> Media);
 public sealed record CreateProduct(Guid ProductTypeId, string ProductTypeVersion, ProductContent Content, List<OptionInput> Options, List<VariantInput> Variants,
-    ProductFulfillmentKind FulfillmentKind = ProductFulfillmentKind.Physical) : IRequest<ProductDto>;
+    ProductFulfillmentKind FulfillmentKind = ProductFulfillmentKind.Physical, string? DefaultVariantSku = null) : IRequest<ProductDto>;
 public sealed record EditProduct(Guid Id, string Version, string ProductTypeVersion, ProductContent Content) : IRequest<ProductDto>;
+public sealed record OptionEditorInput(Guid OptionId, string Name, int SortOrder, List<ChoiceInput> AddValues, List<OptionValueEdit> Values);
+public sealed record VariantEditorInput(Guid VariantId, decimal? Price, decimal? CompareAtPrice, bool IsActive, Guid? ImageMediaId);
+public sealed record SaveProductEditor(Guid Id, string Version, string ProductTypeVersion, ProductContent Content,
+    List<OptionEditorInput> OptionEdits, List<VariantEditorInput> VariantEdits, List<VariantInput> AddedVariants, string DefaultVariantSku) : IRequest<ProductDto>;
+public sealed record ProductVersionInput(Guid Id, string Version);
+public sealed record BulkProductStatus(List<ProductVersionInput> Items, ProductStatus Status) : IRequest<BulkProductStatusResult>;
+public sealed record ProductStatusResult(Guid Id, ProductStatus Status, string Version);
+public sealed record BulkProductStatusResult(List<ProductStatusResult> Items);
 public sealed record ChangeProductStatus(Guid Id, string Version, ProductStatus Status) : IRequest<ProductDto>;
 public sealed record AddVariant(Guid ProductId, string Version, VariantInput Variant) : IRequest<ProductDto>;
 public sealed record EditVariant(Guid ProductId, Guid VariantId, string Version, decimal? Price, decimal? CompareAtPrice, bool IsActive, Guid? ImageMediaId) : IRequest<ProductDto>;
@@ -36,13 +45,16 @@ public sealed record ReplayOutbox(Guid MessageId) : IRequest<bool>;
 public sealed record VariantDto(Guid Id, string Sku, string CombinationKey, decimal? Price, decimal? CompareAtPrice, string Currency, bool IsDefault, bool IsActive, Guid? ImageMediaId, bool InStock, IReadOnlyCollection<VariantSelectionDto> Selections);
 public sealed record ProductDto(Guid Id, Guid ProductTypeId, string Name, string Slug, string? Description, ProductStatus Status, string Version,
     IReadOnlyCollection<Guid> CategoryIds, IReadOnlyCollection<OptionDto> Options, IReadOnlyCollection<VariantDto> Variants,
-    IReadOnlyCollection<FieldValueDto> Fields, IReadOnlyCollection<MediaInput> Media, ProductFulfillmentKind FulfillmentKind = ProductFulfillmentKind.Physical);
+    IReadOnlyCollection<FieldValueDto> Fields, IReadOnlyCollection<MediaInput> Media, ProductFulfillmentKind FulfillmentKind = ProductFulfillmentKind.Physical,
+    DateTime CreatedOn = default, DateTime ModifiedOn = default);
 public sealed record VariantSelectionDto(Guid OptionId, Guid OptionValueId);
 public sealed record OptionDto(Guid Id, string Code, string Name, int SortOrder, IReadOnlyCollection<OptionValueDto> Values);
 public sealed record OptionValueDto(Guid Id, string Code, string Label, int SortOrder);
 public sealed record FieldValueDto(Guid FieldDefinitionId, ProductFieldType FieldType, string Label, string? TextValue, decimal? NumberValue, bool? BooleanValue, DateOnly? DateValue, Guid? ChoiceId, string? ChoiceLabel);
 public sealed record ProductSummary(Guid Id, string Name, string Slug, ProductStatus Status, decimal? FromPrice, bool InStock,
-    ProductFulfillmentKind FulfillmentKind = ProductFulfillmentKind.Physical);
+    ProductFulfillmentKind FulfillmentKind = ProductFulfillmentKind.Physical, Guid ProductTypeId = default, string ProductTypeName = "",
+    Guid? ThumbnailMediaId = null, string Version = "", DateTime ModifiedOn = default);
+public sealed record CategorySummary(Guid Id, int ProductCount);
 public sealed record Page<T>(List<T> Items, int Total, int PageNumber, int PageSize);
 public sealed record InventoryDto(Guid Id, Guid VariantId, Guid LocationId, int OnHand, string Version, int Reserved = 0)
 {
@@ -72,6 +84,9 @@ public sealed class ProductSearch
     {
         get; set;
     }
+    public ProductFulfillmentKind? FulfillmentKind { get; set; }
+    public string SortBy { get; set; } = "modified";
+    public string SortDirection { get; set; } = "desc";
     public decimal? MinimumPrice
     {
         get; set;
@@ -91,6 +106,8 @@ public interface ICommerceService
 {
     Task<ProductDto> CreateAsync(CreateProduct request, CancellationToken ct);
     Task<ProductDto> EditAsync(EditProduct request, CancellationToken ct);
+    Task<ProductDto> SaveEditorAsync(SaveProductEditor request, CancellationToken ct);
+    Task<BulkProductStatusResult> BulkStatusAsync(BulkProductStatus request, CancellationToken ct);
     Task<ProductDto> StatusAsync(ChangeProductStatus request, CancellationToken ct);
     Task<ProductDto> AddVariantAsync(AddVariant request, CancellationToken ct);
     Task<ProductDto> EditVariantAsync(EditVariant request, CancellationToken ct);
@@ -108,9 +125,10 @@ public interface ICommerceService
     Task<ProductDto> GetBySlugAsync(string slug, CancellationToken ct);
     Task<Page<ProductSummary>> SearchAsync(ProductSearch request, bool publishedOnly, CancellationToken ct);
     Task<List<Category>> CategoriesAsync(bool publicOnly, CancellationToken ct);
+    Task<List<CategorySummary>> CategorySummariesAsync(CancellationToken ct);
     Task<List<ProductType>> TypesAsync(CancellationToken ct);
     Task<ProductType> TypeAsync(Guid id, CancellationToken ct);
-    Task<Page<InventoryDto>> InventoryAsync(int page, int size, CancellationToken ct);
+    Task<Page<InventoryDto>> InventoryAsync(int page, int size, CancellationToken ct, Guid? productId = null, Guid? variantId = null);
     Task<Page<MovementDto>> MovementsAsync(Guid itemId, int page, int size, CancellationToken ct);
     Task<List<DigitalStockDto>> ImportDigitalAsync(ImportDigitalStock request, CancellationToken ct);
     Task<DigitalStockDto> SaveSharedAsync(SaveSharedDigitalContent request, CancellationToken ct);

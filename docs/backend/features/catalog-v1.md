@@ -2,6 +2,12 @@
 
 Cập nhật vận hành gần nhất: 2026-10-18; xem [operations acceptance](operations-acceptance.md).
 
+2026-10-21: cải tổ trải nghiệm catalog và các API cần thiết được theo dõi tại [Catalog workspace](catalog-workspace.md): unified save, ảnh/default, summary/filter/sort/count và bulk publish/archive; CSV hoãn. Không thay schema hoặc identity của Product/SKU hiện có.
+
+Phối hợp BE–FE được theo dõi tại [hồ sơ dùng chung](../../shared/features/catalog-workspace.md); contract kỹ thuật giữ tại API BE, trạng thái giao diện giữ tại repo Frontend.
+
+Lát UI vận hành SKU/tồn (2026-10-21): bổ sung bộ lọc tùy chọn `productId` và `variantId` cho `GET /api/inventory`. Hai bộ lọc kết hợp bằng AND, áp dụng trước count/phân trang và giữ nguyên quyền Inventory.View cùng DTO; không thay đổi database hay mutation. Mục tiêu là để product editor đọc đúng số dư thay vì quét toàn kho. Kiểm chứng SQL Server và FE đang thực hiện.
+
 ## Mục tiêu và giới hạn
 
 Một shop bán hàng vật lý, VND nguyên đồng, một kho MAIN không âm. Quản trị sản phẩm linh hoạt bằng ProductType/schema, options/SKU và category. Giữ modular monolith, DDD tại Product/ProductType/InventoryItem; handler điều phối use case, quyền và persistence.
@@ -38,4 +44,4 @@ Chi tiết đầy đủ: [ERD và từ điển database](../commerce-database.md
 
 [Báo cáo kiểm chứng](../verification/2026-10-17-commerce.md) phân biệt các lượt test và thời điểm source, không cộng các lượt chồng lặp thành tổng ca duy nhất. [Lịch sử từng bước](../history/README.md) liên kết thay đổi, quyết định và commit.
 
-Chưa triển khai reservation, checkout, Orders, payment attempts/refunds hoặc shipments. Checkout phải chốt reservation/idempotency và snapshot OrderItem trước khi viết code. Không xem milestone Catalog là đã nghiệm thu production.
+Phạm vi Catalog v1 ban đầu không gồm reservation/checkout/Orders/payment/shipping. Các lát Ordering, Payment, Shipping, Renewal và hậu mãi đã được bổ sung ở các hồ sơ riêng trong [roadmap](../roadmap.md); không dùng giới hạn hồi cứu của Catalog v1 để suy ra trạng thái code hiện tại. Payment attempts/gateway còn ở giai đoạn sau. Không xem milestone Catalog là đã nghiệm thu production.

@@ -16,6 +16,11 @@ public sealed class ProductsController(ICommerceService commerce) : BaseApiContr
     [HttpPut("{id:guid}"), MustHavePermission(AppAction.Update, AppFunction.Product)]
     public async Task<ActionResult<ProductDto>> Edit(Guid id, EditProduct request, CancellationToken ct)
         => id != request.Id ? BadRequest() : Ok(await Mediator.Send(request, ct));
+    [HttpPut("{id:guid}/editor"), MustHavePermission(AppAction.Update, AppFunction.Product)]
+    public async Task<ActionResult<ProductDto>> SaveEditor(Guid id, SaveProductEditor request, CancellationToken ct)
+        => id != request.Id ? BadRequest() : Ok(await Mediator.Send(request, ct));
+    [HttpPost("bulk-status"), MustHavePermission(AppAction.Publish, AppFunction.Product)]
+    public Task<BulkProductStatusResult> BulkStatus(BulkProductStatus request, CancellationToken ct) => Mediator.Send(request, ct);
     [HttpPost("{id:guid}/status"), MustHavePermission(AppAction.Publish, AppFunction.Product)]
     public async Task<ActionResult<ProductDto>> Status(Guid id, ChangeProductStatus request, CancellationToken ct)
         => id != request.Id ? BadRequest() : Ok(await Mediator.Send(request, ct));

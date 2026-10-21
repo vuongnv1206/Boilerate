@@ -31,6 +31,7 @@ Tài liệu được cập nhật cùng phần code liên quan. Mỗi tính năn
 21. [Admin Orders workspace](features/admin-orders.md): danh sách lọc server-side, detail snapshot read-only, lifecycle commands, safe timeline và seed/replay; trạng thái kiểm chứng tại [báo cáo](verification/2026-10-21-admin-orders.md).
 
 22. [Phân quyền theo nhóm](features/grouped-authorization.md): API nhóm chức năng, ngữ cảnh quyền hiện tại, tương thích và script migration để review.
+23. [Catalog workspace](features/catalog-workspace.md): unified editor save, gallery/ảnh/default SKU, list metadata/filter/sort/count và bulk publish/archive; CSV hoãn.
 
 Hướng dẫn dựng installation mới, cấu hình và các lệnh operator nằm tại [README dự án](../../README.md). [plan.md](../../plan.md) chỉ điều hướng; tiến độ chính thức nằm trong roadmap và từng hồ sơ BE.
 

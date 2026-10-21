@@ -39,6 +39,31 @@ public sealed class CommerceIntegrationTests
     private static ProductContent Content(string slug, params Guid[] categories) => new("Product " + slug, slug, null, categories.ToList(), [], []);
     private static CreateProduct Simple(ProductType type, string slug, decimal? price = 100, params Guid[] categories) =>
         new(type.Id, type.Version, Content(slug, categories), [], [new(slug, price, null, new())]);
+    [Fact, Trait("Category", "ProviderIntegration")]
+    public async Task InventoryFiltersApplyBeforeCountAndPaginationOnSqlServer()
+    {
+        await using var fixture = new FoundationDatabase("mssql", true);
+        await fixture.CreateAsync();
+        using var scope = fixture.Scope(Guid.NewGuid());
+        var service = Service(scope);
+        await service.InitializeAsync(default);
+        var type = await service.CreateTypeAsync(new("FILTERED", "Filtered stock", []), default);
+        var first = await service.CreateAsync(new(type.Id, type.Version, Content("filtered-first"),
+            [new("COLOR", "Color", [new("RED", "Red"), new("BLUE", "Blue")])],
+            [new("FILTER-RED", 100, null, new() { ["COLOR"] = "RED" }), new("FILTER-BLUE", 200, null, new() { ["COLOR"] = "BLUE" })]), default);
+        var second = await service.CreateAsync(Simple(type, "filtered-second"), default);
+        var page = await service.InventoryAsync(1, 1, default, first.Id);
+        Assert.Equal(2, page.Total);
+        Assert.Single(page.Items);
+        Assert.Contains(page.Items[0].VariantId, first.Variants.Select(variant => variant.Id));
+        var next = await service.InventoryAsync(2, 1, default, first.Id);
+        Assert.Equal(2, next.Total);
+        Assert.NotEqual(page.Items[0].Id, Assert.Single(next.Items).Id);
+        var variantId = first.Variants.First().Id;
+        Assert.Equal(variantId, Assert.Single((await service.InventoryAsync(1, 100, default, variantId: variantId)).Items).VariantId);
+        Assert.Empty((await service.InventoryAsync(1, 100, default, second.Id, variantId)).Items);
+        Assert.Equal(3, (await service.InventoryAsync(1, 100, default)).Total);
+    }
     private static OutboxProcessor Processor(IServiceScope scope, int attempts = 8)
     {
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

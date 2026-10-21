@@ -10,6 +10,8 @@ public sealed class CategoriesController(ICommerceService commerce) : BaseApiCon
 {
     [HttpGet, MustHavePermission(AppAction.View, AppFunction.Category)]
     public Task<List<Category>> Get(CancellationToken ct) => commerce.CategoriesAsync(false, ct);
+    [HttpGet("summaries"), MustHavePermission(AppAction.View, AppFunction.Category)]
+    public Task<List<CategorySummary>> Summaries(CancellationToken ct) => commerce.CategorySummariesAsync(ct);
     [HttpPost, MustHavePermission(AppAction.Create, AppFunction.Category)]
     public async Task<ActionResult<Category>> Create(SaveCategory request, CancellationToken ct)
         => request.Id.HasValue ? BadRequest() : Ok(await Mediator.Send(request, ct));

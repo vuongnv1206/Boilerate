@@ -60,6 +60,10 @@ public sealed class DevelopmentSeedingTests
         Assert.Equal(8, data.Scenarios.Length);
         Assert.Contains(data.Scenarios, scenario => scenario.Key == "prepaid-needs-review" && scenario.Action == "ConfirmAndReview");
         Assert.Contains(data.Scenarios, scenario => scenario.Lines.Length == 2);
+        var catalog = await CatalogSeedData.ReadAsync(default);
+        var publishedSkus = catalog.Products.Where(product => product.Status == ProductStatus.Published)
+            .Select(product => product.Sku).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.All(data.Scenarios.SelectMany(scenario => scenario.Lines), line => Assert.Contains(line.Sku, publishedSkus));
     }
 
     [Fact]
@@ -127,7 +131,10 @@ public sealed class DevelopmentSeedingTests
             Assert.Equal(14, await db.Products.CountAsync());
             Assert.Equal(14, await db.ProductVariants.CountAsync());
             Assert.Equal(14, await db.InventoryItems.CountAsync());
-            Assert.Equal(14, await db.StockMovements.CountAsync());
+            Assert.Equal(16, await db.StockMovements.CountAsync());
+            Assert.Equal(8, await db.Orders.CountAsync());
+            Assert.Equal(3, await db.PaymentReceipts.CountAsync());
+            Assert.Equal(2, await db.Shipments.CountAsync());
             Assert.Equal(8, await db.Products.CountAsync(product => product.Status == ProductStatus.Published));
             Assert.All(await db.StockMovements.ToListAsync(), movement => Assert.NotEqual(Guid.Empty, movement.ActorId));
 
@@ -146,12 +153,18 @@ public sealed class DevelopmentSeedingTests
         {
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var before = await db.Products.AsNoTracking().ToDictionaryAsync(product => product.Id, product => product.Version);
+            var ordersBefore = await db.Orders.AsNoTracking().ToDictionaryAsync(order => order.Id, order => order.Version);
             var grantsBefore = await db.Permissions.CountAsync();
             await scope.ServiceProvider.GetRequiredService<CustomSeederRunner>().RunAsync();
             Assert.Equal(14, await db.Products.CountAsync());
             Assert.Equal(6, await db.Categories.CountAsync());
             Assert.Equal(2, await db.ProductTypes.CountAsync());
-            Assert.Equal(15, await db.StockMovements.CountAsync());
+            Assert.Equal(17, await db.StockMovements.CountAsync());
+            Assert.Equal(8, await db.Orders.CountAsync());
+            Assert.Equal(3, await db.PaymentReceipts.CountAsync());
+            Assert.Equal(2, await db.Shipments.CountAsync());
+            var ordersAfter = await db.Orders.AsNoTracking().ToDictionaryAsync(order => order.Id, order => order.Version);
+            Assert.Equal(ordersBefore.OrderBy(pair => pair.Key), ordersAfter.OrderBy(pair => pair.Key));
             Assert.Equal(grantsBefore, await db.Permissions.CountAsync());
             var after = await db.Products.AsNoTracking().ToDictionaryAsync(product => product.Id, product => product.Version);
             Assert.Equal(before.OrderBy(pair => pair.Key), after.OrderBy(pair => pair.Key));

@@ -40,6 +40,7 @@ public sealed class CreateProductValidator : AbstractValidator<CreateProduct>
         RuleFor(x => x.ProductTypeId).NotEmpty();
         RuleFor(x => x.FulfillmentKind).IsInEnum();
         RuleFor(x => x.ProductTypeVersion).NotEmpty();
+        RuleFor(x => x.DefaultVariantSku).MaximumLength(100);
         RuleFor(x => x.Content).NotNull().SetValidator(new ProductContentValidator());
         RuleFor(x => x.Options).NotNull().Must(x => x is null || x.Count <= 10);
         RuleForEach(x => x.Options).NotNull().SetValidator(new OptionInputValidator());
@@ -63,6 +64,45 @@ public sealed class AddVariantValidator : AbstractValidator<AddVariant>
     {
         RuleFor(x => x.Version).NotEmpty();
         RuleFor(x => x.Variant).NotNull().SetValidator(new VariantInputValidator());
+    }
+}
+public sealed class SaveProductEditorValidator : AbstractValidator<SaveProductEditor>
+{
+    public SaveProductEditorValidator()
+    {
+        RuleFor(x => x.Id).NotEmpty();
+        RuleFor(x => x.Version).NotEmpty();
+        RuleFor(x => x.ProductTypeVersion).NotEmpty();
+        RuleFor(x => x.Content).NotNull().SetValidator(new ProductContentValidator());
+        RuleFor(x => x.DefaultVariantSku).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.OptionEdits).NotNull().Must(x => x is null || x.Count <= 10);
+        RuleForEach(x => x.OptionEdits).NotNull().ChildRules(option =>
+        {
+            option.RuleFor(x => x.OptionId).NotEmpty();
+            option.RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
+            option.RuleFor(x => x.SortOrder).GreaterThanOrEqualTo(0);
+            option.RuleFor(x => x.AddValues).NotNull().Must(x => x is null || x.Count <= 200);
+            option.RuleForEach(x => x.AddValues).NotNull();
+            option.RuleFor(x => x.Values).NotNull().Must(x => x is null || x.Count <= 200);
+            option.RuleForEach(x => x.Values).NotNull();
+        });
+        RuleFor(x => x.VariantEdits).NotNull().Must(x => x is null || x.Count <= 1000);
+        RuleForEach(x => x.VariantEdits).NotNull().ChildRules(variant => variant.RuleFor(x => x.VariantId).NotEmpty());
+        RuleFor(x => x.AddedVariants).NotNull().Must(x => x is null || x.Count <= 1000);
+        RuleForEach(x => x.AddedVariants).NotNull().SetValidator(new VariantInputValidator());
+    }
+}
+public sealed class BulkProductStatusValidator : AbstractValidator<BulkProductStatus>
+{
+    public BulkProductStatusValidator()
+    {
+        RuleFor(x => x.Items).NotEmpty().Must(x => x is null || x.Count <= 100);
+        RuleForEach(x => x.Items).NotNull().ChildRules(item =>
+        {
+            item.RuleFor(x => x.Id).NotEmpty();
+            item.RuleFor(x => x.Version).NotEmpty();
+        });
+        RuleFor(x => x.Status).Must(x => x is Boilerate.Domain.Catalog.ProductStatus.Published or Boilerate.Domain.Catalog.ProductStatus.Archived);
     }
 }
 public sealed class PreviewVariantsValidator : AbstractValidator<PreviewVariants>

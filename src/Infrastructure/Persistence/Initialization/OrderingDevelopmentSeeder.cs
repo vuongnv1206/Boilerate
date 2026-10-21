@@ -94,7 +94,7 @@ public sealed class OrderingDevelopmentSeeder(
     private async Task<OrderDto> ConfirmAndReviewAsync(OrderDto order, CancellationToken ct)
     {
         var paid = await payments.ConfirmPaymentAsync(order.Id, new(order.Version, StableId($"ordering-development-v1:payment:{order.Number}"),
-            $"DEV-{order.Number[..8]}", order.Total, order.Currency, DateTime.UtcNow.AddMinutes(-1)), ct);
+            $"DEV-{order.Number}", order.Total, order.Currency, DateTime.UtcNow.AddMinutes(-1)), ct);
         // A paid order requiring operator attention is a valid lifecycle state. The domain method
         // remains the only writer of the fulfillment state; the seeder only arranges the fixture.
         var tracked = await db.Orders.SingleAsync(item => item.Id == paid.Id, ct);
@@ -106,13 +106,13 @@ public sealed class OrderingDevelopmentSeeder(
     private async Task<OrderDto> CompleteCodAsync(OrderDto order, OrderScenarioSeed scenario, CancellationToken ct)
     {
         var dispatch = await shipping.DispatchShipmentAsync(order.Id, new(order.Version,
-            StableId($"ordering-development-v1:dispatch:{scenario.Key}"), "Development Carrier", $"DEV-{order.Number[..8]}",
+            StableId($"ordering-development-v1:dispatch:{scenario.Key}"), "Development Carrier", $"DEV-{order.Number}",
             order.Items.Where(item => item.FulfillmentKind == Domain.Catalog.ProductFulfillmentKind.Physical)
                 .Select(item => new ShipmentLineInput(item.Id, item.Quantity)).ToList()), ct);
         var delivered = await shipping.DeliverShipmentAsync(order.Id, dispatch.Id,
             new(dispatch.OrderVersion, dispatch.Version, StableId($"ordering-development-v1:deliver:{scenario.Key}")), ct);
         return await payments.ConfirmPaymentAsync(order.Id, new(delivered.OrderVersion,
-            StableId($"ordering-development-v1:cod-payment:{scenario.Key}"), $"COD-{order.Number[..8]}", order.Total,
+            StableId($"ordering-development-v1:cod-payment:{scenario.Key}"), $"COD-{order.Number}", order.Total,
             order.Currency, DateTime.UtcNow.AddMinutes(-1), "ManualCOD"), ct);
     }
 

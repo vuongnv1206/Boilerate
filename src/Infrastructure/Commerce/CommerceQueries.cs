@@ -43,7 +43,8 @@ public sealed partial class CommerceService
                 return new FieldValueDto(f.FieldDefinitionId,f.FieldType,definition.Label,f.TextValue,f.NumberValue,f.BooleanValue,f.DateValue,f.ChoiceId,
                     definition.Choices.SingleOrDefault(c => c.Id == f.ChoiceId)?.Label);
             }).ToArray(),
-            p.Media.OrderBy(m => m.SortOrder).ThenBy(m => m.MediaAssetId).Select(m => new MediaInput(m.MediaAssetId,m.SortOrder,m.AltText)).ToArray(), p.FulfillmentKind);
+            p.Media.OrderBy(m => m.SortOrder).ThenBy(m => m.MediaAssetId).Select(m => new MediaInput(m.MediaAssetId,m.SortOrder,m.AltText)).ToArray(), p.FulfillmentKind,
+            CatalogTimestamp(p.CreatedOn), CatalogTimestamp(p.LastModifiedOn ?? p.CreatedOn));
     }
     public async Task<ProductDto> GetBySlugAsync(string slug, CancellationToken ct)
     {
@@ -61,7 +62,8 @@ public sealed partial class CommerceService
     {
         ValidatePage(r.PageNumber, r.PageSize);
         if (r.Fields is null || r.OptionValueIds is null || r.Fields.Count > 20 || r.Fields.Any(f => f is null) || r.OptionValueIds.Count > 10 || r.Search?.Length > 200 ||
-            r.MinimumPrice < 0 || r.MaximumPrice < 0 || (r.MinimumPrice.HasValue && r.MaximumPrice < r.MinimumPrice) || (r.Status.HasValue && !Enum.IsDefined(r.Status.Value)))
+            r.MinimumPrice < 0 || r.MaximumPrice < 0 || (r.MinimumPrice.HasValue && r.MaximumPrice < r.MinimumPrice) || (r.Status.HasValue && !Enum.IsDefined(r.Status.Value)) ||
+            (r.FulfillmentKind.HasValue && !Enum.IsDefined(r.FulfillmentKind.Value)) || r.SortBy is not ("modified" or "name" or "price") || r.SortDirection is not ("asc" or "desc"))
             throw new DomainException("Invalid filters.");
         CatalogRules.Money(r.MinimumPrice, null);
         CatalogRules.Money(r.MaximumPrice, null);
@@ -77,6 +79,8 @@ public sealed partial class CommerceService
         }
         if (r.ProductTypeId.HasValue)
             q = q.Where(p => p.ProductTypeId == r.ProductTypeId);
+        if (r.FulfillmentKind.HasValue)
+            q = q.Where(p => p.FulfillmentKind == r.FulfillmentKind);
         if (r.CategoryId.HasValue)
             q = q.Where(p => p.Categories.Any(c => c.CategoryId == r.CategoryId));
         if (r.MinimumPrice.HasValue || r.MaximumPrice.HasValue || r.OptionValueIds.Count > 0 || r.InStock.HasValue)
@@ -150,18 +154,40 @@ public sealed partial class CommerceService
         }
         int total = await q.CountAsync(ct);
         var availableVariantIds = StockedVariants(db.ProductVariants.Where(v => v.IsActive)).Select(v => v.Id);
-        var items = await q.OrderBy(p => p.Id).Skip((r.PageNumber - 1) * r.PageSize).Take(r.PageSize)
+        var ordered = (r.SortBy, r.SortDirection) switch
+        {
+            ("name", "asc") => q.OrderBy(p => p.Name),
+            ("name", "desc") => q.OrderByDescending(p => p.Name),
+            ("price", "asc") => q.OrderBy(p => !p.Variants.Any(v => v.IsActive && v.Price.HasValue))
+                .ThenBy(p => p.Variants.Where(v => v.IsActive).Min(v => v.Price)),
+            ("price", "desc") => q.OrderBy(p => !p.Variants.Any(v => v.IsActive && v.Price.HasValue))
+                .ThenByDescending(p => p.Variants.Where(v => v.IsActive).Min(v => v.Price)),
+            ("modified", "asc") => q.OrderBy(p => p.LastModifiedOn ?? p.CreatedOn),
+            _ => q.OrderByDescending(p => p.LastModifiedOn ?? p.CreatedOn)
+        };
+        var items = await ordered.ThenBy(p => p.Id).Skip((r.PageNumber - 1) * r.PageSize).Take(r.PageSize)
             .Select(p => new ProductSummary(p.Id, p.Name, p.Slug, p.Status, p.Variants.Where(v => v.IsActive).Min(v => v.Price),
-                p.Variants.Any(v => v.IsActive && availableVariantIds.Contains(v.Id)), p.FulfillmentKind)).ToListAsync(ct);
+                p.Variants.Any(v => v.IsActive && availableVariantIds.Contains(v.Id)), p.FulfillmentKind, p.ProductTypeId,
+                db.ProductTypes.Where(t => t.Id == p.ProductTypeId).Select(t => t.Name).First(),
+                p.Variants.Where(v => v.IsDefault).Select(v => v.ImageMediaId).FirstOrDefault() ??
+                    p.Media.OrderBy(m => m.SortOrder).ThenBy(m => m.MediaAssetId).Select(m => (Guid?)m.MediaAssetId).FirstOrDefault(),
+                p.Version, CatalogTimestamp(p.LastModifiedOn ?? p.CreatedOn))).ToListAsync(ct);
         return new(items, total, r.PageNumber, r.PageSize);
     }
     public Task<List<Category>> CategoriesAsync(bool publicOnly, CancellationToken ct) => db.Categories.AsNoTracking().Where(c => !publicOnly || c.IsActive).OrderBy(c => c.SortOrder).ThenBy(c => c.Id).ToListAsync(ct);
+    public Task<List<CategorySummary>> CategorySummariesAsync(CancellationToken ct) => db.Categories.AsNoTracking().OrderBy(c => c.Id)
+        .Select(c => new CategorySummary(c.Id, db.Set<ProductCategory>().Count(pc => pc.CategoryId == c.Id))).ToListAsync(ct);
+    private static DateTime CatalogTimestamp(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);
     public Task<List<ProductType>> TypesAsync(CancellationToken ct) => db.ProductTypes.AsNoTracking().OrderBy(t => t.Id).ToListAsync(ct);
     public async Task<ProductType> TypeAsync(Guid id, CancellationToken ct) => await db.ProductTypes.AsNoTracking().Include(t => t.Fields).ThenInclude(f => f.Choices).AsSplitQuery().SingleOrDefaultAsync(t => t.Id == id, ct) ?? throw new NotFoundException("Product type not found.");
-    public async Task<Page<InventoryDto>> InventoryAsync(int page, int size, CancellationToken ct)
+    public async Task<Page<InventoryDto>> InventoryAsync(int page, int size, CancellationToken ct, Guid? productId = null, Guid? variantId = null)
     {
         ValidatePage(page, size);
         var q = db.InventoryItems.AsNoTracking();
+        if (productId.HasValue)
+            q = q.Where(i => db.ProductVariants.Any(v => v.Id == i.VariantId && v.ProductId == productId));
+        if (variantId.HasValue)
+            q = q.Where(i => i.VariantId == variantId);
         return new(await q.OrderBy(i => i.Id).Skip((page - 1) * size).Take(size).Select(i => new InventoryDto(i.Id, i.VariantId, i.LocationId, i.OnHand, i.Version, i.Reserved)).ToListAsync(ct), await q.CountAsync(ct), page, size);
     }
     internal static MovementDto MapMovement(StockMovement m) => new(m.Id, m.InventoryItemId, m.OperationId, m.Delta, m.QuantityAfter, m.Reason, m.ActorId, m.CreatedAt);

@@ -75,7 +75,13 @@ public sealed partial class CommerceService(ApplicationDbContext db, CommerceUni
             }
             foreach (var input in r.Variants)
                 product.AddVariant(input.Sku, input.Price, input.CompareAtPrice, ResolveSelection(product, input.Options), MaxVariants);
-            await ApplyContent(product, type, r.Content, ct);
+            var states = r.Variants.Select(input =>
+            {
+                var variant = product.Variants.Single(v => v.NormalizedSku == input.Sku.Trim().ToUpperInvariant());
+                return new VariantEditorState(variant.Id, input.Price, input.CompareAtPrice, input.IsActive, input.ImageMediaId);
+            }).ToArray();
+            var defaultId = r.DefaultVariantSku is null ? product.Variants.First().Id : ResolveDefault(product, r.DefaultVariantSku);
+            await ApplyContent(product, type, r.Content, ct, states, defaultId);
             product.Validate(type);
             db.Products.Add(product);
             if (product.FulfillmentKind == ProductFulfillmentKind.Physical)
@@ -103,7 +109,8 @@ public sealed partial class CommerceService(ApplicationDbContext db, CommerceUni
             return o.Values.SingleOrDefault(v => string.Equals(v.Code, code, StringComparison.OrdinalIgnoreCase))?.Id ?? throw new DomainException("Unknown option value.");
         });
     }
-    private async Task ApplyContent(Product p, ProductType type, ProductContent content, CancellationToken ct)
+    private async Task ApplyContent(Product p, ProductType type, ProductContent content, CancellationToken ct,
+        IReadOnlyCollection<VariantEditorState>? variantStates = null, Guid? defaultVariantId = null)
     {
         if (content.CategoryIds is null || content.Fields is null || content.Media is null || content.Fields.Count > 100 || content.Media.Count > 30 || content.CategoryIds.Count > 100)
             throw new DomainException("Invalid product content.");
@@ -129,7 +136,11 @@ public sealed partial class CommerceService(ApplicationDbContext db, CommerceUni
         p.Edit(content.Name, content.Slug, content.Description);
         p.SetCategories(categoryIds);
         p.SetFields(type, content.Fields.Select(f => f.ToValue(p.Id, type.Id)));
-        p.SetMedia(content.Media.Select(m => new ProductMedia(p.Id, m.MediaAssetId, m.SortOrder, m.AltText)));
+        var gallery = content.Media.Select(m => new ProductMedia(p.Id, m.MediaAssetId, m.SortOrder, m.AltText)).ToArray();
+        if (variantStates is null)
+            p.SetMedia(gallery);
+        else
+            p.ApplyEditorState(variantStates, gallery, defaultVariantId!.Value);
     }
     public async Task<ProductDto> EditAsync(EditProduct r, CancellationToken ct)
     {
@@ -156,6 +167,7 @@ public sealed partial class CommerceService(ApplicationDbContext db, CommerceUni
         {
             var (p, t) = await LockedProduct(r.ProductId, r.Version, ct);
             var v = p.AddVariant(r.Variant.Sku, r.Variant.Price, r.Variant.CompareAtPrice, ResolveSelection(p, r.Variant.Options), MaxVariants);
+            p.EditVariant(v.Id, r.Variant.Price, r.Variant.CompareAtPrice, r.Variant.IsActive, r.Variant.ImageMediaId);
             if (p.FulfillmentKind == ProductFulfillmentKind.Physical)
             {
                 var location = await MainLocation(ct);

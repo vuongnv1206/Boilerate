@@ -40,7 +40,7 @@
       "key": "multi-line-cod",
       "paymentMethod": "CashOnDelivery",
       "lines": [
-        { "sku": "DEMO-ACC-009", "quantity": 1 },
+        { "sku": "DEMO-ACC-001", "quantity": 1 },
         { "sku": "DEMO-LIV-010", "quantity": 1 }
       ],
       "action": "None"
