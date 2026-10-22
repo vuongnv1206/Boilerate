@@ -78,7 +78,7 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
                 CheckVersion(r.Version, cart.Version);
             var ids = r.Items.Select(i => i.VariantId).Distinct().ToArray();
             if (await db.ProductVariants.CountAsync(v => ids.Contains(v.Id) && v.IsActive &&
-                db.Products.Any(p => p.Id == v.ProductId && p.Status == ProductStatus.Published), ct) != ids.Length)
+                db.Products.Any(p => p.Id == v.ProductId && !p.IsDeleted && p.Status == ProductStatus.Published), ct) != ids.Length)
                 throw new DomainException("Cart contains an unavailable product or SKU.");
             db.Set<CartItem>().RemoveRange(cart.Items.Where(i => !ids.Contains(i.VariantId)).ToArray());
             cart.ReplaceItems(r.Items.Select(i => (i.VariantId, i.Quantity)));
@@ -99,10 +99,10 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
         {
             var product = products.Single(p => p.Variants.Any(v => v.Id == line.VariantId));
             var variant = product.GetVariant(line.VariantId);
-            var available = product.Status == ProductStatus.Published && variant.IsActive && variant.Price.HasValue &&
+            var available = !product.IsDeleted && !variant.IsRetired && product.Status == ProductStatus.Published && variant.IsActive && variant.Price.HasValue &&
                 product.FulfillmentKind switch
                 {
-                    ProductFulfillmentKind.Physical => stock.Any(i => i.VariantId == variant.Id && i.OnHand - i.Reserved >= line.Quantity),
+                    ProductFulfillmentKind.Physical => !variant.TrackInventory || stock.Any(i => i.VariantId == variant.Id && i.OnHand - i.Reserved >= line.Quantity),
                     ProductFulfillmentKind.DigitalUnique => counts.GetValueOrDefault(variant.Id) >= line.Quantity,
                     ProductFulfillmentKind.DigitalShared => counts.GetValueOrDefault(variant.Id) > 0,
                     ProductFulfillmentKind.ManualExtension => true,
@@ -167,14 +167,14 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
             {
                 var product = products.Values.Single(p => p.Variants.Any(v => v.Id == line.VariantId));
                 var variant = product.GetVariant(line.VariantId);
-                if (product.Status != ProductStatus.Published || !variant.IsActive || !variant.Price.HasValue)
+                if (product.IsDeleted || variant.IsRetired || product.Status != ProductStatus.Published || !variant.IsActive || !variant.Price.HasValue)
                     throw new ConflictException("A cart product is no longer available for purchase.");
                 var selections = variant.Selections.OrderBy(s => s.OptionId).Select(s =>
                 {
                     var option = product.Options.Single(o => o.Id == s.OptionId);
                     return option.Name + ": " + option.Values.Single(v => v.Id == s.OptionValueId).Label;
                 });
-                items.Add(new(product.Id, variant.Id, product.Name, variant.Sku, string.Join("; ", selections), product.FulfillmentKind, variant.Price.Value, line.Quantity));
+                items.Add(new(product.Id, variant.Id, product.Name, variant.Sku, string.Join("; ", selections), product.FulfillmentKind, variant.Price.Value, line.Quantity, variant.TrackInventory));
             }
             var shipping = items.Any(i => i.FulfillmentKind == ProductFulfillmentKind.Physical) ? settings.Value.FlatShippingAmount : 0;
             CatalogRules.Money(shipping, null);
@@ -204,6 +204,7 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
             switch (item.FulfillmentKind)
             {
                 case ProductFulfillmentKind.Physical:
+                    if (!item.TrackInventory) break;
                     var balance = balances.SingleOrDefault(i => i.VariantId == item.VariantId);
                     if (balance is null || balance.OnHand - balance.Reserved < item.Quantity)
                         throw new ConflictException("Insufficient physical stock; no order was created.");

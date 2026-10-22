@@ -11,15 +11,17 @@ public sealed partial class CommerceService
 {
     private static Guid ResolveDefault(Product product, string sku)
     {
-        var normalized = CatalogRules.Code(sku).ToUpperInvariant();
-        return product.Variants.SingleOrDefault(v => v.NormalizedSku == normalized)?.Id
-            ?? throw new DomainException("Default SKU does not belong to this product.");
+        var normalized = (sku ?? "").Trim().ToUpperInvariant();
+        var matches = product.Variants.Where(v => !v.IsRetired && v.NormalizedSku == normalized).Take(2).ToArray();
+        return matches.Length == 1 ? matches[0].Id
+            : throw new DomainException("Identify the default variant by ID when SKU is empty or shared.");
     }
 
     public async Task<ProductDto> SaveEditorAsync(SaveProductEditor r, CancellationToken ct)
     {
+        if (r.Configuration is not null) return await SaveConfiguredAsync(r, ct);
         if (r.Content is null || r.OptionEdits is null || r.VariantEdits is null || r.AddedVariants is null ||
-            r.OptionEdits.Count > MaxOptions || r.VariantEdits.Count > MaxVariants || r.AddedVariants.Count > MaxVariants ||
+            r.OptionEdits.Count > MaxOptions || r.AddedOptions?.Count > MaxOptions || r.VariantEdits.Count > MaxVariants || r.AddedVariants.Count > MaxVariants ||
             r.OptionEdits.Any(o => o is null || o.AddValues is null || o.Values is null || o.AddValues.Count > 200 || o.Values.Count > 200 ||
                 o.AddValues.Any(v => v is null) || o.Values.Any(v => v is null)) ||
             r.VariantEdits.Any(v => v is null) || r.AddedVariants.Any(v => v is null) ||
@@ -49,6 +51,16 @@ public sealed partial class CommerceService
                     (option.Values.SingleOrDefault(v => v.Id == value.Id) ?? throw new DomainException("Unknown option value.")).Rename(value.Label, value.SortOrder);
                 foreach (var value in edit.AddValues)
                     option.AddValue(value.Code, value.Label);
+            }
+
+            foreach (var input in r.AddedOptions ?? [])
+            {
+                var option = p.AddOption(input.Code, input.Name, MaxOptions);
+                foreach (var value in input.Values)
+                    option.AddValue(value.Code, value.Label);
+                var defaultValueId = option.Values.First().Id;
+                foreach (var variantId in originalIds)
+                    p.AssignOptionValue(variantId, option.Id, defaultValueId);
             }
 
             var newVariants = r.AddedVariants.Select(input =>

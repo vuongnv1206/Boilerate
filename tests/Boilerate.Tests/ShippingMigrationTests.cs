@@ -63,7 +63,7 @@ public sealed class ShippingMigrationTests
         var audit = JsonSerializer.Serialize(await db.Trails.AsNoTracking().Where(x => x.TableName == "ShipmentItems").ToListAsync());
         Assert.Contains(seeded.Shipment.Id.ToString(), audit);
         Assert.Contains(item.Id.ToString(), audit);
-        Assert.Contains(shipmentItem.StockMovementId.ToString(), audit);
+        Assert.Contains(shipmentItem.StockMovementId!.Value.ToString(), audit);
 
         db.Entry(shipmentItem).Property(x => x.Quantity).CurrentValue = 2;
         await Assert.ThrowsAsync<InvalidOperationException>(() => db.SaveChangesAsync());

@@ -9,6 +9,8 @@ public sealed class Product : CommerceEntity, IAggregateRoot
     private readonly List<ProductCategory> _categories = [];
     private readonly List<ProductFieldValue> _fieldValues = [];
     private readonly List<ProductMedia> _media = [];
+    public bool IsDeleted { get; private set; }
+    public void Delete() { IsDeleted = true; Status = ProductStatus.Archived; Touch(); }
     public Guid ProductTypeId
     {
         get; private set;
@@ -62,9 +64,7 @@ public sealed class Product : CommerceEntity, IAggregateRoot
     }
     public ProductOption AddOption(string code, string name, int maximumOptions)
     {
-        if (_variants.Count != 0)
-            throw new DomainException("Option axes cannot change after SKU creation; add values to an existing axis instead.");
-        if (_options.Count >= maximumOptions)
+        if (_options.Count(o => !o.IsRetired) >= maximumOptions)
             throw new DomainException("Option limit exceeded.");
         var option = new ProductOption(Id, code, name, _options.Count);
         if (_options.Any(o => o.Code == option.Code))
@@ -73,13 +73,23 @@ public sealed class Product : CommerceEntity, IAggregateRoot
         Touch();
         return option;
     }
+    public void AssignOptionValue(Guid variantId, Guid optionId, Guid optionValueId)
+    {
+        var option = _options.SingleOrDefault(o => o.Id == optionId) ?? throw new DomainException("Unknown option.");
+        var value = option.Values.SingleOrDefault(v => v.Id == optionValueId) ?? throw new DomainException("Unknown option value.");
+        var variant = GetVariant(variantId);
+        variant.AddSelection(option, value);
+        if (_variants.Any(other => other.Id != variant.Id && other.CombinationKey == variant.CombinationKey))
+            throw new DomainException("Duplicate option combination.");
+        Touch();
+    }
     public ProductVariant AddVariant(string sku, decimal? price, decimal? compareAtPrice, IReadOnlyDictionary<Guid, Guid> selection, int maximumVariants)
     {
-        if (_variants.Count >= maximumVariants)
+        if (_variants.Count(v => !v.IsRetired) >= maximumVariants)
             throw new DomainException("Variant limit exceeded.");
         var variant = new ProductVariant(Id, sku, price, compareAtPrice, _variants.Count == 0);
-        variant.SetSelection(_options, selection);
-        if (_variants.Any(v => v.CombinationKey == variant.CombinationKey || v.NormalizedSku == variant.NormalizedSku))
+        variant.SetSelection(_options.Where(o => !o.IsRetired).ToArray(), selection);
+        if (_variants.Any(v => !v.IsRetired && v.CombinationKey == variant.CombinationKey))
             throw new DomainException("Duplicate SKU or option combination.");
         _variants.Add(variant);
         Touch();
@@ -95,6 +105,7 @@ public sealed class Product : CommerceEntity, IAggregateRoot
         variant.Edit(price, comparison, active, imageMediaId);
         Touch();
     }
+    public void ClearConfigurationDefault() { foreach (var variant in _variants) variant.SetDefault(false); }
     public void SelectDefault(Guid id)
     {
         var selected = GetVariant(id);
@@ -125,12 +136,12 @@ public sealed class Product : CommerceEntity, IAggregateRoot
         }
         Touch();
     }
-    public void SetMedia(IEnumerable<ProductMedia> media)
+    public void SetMedia(IEnumerable<ProductMedia> media, int maximum = 30)
     {
         var list = media.ToList();
-        if (list.Count > 30 || list.Any(m => m.ProductId != Id) || list.GroupBy(m => m.MediaAssetId).Any(g => g.Count() > 1))
+        if (list.Count > maximum || list.Any(m => m.ProductId != Id) || list.GroupBy(m => m.MediaAssetId).Any(g => g.Count() > 1))
             throw new DomainException("Invalid product gallery.");
-        if (_variants.Any(v => v.ImageMediaId.HasValue && list.All(m => m.MediaAssetId != v.ImageMediaId)))
+        if (_variants.Any(v => !v.IsRetired && v.ImageMediaId.HasValue && list.All(m => m.MediaAssetId != v.ImageMediaId)))
             throw new DomainException("Detach variant images before removing them from the gallery.");
         _media.RemoveAll(m => list.All(n => n.MediaAssetId != m.MediaAssetId));
         foreach (var item in list)
@@ -147,10 +158,10 @@ public sealed class Product : CommerceEntity, IAggregateRoot
     {
         var states = variants.ToList();
         var gallery = media.ToList();
-        if (states.Count != _variants.Count || states.Select(v => v.Id).Distinct().Count() != states.Count ||
+        if (states.Count != _variants.Count(v => !v.IsRetired) || states.Select(v => v.Id).Distinct().Count() != states.Count ||
             states.Any(v => _variants.All(existing => existing.Id != v.Id)))
             throw new DomainException("Editor state must identify every SKU exactly once.");
-        if (gallery.Count > 30 || gallery.Any(m => m.ProductId != Id) || gallery.Select(m => m.MediaAssetId).Distinct().Count() != gallery.Count)
+        if (gallery.Count > Math.Max(30, states.Count * 31) || gallery.Any(m => m.ProductId != Id) || gallery.Select(m => m.MediaAssetId).Distinct().Count() != gallery.Count)
             throw new DomainException("Invalid product gallery.");
         if (!states.Any(v => v.Id == defaultVariantId && v.IsActive))
             throw new DomainException("Default SKU must be active.");
@@ -167,7 +178,7 @@ public sealed class Product : CommerceEntity, IAggregateRoot
             variant.Edit(state.Price, state.CompareAtPrice, state.IsActive, state.ImageMediaId);
             variant.SetDefault(state.Id == defaultVariantId);
         }
-        SetMedia(gallery);
+        SetMedia(gallery, Math.Max(30, states.Count * 31));
     }
     public void ChangeStatus(ProductStatus status, ProductType type)
     {
@@ -182,13 +193,13 @@ public sealed class Product : CommerceEntity, IAggregateRoot
     {
         if (type.Id != ProductTypeId)
             throw new DomainException("Wrong product type.");
-        if (_variants.Count == 0 || _variants.Count(v => v.IsDefault && v.IsActive) != 1)
+        if (_variants.All(v => v.IsRetired) || _variants.Count(v => !v.IsRetired && v.IsDefault && v.IsActive) != 1)
             throw new DomainException("Exactly one active default SKU is required.");
         if (Status != ProductStatus.Published && !publishing)
             return;
         if (!type.IsActive)
             throw new DomainException("Product type is inactive.");
-        if (_variants.Where(v => v.IsActive).Any(v => !v.Price.HasValue))
+        if (_variants.Where(v => !v.IsRetired && v.IsActive).Any(v => !v.Price.HasValue))
             throw new DomainException("Active SKUs require prices before publication.");
         if (type.Fields.Any(f => f.IsActive && f.IsRequired && _fieldValues.All(v => v.FieldDefinitionId != f.Id)))
             throw new DomainException("Required product fields are missing.");

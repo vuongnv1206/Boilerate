@@ -40,8 +40,8 @@ public sealed partial class CommerceService(ApplicationDbContext db, CommerceUni
         // This lock serializes product writes with schema edits without changing schema version.
         return await db.ProductTypes.Include(x => x.Fields).ThenInclude(x => x.Choices).AsSplitQuery().SingleAsync(x => x.Id == id, ct);
     }
-    private IQueryable<Product> ProductGraph() => db.Products.Include(x => x.Variants).ThenInclude(x => x.Selections)
-        .Include(x => x.Options).ThenInclude(x => x.Values).Include(x => x.Categories).Include(x => x.FieldValues).Include(x => x.Media).AsSplitQuery();
+    private IQueryable<Product> ProductGraph() => db.Products.Where(p => !p.IsDeleted).Include(x => x.Variants).ThenInclude(x => x.Selections)
+        .Include(x => x.Variants).ThenInclude(x => x.Images).Include(x => x.Options).ThenInclude(x => x.Values).Include(x => x.Categories).Include(x => x.FieldValues).Include(x => x.Media).AsSplitQuery();
     private async Task<(Product Product, ProductType Type)> LockedProduct(Guid id, string version, CancellationToken ct)
     {
         var typeId = await db.Products.Where(x => x.Id == id).Select(x => (Guid?)x.ProductTypeId).SingleOrDefaultAsync(ct)
@@ -54,6 +54,7 @@ public sealed partial class CommerceService(ApplicationDbContext db, CommerceUni
     }
     public async Task<ProductDto> CreateAsync(CreateProduct r, CancellationToken ct)
     {
+        if (r.Configuration is not null) return await CreateConfiguredAsync(r, ct);
         if (r.Variants is null || r.Variants.Count is < 1 || r.Variants.Count > MaxVariants || r.Options is null)
             throw new DomainException("Invalid variants/options.");
         if (r.Variants.Any(v => v.Price.HasValue || v.CompareAtPrice.HasValue))
@@ -75,9 +76,9 @@ public sealed partial class CommerceService(ApplicationDbContext db, CommerceUni
             }
             foreach (var input in r.Variants)
                 product.AddVariant(input.Sku, input.Price, input.CompareAtPrice, ResolveSelection(product, input.Options), MaxVariants);
-            var states = r.Variants.Select(input =>
+            var states = r.Variants.Select((input, index) =>
             {
-                var variant = product.Variants.Single(v => v.NormalizedSku == input.Sku.Trim().ToUpperInvariant());
+                var variant = product.Variants.ElementAt(index);
                 return new VariantEditorState(variant.Id, input.Price, input.CompareAtPrice, input.IsActive, input.ImageMediaId);
             }).ToArray();
             var defaultId = r.DefaultVariantSku is null ? product.Variants.First().Id : ResolveDefault(product, r.DefaultVariantSku);
@@ -96,13 +97,13 @@ public sealed partial class CommerceService(ApplicationDbContext db, CommerceUni
     }
     private static Dictionary<Guid, Guid> ResolveSelection(Product p, Dictionary<string, string>? selections)
     {
-        if (selections is null || selections.Count != p.Options.Count)
+        if (selections is null || selections.Count != p.Options.Count(o => !o.IsRetired))
             throw new DomainException("Invalid SKU selection.");
         var normalized = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var pair in selections)
             if (!normalized.TryAdd(pair.Key, pair.Value))
                 throw new DomainException("Duplicate option selection.");
-        return p.Options.ToDictionary(o => o.Id, o =>
+        return p.Options.Where(o => !o.IsRetired).ToDictionary(o => o.Id, o =>
         {
             if (!normalized.TryGetValue(o.Code, out var code))
                 throw new DomainException("An option selection is missing.");
@@ -112,7 +113,7 @@ public sealed partial class CommerceService(ApplicationDbContext db, CommerceUni
     private async Task ApplyContent(Product p, ProductType type, ProductContent content, CancellationToken ct,
         IReadOnlyCollection<VariantEditorState>? variantStates = null, Guid? defaultVariantId = null)
     {
-        if (content.CategoryIds is null || content.Fields is null || content.Media is null || content.Fields.Count > 100 || content.Media.Count > 30 || content.CategoryIds.Count > 100)
+        if (content.CategoryIds is null || content.Fields is null || content.Media is null || content.Fields.Count > 100 || content.Media.Count > (variantStates is null ? 30 : Math.Max(30, variantStates.Count * 31)) || content.CategoryIds.Count > 100)
             throw new DomainException("Invalid product content.");
         var categoryIds = content.CategoryIds.Distinct().ToArray();
         if (await db.Categories.CountAsync(c => categoryIds.Contains(c.Id), ct) != categoryIds.Length)

@@ -63,6 +63,7 @@ internal static class OrderingModel
         order.HasOne<Cart>().WithMany().HasForeignKey(x => x.CartId).OnDelete(DeleteBehavior.Restrict);
 
         var orderItem = m.Entity<OrderItem>();
+        orderItem.Property(x => x.TrackInventory).HasDefaultValue(true);
         orderItem.HasBaseType((Type?)null);
         orderItem.ToTable("OrderItems", "Ordering", t =>
         {

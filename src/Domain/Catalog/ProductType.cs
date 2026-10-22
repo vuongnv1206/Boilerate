@@ -15,7 +15,7 @@ public sealed class ProductType : CommerceEntity, IAggregateRoot
     }
     public ProductType(string code, string name)
     {
-        Code = CatalogRules.Code(code);
+        Code = CatalogRules.InternalCode(code, "FIELD");
         NormalizedCode = Code.ToUpperInvariant();
         Edit(name, true);
     }
@@ -93,7 +93,7 @@ public sealed class ProductFieldDefinition : BaseEntity
         if (!Enum.IsDefined(type))
             throw new DomainException("Unknown field type.");
         ProductTypeId = typeId;
-        Code = CatalogRules.Code(code).ToUpperInvariant();
+        Code = CatalogRules.InternalCode(code, "FIELD").ToUpperInvariant();
         DataType = type;
         IsRequired = required;
         Edit(label, help, filterable, true, order);
@@ -138,7 +138,7 @@ public sealed class ProductFieldChoice : BaseEntity
     internal ProductFieldChoice(Guid fieldId, string code, string label, int order)
     {
         FieldDefinitionId = fieldId;
-        Code = CatalogRules.Code(code).ToUpperInvariant();
+        Code = CatalogRules.InternalCode(code, "FIELD").ToUpperInvariant();
         Edit(label, true, order);
     }
     public void Edit(string label, bool active, int order)

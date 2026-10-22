@@ -84,7 +84,7 @@ public sealed class ShipmentItem
     public Guid OrderId { get; private set; }
     public Guid OrderItemId { get; private set; }
     public Guid VariantId { get; private set; }
-    public Guid StockMovementId { get; private set; }
+    public Guid? StockMovementId { get; private set; }
     public ProductFulfillmentKind FulfillmentKind { get; private set; } = ProductFulfillmentKind.Physical;
     public int Quantity { get; private set; }
 
@@ -92,7 +92,7 @@ public sealed class ShipmentItem
     {
     }
 
-    public ShipmentItem(Guid orderId, Guid orderItemId, Guid variantId, Guid stockMovementId, int quantity)
+    public ShipmentItem(Guid orderId, Guid orderItemId, Guid variantId, Guid? stockMovementId, int quantity)
     {
         if (orderId == Guid.Empty || orderItemId == Guid.Empty || variantId == Guid.Empty || stockMovementId == Guid.Empty || quantity is < 1 or > 999)
             throw new DomainException("Shipment items require order, item, SKU and movement IDs and quantity from 1 to 999.");

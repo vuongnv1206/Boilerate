@@ -127,6 +127,7 @@ public sealed partial class OrderingService
             switch (item.FulfillmentKind)
             {
                 case ProductFulfillmentKind.Physical:
+                    if (!item.TrackInventory) break;
                     var held = reservations.GetValueOrDefault(item.Id);
                     if (!balances.TryGetValue(item.VariantId, out var balance) ||
                         (held?.State == HoldState.Held
@@ -188,7 +189,7 @@ public sealed partial class OrderingService
         }
         foreach (var item in order.Items.OrderBy(i => i.VariantId))
         {
-            if (item.FulfillmentKind == ProductFulfillmentKind.Physical)
+            if (item.FulfillmentKind == ProductFulfillmentKind.Physical && item.TrackInventory)
             {
                 var balance = balances[item.VariantId];
                 var held = reservations.GetValueOrDefault(item.Id);

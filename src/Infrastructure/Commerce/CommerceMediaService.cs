@@ -31,7 +31,7 @@ public sealed class CommerceMediaService(ApplicationDbContext db, CommerceUnitOf
     public async Task<(Stream Stream, string ContentType)> OpenAsync(Guid id, bool publishedOnly, CancellationToken ct)
     {
         var asset = await db.MediaAssets.AsNoTracking().SingleOrDefaultAsync(m => m.Id == id && m.State == MediaState.Ready &&
-            (!publishedOnly || db.Set<ProductMedia>().Any(link => link.MediaAssetId == m.Id && db.Products.Any(p => p.Id == link.ProductId && p.Status == ProductStatus.Published))), ct)
+            (!publishedOnly || db.Set<ProductMedia>().Any(link => link.MediaAssetId == m.Id && db.Products.Any(p => p.Id == link.ProductId && p.Status == ProductStatus.Published && !p.IsDeleted))), ct)
             ?? throw new NotFoundException("Media not found.");
         try
         {

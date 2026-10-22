@@ -72,6 +72,12 @@ public sealed partial class OrderingService
             var balances = await db.InventoryItems.Where(i => balanceIds.Contains(i.Id)).ToDictionaryAsync(i => i.Id, ct);
             foreach (var line in r.Items)
             {
+                if (!physical[line.OrderItemId].TrackInventory)
+                {
+                    if (previouslyShipped.GetValueOrDefault(line.OrderItemId) + line.Quantity > physical[line.OrderItemId].Quantity)
+                        throw new ConflictException("Shipment exceeds the order's remaining quantity.");
+                    continue;
+                }
                 if (previouslyShipped.GetValueOrDefault(line.OrderItemId) + line.Quantity > physical[line.OrderItemId].Quantity ||
                     !reservations.TryGetValue(line.OrderItemId, out var reservation) || reservation.State != HoldState.Held ||
                     reservation.Remaining < line.Quantity || !balances.TryGetValue(reservation.InventoryItemId, out var balance) ||
@@ -82,6 +88,7 @@ public sealed partial class OrderingService
             foreach (var line in r.Items.OrderBy(i => i.OrderItemId))
             {
                 var item = physical[line.OrderItemId];
+                if (!item.TrackInventory) { lines.Add(new(order.Id, item.Id, item.VariantId, null, line.Quantity)); continue; }
                 var reservation = reservations[line.OrderItemId];
                 var movement = balances[reservation.InventoryItemId].ConsumeReserved(Guid.NewGuid(), line.Quantity,
                     $"Dispatch order {order.Number}", actor.GetUserId());

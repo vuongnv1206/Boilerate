@@ -95,7 +95,7 @@ public sealed class OutboxProcessor(ApplicationDbContext db, CommerceUnitOfWork 
             if (await db.MediaAssets.Where(m => m.Id == mediaId).ExecuteUpdateAsync(s => s.SetProperty(m => m.Version, m => m.Version), ct) == 0)
                 return null;
             var asset = await db.MediaAssets.SingleAsync(m => m.Id == mediaId, ct);
-            if (asset.State == MediaState.Deleted || await db.Set<ProductMedia>().AnyAsync(m => m.MediaAssetId == mediaId, ct))
+            if (asset.State == MediaState.Deleted || (await db.Set<ProductMedia>().AnyAsync(m => m.MediaAssetId == mediaId, ct) || await db.Set<VariantMedia>().AnyAsync(m => m.MediaAssetId == mediaId, ct)))
                 return null;
             if (asset.State == MediaState.Uploading && asset.ExpiresAt > DateTime.UtcNow)
                 return null;
@@ -120,7 +120,7 @@ public sealed class OutboxProcessor(ApplicationDbContext db, CommerceUnitOfWork 
             .Where(m => m.Type == "MediaCleanupRequested" && m.State != OutboxState.Completed)
             .Select(m => m.Payload).ToListAsync(ct)).ToHashSet(StringComparer.Ordinal);
         var candidates = db.MediaAssets.AsNoTracking().Where(m => m.State != MediaState.Deleted && m.ExpiresAt <= now &&
-            !db.Set<ProductMedia>().Any(p => p.MediaAssetId == m.Id)).OrderBy(m => m.ExpiresAt).ThenBy(m => m.Id);
+            !db.Set<ProductMedia>().Any(p => p.MediaAssetId == m.Id) && !db.Set<VariantMedia>().Any(p => p.MediaAssetId == m.Id)).OrderBy(m => m.ExpiresAt).ThenBy(m => m.Id);
         int offset = 0, added = 0;
         while (added < 100)
         {

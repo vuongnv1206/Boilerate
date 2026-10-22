@@ -30,7 +30,7 @@ public sealed class FoundationBootstrap : IScopedService
         yield return ("Hangfire", new[] { "View" });
         if (_config.GetValue<bool>("Modules:Catalog:Enabled"))
         {
-            yield return ("Product", new[] { "View", "Create", "Update", "Publish" });
+            yield return ("Product", new[] { "View", "Create", "Update", "Publish", "Delete" });
             yield return ("ProductType", new[] { "View", "Create", "Update" });
             yield return ("Price", new[] { "Update" });
             yield return ("Inventory", new[] { "View", "Adjust", "Initialize" });

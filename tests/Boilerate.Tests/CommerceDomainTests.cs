@@ -22,7 +22,36 @@ public sealed class CommerceDomainTests
         Assert.Equal(2, p.Categories.Count);
         Assert.Throws<DomainException>(() => p.AddVariant("SECOND", 100000, null, new Dictionary<Guid, Guid> { [color.Id] = black.Id, [size.Id] = medium.Id }, 200));
         Assert.Throws<DomainException>(() => p.AddVariant("MISSING", 100000, null, new Dictionary<Guid, Guid>(), 200));
-        Assert.Throws<DomainException>(() => p.AddOption("new", "New axis", 3));
+        var material = p.AddOption("material", "Material", 3);
+        var cotton = material.AddValue("cotton", "Cotton");
+        p.AssignOptionValue(v.Id, material.Id, cotton.Id);
+        Assert.Equal(3, v.Selections.Count);
+        Assert.Contains(v.Selections, selection => selection.OptionId == material.Id && selection.OptionValueId == cotton.Id);
+    }
+
+    [Fact]
+    public void ExistingSkusCanReceiveValuesForANewOptionAxis()
+    {
+        var p = new Product(Guid.NewGuid(), "T-shirt", "t-shirt");
+        var color = p.AddOption("color", "Color", 3);
+        var red = color.AddValue("red", "Red");
+        var blue = color.AddValue("blue", "Blue");
+        var first = p.AddVariant("SHIRT-RED", 100, null, new Dictionary<Guid, Guid> { [color.Id] = red.Id }, 200);
+        var second = p.AddVariant("SHIRT-BLUE", 100, null, new Dictionary<Guid, Guid> { [color.Id] = blue.Id }, 200);
+
+        var size = p.AddOption("size", "Size", 3);
+        var small = size.AddValue("s", "Small");
+        var medium = size.AddValue("m", "Medium");
+        p.AssignOptionValue(first.Id, size.Id, small.Id);
+        p.AssignOptionValue(second.Id, size.Id, small.Id);
+        var added = p.AddVariant("SHIRT-RED-M", 100, null,
+            new Dictionary<Guid, Guid> { [color.Id] = red.Id, [size.Id] = medium.Id }, 200);
+
+        Assert.Equal(2, first.Selections.Count);
+        Assert.Equal(small.Id, first.Selections.Single(selection => selection.OptionId == size.Id).OptionValueId);
+        Assert.Equal(small.Id, second.Selections.Single(selection => selection.OptionId == size.Id).OptionValueId);
+        Assert.Contains(added.Selections, selection => selection.OptionId == size.Id && selection.OptionValueId == medium.Id);
+        Assert.Equal(3, p.Variants.Count);
     }
     [Fact]
     public void PublicationRequiresWholeVndPricesAndRequiredTypedFields()

@@ -40,6 +40,7 @@ public static class CatalogRules
             throw new DomainException("Codes must contain ASCII letters, numbers, '.', '-' or '_'.");
         return value;
     }
+    public static string InternalCode(string? value, string prefix) => string.IsNullOrWhiteSpace(value) ? $"{prefix}_{Guid.NewGuid():N}" : Code(value);
     public static string Slug(string? value)
     {
         value = Required(value, 200, "Slug").ToLowerInvariant();

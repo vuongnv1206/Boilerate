@@ -31,6 +31,7 @@ Các bản ghi trước ngày tách tài liệu giữ nguyên bối cảnh nghi�
 - 2026-10-19: [Tổng kết kiểm chứng hậu mãi](2026-10-19-07-aftersales-regression-docs.md).
 - 2026-10-20: [Seed dữ liệu JSON qua ICustomSeeder](2026-10-20-development-seeding.md) — [kiểm chứng local](../verification/2026-10-20-development-seeding.md).
 - 2026-10-21: [Browser session qua HttpOnly cookie](2026-10-21-browser-session.md) — [kiểm chứng local](../verification/2026-10-21-browser-session.md).
+- 2026-10-22: Catalog editor thêm trục option cho sản phẩm đã lưu, giữ identity/kho SKU cũ; [hồ sơ và kiểm chứng](../../shared/features/catalog-workspace.md).
 
 - 2026-10-18: [Lập kế hoạch nghiệm thu vận hành](2026-10-18-01-operations-plan.md).
 - 2026-10-18: [Gate runtime và trusted proxy](2026-10-18-02-runtime-gates.md).

@@ -85,6 +85,29 @@ public sealed class ShippingIntegrationTests
 
     private static DeliverShipment Deliver(ShipmentDto shipment) => new(shipment.OrderVersion, shipment.Version, Guid.NewGuid());
 
+    [Fact, Trait("Category", "ProviderIntegration")]
+    public async Task WebflowUntrackedVariantCanCheckoutShipAndDeliverWithEmptySku()
+    {
+        await using var fixture = new FoundationDatabase("mssql", true);
+        await fixture.CreateAsync();
+        using var scope = fixture.Scope(Guid.NewGuid());
+        var catalog = Catalog(scope); var ordering = Ordering(scope);
+        await catalog.InitializeAsync(default);
+        var type = await catalog.CreateTypeAsync(new("", "Untracked", []), default);
+        var key = Guid.NewGuid();
+        var product = await catalog.CreateAsync(new(type.Id,type.Version,new("Unlimited","unlimited",null,[],[],[]),[],[],
+            Configuration:new([], [new(key,"",100,null,[],TrackInventory:false)],key)),default);
+        product = await catalog.StatusAsync(new(product.Id,product.Version,ProductStatus.Published),default);
+        var order = await Checkout(ordering,OrderPaymentMethod.CashOnDelivery,(product.Variants.Single().Id,2));
+        Assert.Empty(order.Items.Single().Sku);
+        var shipment = await ordering.DispatchShipmentAsync(order.Id,Dispatch(order,(order.Items.Single().Id,2)),default);
+        await ordering.DeliverShipmentAsync(order.Id,shipment.Id,Deliver(shipment),default);
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        Assert.Empty(await db.PhysicalStockReservations.ToListAsync());
+        Assert.Null((await db.Set<ShipmentItem>().SingleAsync()).StockMovementId);
+        Assert.Equal(0,(await catalog.InventoryAsync(1,100,default,product.Id)).Items.Single().OnHand);
+    }
+
     private sealed class PrecisionClock : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => new(new DateTime(2026, 10, 18, 11, 0, 0, DateTimeKind.Utc).AddTicks(1234567));

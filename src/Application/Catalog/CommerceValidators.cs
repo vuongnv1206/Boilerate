@@ -10,7 +10,7 @@ public sealed class ProductContentValidator : AbstractValidator<ProductContent>
         RuleFor(x => x.Description).MaximumLength(20000);
         RuleFor(x => x.CategoryIds).NotNull().Must(x => x is null || x.Count <= 100);
         RuleFor(x => x.Fields).NotNull().Must(x => x is null || x.Count <= 100);
-        RuleFor(x => x.Media).NotNull().Must(x => x is null || x.Count <= 30);
+        RuleFor(x => x.Media).NotNull().Must(x => x is null || x.Count <= 31000);
         RuleForEach(x => x.Fields).NotNull();
         RuleForEach(x => x.Media).NotNull();
     }
@@ -19,7 +19,7 @@ public sealed class VariantInputValidator : AbstractValidator<VariantInput>
 {
     public VariantInputValidator()
     {
-        RuleFor(x => x.Sku).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.Sku).MaximumLength(100);
         RuleFor(x => x.Options).NotNull().Must(x => x is null || x.Count <= 10);
     }
 }
@@ -27,7 +27,7 @@ public sealed class OptionInputValidator : AbstractValidator<OptionInput>
 {
     public OptionInputValidator()
     {
-        RuleFor(x => x.Code).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.Code).MaximumLength(100);
         RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Values).NotEmpty().Must(x => x is null || x.Count <= 200);
         RuleForEach(x => x.Values).NotNull();
@@ -44,7 +44,7 @@ public sealed class CreateProductValidator : AbstractValidator<CreateProduct>
         RuleFor(x => x.Content).NotNull().SetValidator(new ProductContentValidator());
         RuleFor(x => x.Options).NotNull().Must(x => x is null || x.Count <= 10);
         RuleForEach(x => x.Options).NotNull().SetValidator(new OptionInputValidator());
-        RuleFor(x => x.Variants).NotEmpty().Must(x => x is null || x.Count <= 1000);
+        RuleFor(x => x.Variants).NotEmpty().Must(x => x is null || x.Count <= 1000).When(x => x.Configuration is null);
         RuleForEach(x => x.Variants).NotNull().SetValidator(new VariantInputValidator());
     }
 }
@@ -74,8 +74,10 @@ public sealed class SaveProductEditorValidator : AbstractValidator<SaveProductEd
         RuleFor(x => x.Version).NotEmpty();
         RuleFor(x => x.ProductTypeVersion).NotEmpty();
         RuleFor(x => x.Content).NotNull().SetValidator(new ProductContentValidator());
-        RuleFor(x => x.DefaultVariantSku).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.DefaultVariantSku).MaximumLength(100);
         RuleFor(x => x.OptionEdits).NotNull().Must(x => x is null || x.Count <= 10);
+        RuleFor(x => x.AddedOptions).Must(x => x is null || x.Count <= 10);
+        RuleForEach(x => x.AddedOptions!).NotNull().SetValidator(new OptionInputValidator());
         RuleForEach(x => x.OptionEdits).NotNull().ChildRules(option =>
         {
             option.RuleFor(x => x.OptionId).NotEmpty();
@@ -117,7 +119,7 @@ public sealed class FieldDefinitionInputValidator : AbstractValidator<FieldDefin
 {
     public FieldDefinitionInputValidator()
     {
-        RuleFor(x => x.Code).NotEmpty();
+        RuleFor(x => x.Code).MaximumLength(100);
         RuleFor(x => x.Label).NotEmpty();
         RuleFor(x => x.Choices).NotNull().Must(x => x is null || x.Count <= 200);
         RuleForEach(x => x.Choices).NotNull();

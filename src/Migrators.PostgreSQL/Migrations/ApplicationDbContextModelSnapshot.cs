@@ -153,6 +153,9 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(1);
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("LastModifiedBy")
                         .HasColumnType("uuid");
 
@@ -383,6 +386,9 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<bool>("IsRetired")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -411,6 +417,9 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsRetired")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Label")
                         .IsRequired()
@@ -500,6 +509,10 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("character varying(3)");
 
+                    b.Property<decimal?>("Height")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
                     b.Property<Guid?>("ImageMediaId")
                         .HasColumnType("uuid");
 
@@ -508,6 +521,13 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
 
                     b.Property<bool>("IsDefault")
                         .HasColumnType("boolean");
+
+                    b.Property<bool>("IsRetired")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("Length")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
 
                     b.Property<string>("NormalizedSku")
                         .IsRequired()
@@ -526,17 +546,30 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<bool>("TrackInventory")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<decimal?>("Weight")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal?>("Width")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("NormalizedSku")
-                        .IsUnique();
+                    b.HasIndex("NormalizedSku");
 
                     b.HasIndex("ProductId")
                         .IsUnique()
                         .HasFilter("\"IsDefault\" = TRUE");
 
                     b.HasIndex("ProductId", "CombinationKey")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("\"IsRetired\" = FALSE");
 
                     b.HasIndex("ProductId", "ImageMediaId");
 
@@ -544,6 +577,28 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         {
                             t.HasCheckConstraint("CK_Variant_Price", "(\"Price\" IS NULL OR (\"Price\" >= 0 AND \"Price\" = FLOOR(\"Price\"))) AND (\"CompareAtPrice\" IS NULL OR (\"Price\" IS NOT NULL AND \"CompareAtPrice\" > \"Price\" AND \"CompareAtPrice\" = FLOOR(\"CompareAtPrice\"))) AND \"Currency\" = 'VND'");
                         });
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Catalog.VariantMedia", b =>
+                {
+                    b.Property<Guid>("VariantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("MediaAssetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AltText")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.HasKey("VariantId", "MediaAssetId");
+
+                    b.HasIndex("MediaAssetId");
+
+                    b.ToTable("VariantMedia", "Catalog");
                 });
 
             modelBuilder.Entity("Boilerate.Domain.Catalog.VariantOptionValue", b =>
@@ -1757,6 +1812,11 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<bool>("TrackInventory")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<decimal>("UnitPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
@@ -2433,7 +2493,7 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("StockMovementId")
+                    b.Property<Guid?>("StockMovementId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("VariantId")
@@ -2655,6 +2715,21 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         .WithMany()
                         .HasForeignKey("ProductId", "ImageMediaId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Catalog.VariantMedia", b =>
+                {
+                    b.HasOne("Boilerate.Domain.Media.MediaAsset", null)
+                        .WithMany()
+                        .HasForeignKey("MediaAssetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Boilerate.Domain.Catalog.ProductVariant", null)
+                        .WithMany("Images")
+                        .HasForeignKey("VariantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Boilerate.Domain.Catalog.VariantOptionValue", b =>
@@ -2988,8 +3063,7 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                     b.HasOne("Boilerate.Domain.Inventory.StockMovement", null)
                         .WithMany()
                         .HasForeignKey("StockMovementId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Boilerate.Domain.Shipping.Shipment", null)
                         .WithMany("Items")
@@ -3078,6 +3152,8 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
 
             modelBuilder.Entity("Boilerate.Domain.Catalog.ProductVariant", b =>
                 {
+                    b.Navigation("Images");
+
                     b.Navigation("Selections");
                 });
 

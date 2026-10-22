@@ -97,27 +97,29 @@ PUT `/api/products/{id}/editor`:
   "id":"<product-id>", "version":"<product-version>", "productTypeVersion":"<type-version>",
   "content":{"name":"Áo thun","slug":"ao-thun","description":"Cotton","categoryIds":[],"fields":[],"media":[{"mediaAssetId":"<image-id>","sortOrder":0,"altText":"Áo xanh"}]},
   "optionEdits":[{"optionId":"<color-id>","name":"Màu sắc","sortOrder":0,"addValues":[{"code":"BLUE","label":"Xanh"}],"values":[]}],
+  "addedOptions":[{"code":"SIZE","name":"Kích cỡ","values":[{"code":"S","label":"S"},{"code":"M","label":"M"}]}],
   "variantEdits":[{"variantId":"<red-sku-id>","price":150000,"compareAtPrice":null,"isActive":false,"imageMediaId":null}],
   "addedVariants":[{"sku":"SHIRT-BLUE","price":160000,"compareAtPrice":180000,"options":{"COLOR":"BLUE"},"isActive":true,"imageMediaId":"<image-id>"}],
   "defaultVariantSku":"SHIRT-BLUE"
 }
 ```
 
-`content` là tập đầy đủ như PUT cũ. Ba mảng `optionEdits`, `variantEdits`, `addedVariants` bắt buộc, là delta; mảng rỗng không thay đổi phần đó, không xóa SKU/options. ID cũ phải thuộc Product/option; không lặp cùng ID trong các edits. Existing SKU/mã option/mã value/selections bất biến. Options sau create chỉ đổi nhãn/thứ tự, thêm values và các tổ hợp SKU được chọn; không sinh toàn bộ Cartesian combinations tự động hoặc thêm/xóa trục.
+`content` là tập đầy đủ như PUT cũ. `optionEdits`, `variantEdits`, `addedVariants` là delta; `addedOptions` là tùy chọn để giữ tương thích client cũ. Mảng rỗng không thay đổi phần đó, không xóa SKU/options. ID cũ phải thuộc Product/option; không lặp cùng ID trong các edits. Trục đã lưu không thể đổi/xóa và SKU cũ giữ ID/mã/giá/ảnh/trạng thái/kho/lịch sử. Với từng trục mới, server gán mọi SKU hiện có vào giá trị đầu tiên trong request. Client gửi các tổ hợp còn thiếu qua `addedVariants`; server kiểm tra tổ hợp cuối trong cùng transaction. SKU mới có inventory balance MAIN=0 và không sao chép tồn/lịch sử của SKU khác. Không có thêm/xóa hàng loạt SKU ngầm.
 
-`defaultVariantSku` bắt buộc, so sánh mã không phân biệt hoa/thường và có thể chỉ SKU mới cùng request. Server sinh IDs mới, response ProductDto đầy đủ cho client reconcile theo SKU, rồi dùng IDs/version mới. Một save có thể đổi default và deactivate SKU cũ, thay ảnh SKU và bỏ ảnh cũ khỏi gallery. Mọi SKU giữ ID cũ; Physical SKU mới có MAIN=0, không chép tồn/movement/secret/reservation/đơn.
+`configuration` là hợp đồng editor hiện tại cho POST create và PUT editor. Khi có cấu hình này, server bỏ qua delta/defaultVariantSku legacy:
 
-Product.Update không đủ để thay giá: service so giá existing với DB và kiểm Price.Update nếu khác hoặc SKU mới gửi giá. Gửi lại giá không đổi không yêu cầu quyền giá. Final state được kiểm sau toàn bộ edits; Published luôn có giá cho SKU active và required fields. Invalid/stale/thiếu quyền rollback cả content/options/SKU/gallery/default/outbox/balance mới. Không gọi inventory adjustment hoặc kho số trong endpoint này. Upload file độc lập tạo asset có TTL; attach vào Product và cleanup ảnh tháo ra thuộc transaction save.
+```json
+{"configuration":{"options":[{"id":"<option-or-client-uuid>","name":"Màu sắc","values":[{"id":"<value-or-client-uuid>","label":"Đỏ"}]}],"variants":[{"id":"<variant-or-client-uuid>","sku":"","price":299000,"compareAtPrice":349000,"selections":{"<option-or-client-uuid>":"<value-or-client-uuid>"},"isActive":true,"imageMediaId":null,"images":[],"trackInventory":true,"quantity":10,"inventoryVersion":null,"inventoryOperationId":"<operation-uuid>","weight":180,"width":null,"height":null,"length":null}],"defaultVariantId":"<variant-or-client-uuid>"}}
+```
 
-Published được cập nhật công khai ngay sau save; chưa có draft/live revisions, queued publish hoặc PublishedAt. Publish/archive tiếp tục là thao tác riêng có quyền Product.Publish. Các endpoint legacy được giữ.
+ID mới là UUID ổn định của bản nhập, server map sang ID thật trong ProductDto. SKU tùy chọn, tối đa100 ký tự và có thể trùng; không reconcile theo SKU. Mã option/value/type/field/choice được tự sinh nếu không gửi, giữ ổn định khi đổi nhãn. Tối đa ba nhóm và 50 biến thể mới; sản phẩm cũ vượt giới hạn không bị cắt. Mỗi variant chọn đúng một value mỗi nhóm, tổ hợp không trùng, đúng một default active.
 
-POST `/api/products/bulk-status` nhận `{"items":[{"id":"<id>","version":"<version>"}],"status":2}` hoặc status=3. Items 1–100, ID không trùng, không có query-wide selection. Khóa types trước products theo thứ tự ID; bất kỳ item không tồn tại/version cũ/publish invalid làm rollback toàn lô. Response `{"items":[{"id":"<id>","status":2,"version":"<new-version>"}]}` giữ thứ tự request. Không đổi kho/lịch sử khi archive. Mất response thì tải lại selection trước thao tác tiếp theo.
+Omit option/value/variant nghĩa là loại khỏi catalog hiện tại; bản ghi bị retire để giữ lịch sử. Xóa giá trị loại các tổ hợp liên quan; FE xóa trục gửi cấu hình còn lại kế thừa default, bỏ hết trục gửi một variant đơn. Tổ hợp không đổi giữ ID. Images lưu riêng theo variant (30 ảnh bổ sung cộng ảnh chính); dimensions nullable và không âm. ProductDto trả trackInventory/dimensions/images, quantity/inventoryVersion khi được Inventory.View.
 
-Duplicate là clone vào editor chưa lưu ở FE, rồi POST create: cấp tên/slug/SKU mới, mapping options bằng code và ảnh bằng MediaAssetId dùng chung. Product/Option/Value/Variant IDs được tạo mới; category/type/fields/gallery/prices/default/active được copy, stock/secret/lịch sử không copy. Không có endpoint duplicate ngầm hoặc tự publish bản sao; gửi giá vẫn cần Price.Update.
+Một save kiểm Product/Type version, Price.Update khi thay giá và Inventory.Adjust khi thay quantity/tracking; dùng số lượng đích, kiểm version số dư, không dưới Reserved, adjustment giữ operation ID. Toàn bộ content/configuration/ảnh/default/kho rollback cùng nhau khi lỗi. TrackInventory=false áp dụng cho Physical: khả dụng không giới hạn, order snapshot giữ chính sách và không reserve/consume/create shipment stock movement. Hàng trả không tracked không được restock. Kho số/reveal vẫn dùng endpoint riêng.
 
-ProductDto thêm `createdOn`, `modifiedOn` UTC; modified là LastModifiedOn hoặc CreatedOn. ProductSummary thêm `productTypeId`, `productTypeName`, `thumbnailMediaId`, `version`, `modifiedOn`. Thumbnail ưu tiên ảnh default SKU, sau đó gallery đầu theo sortOrder/media ID; không có ảnh trả null. Metadata không giả lập thời gian publish.
+Legacy delta payload vẫn được nhận; defaultVariantSku chỉ được dùng khi xác định duy nhất một variant, nếu SKU trống/trùng client phải chuyển sang configuration/defaultVariantId. Bulk status giữ hợp đồng trước. Duplicate dùng POST create với ID tạm mới, giữ SKU/ảnh/giá/default, tồn ban đầu 0; không sao chép lịch sử/secret/reservation. DELETE `/api/products/{id}?version=...` yêu cầu Product.Delete, trả bool, gỡ catalog bằng IsDeleted/Archived và giữ đơn/kho. Search/detail/checkout/category count không nhận sản phẩm đã xóa.
 
-ProductSearch thêm `fulfillmentKind` (1–4), `sortBy` (`modified`, `name`, `price`) và `sortDirection` (`asc`, `desc`). Mặc định `modified desc`, tie-break ID asc. Price sort dùng giá thấp nhất của SKU active, thiếu giá xếp cuối ở cả hai hướng. Sort/filter chạy trước phân trang cho cả admin/public. CSV/import/export là giai đoạn sau, chưa có endpoint Catalog CSV.
 
 ### Cách giao và kho hàng số
 
@@ -135,7 +137,7 @@ Shared PUT nhận `{productId,variantId,version,content,isActive}`; tạo/cập 
 
 List/response import/update không trả plaintext hay ciphertext. Reveal trả `{id,content}` sau kiểm quyền riêng và lưu audit; các response kho số no-store. Quyền kiểm cả ở service nên Product.Update hoặc DigitalInventory.View không thay thế được Import/Update/Reveal. Không nhét secret vào custom fields, description hoặc reference công khai; nhập qua kho số.
 
-Public InStock dùng Available=OnHand-Reserved với Physical, dòng Unique Available, nội dung Shared Available, hoặc nhận yêu cầu ManualExtension; luôn xét SKU active. Nội dung Shared/Unique không có trong public Product. Publish vẫn cho sản phẩm hết hàng; quản lý kho không tự publish Draft. Reserved/Delivered có owner dòng đơn; các thay đổi giữ/giao theo đơn không đổi Product.Version, nhưng thay DigitalStockItem.Version.
+Public InStock dùng Available=OnHand-Reserved với Physical có tracking, vô hạn với Physical không tracking, dòng Unique Available, nội dung Shared Available, hoặc nhận yêu cầu ManualExtension; luôn xét SKU active. Nội dung Shared/Unique không có trong public Product. Publish vẫn cho sản phẩm hết hàng; quản lý kho không tự publish Draft. Reserved/Delivered có owner dòng đơn; các thay đổi giữ/giao theo đơn không đổi Product.Version, nhưng thay DigitalStockItem.Version.
 
 ### Giỏ, đơn hàng và giữ hàng
 
@@ -304,7 +306,7 @@ Write kiểm OrderVersion. OperationId unique riêng bảng refund/return, hash 
 {"inventoryItemId":"<balance-id>","version":"<balance-version>","operationId":"<new-guid>","delta":10,"reason":"Nhập lô đầu"}
 ```
 
-Gửi lại đúng operationId/target/delta/reason trả movement cũ kể cả version đã cũ; khác nội dung trả 409. Giảm kho dùng delta âm; DB balance không dưới Reserved. Inventory DTO trả OnHand/Reserved/Available. Dispatch dùng nghiệp vụ consume reservation riêng, giảm đồng thời OnHand và Reserved, không dùng adjustment để xuất phần đã giữ. Không chỉnh quantity qua Product form, không sửa/xóa movement. Endpoint adjustment chỉ dùng cho Physical; hàng số đọc từ DigitalInventory.
+Gửi lại đúng operationId/target/delta/reason trả movement cũ kể cả version đã cũ; khác nội dung trả 409. Giảm kho dùng delta âm; DB balance không dưới Reserved. Inventory DTO trả OnHand/Reserved/Available. Dispatch dùng nghiệp vụ consume reservation riêng, giảm đồng thời OnHand và Reserved, không dùng adjustment để xuất phần đã giữ. Editor configuration cho phép số lượng đích với version/operation ID; không sửa/xóa movement. Endpoint adjustment chỉ dùng cho Physical; hàng số đọc từ DigitalInventory.
 
 ### Trường tùy chỉnh và search
 
@@ -324,7 +326,7 @@ Docker chạy non-root, mount `/data` bền vững; image dùng `Storage__Root=/
 
 Sau proxy, đặt `ReverseProxy__Enabled=true` và `ReverseProxy__KnownProxies__0=<trusted-ip>`. Header từ địa chỉ khác không được tin. CORS khác origin cấu hình `Cors__Origins__0=https://store.example`; không dùng wildcard credentials. Giữ TLS tại reverse proxy và bảo vệ quyền đọc volume chứa key.
 
-`Commerce`: MaximumOptions=3, MaximumVariants=200, WorkerEnabled=true, WorkerIntervalSeconds=5, LeaseSeconds=120, MaximumAttempts=8. Không dùng Hangfire memory ở Production. Module Catalog tắt sẽ dừng worker và routes, giữ nguyên model/data.
+`Commerce`: MaximumOptions=3, MaximumVariants=50, WorkerEnabled=true, WorkerIntervalSeconds=5, LeaseSeconds=120, MaximumAttempts=8. Không dùng Hangfire memory ở Production. Module Catalog tắt sẽ dừng worker và routes, giữ nguyên model/data.
 
 Worker log định kỳ backlog, oldestAgeSeconds, deadLetters; cảnh báo nếu backlog/tuổi tăng kéo dài hoặc deadLetters >0. API outbox trả trạng thái để operator điều tra/replay sau khi sửa nguyên nhân. Replay giữ nguyên message identity và có audit. File missing được coi là đã xóa; permission denied/offline phải retry/dead-letter.
 

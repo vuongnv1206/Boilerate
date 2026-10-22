@@ -121,6 +121,73 @@ public sealed class CatalogEditorTests
 
     [Theory, Trait("Category", "ProviderIntegration")]
     [InlineData("mssql"), InlineData("postgresql")]
+    public async Task EditorAddsOptionAxisAndPreservesExistingSkuIdentityAndStock(string provider)
+    {
+        await using var f = new FoundationDatabase(provider, true);
+        await f.CreateAsync();
+        using var scope = f.Scope(Guid.NewGuid());
+        var service = Service(scope);
+        await service.InitializeAsync(default);
+        var type = await service.CreateTypeAsync(new("AXIS", "Axis", []), default);
+        var product = await service.CreateAsync(new(type.Id, type.Version, Content("axis"),
+            [new("COLOR", "Color", [new("RED", "Red"), new("BLUE", "Blue")])],
+            [
+                new("AXIS-RED", 100, null, new() { ["COLOR"] = "RED" }),
+                new("AXIS-BLUE", 120, null, new() { ["COLOR"] = "BLUE" })
+            ]), default);
+        var red = product.Variants.Single(variant => variant.Sku == "AXIS-RED");
+        var blue = product.Variants.Single(variant => variant.Sku == "AXIS-BLUE");
+        var balance = (await service.InventoryAsync(1, 100, default, product.Id)).Items
+            .Single(item => item.VariantId == red.Id);
+        await service.AdjustAsync(new(balance.Id, balance.Version, Guid.NewGuid(), 7, "Keep existing stock"), default);
+
+        var addedOptions = new List<OptionInput>
+        {
+            new("SIZE", "Size", [new("S", "Small"), new("M", "Medium")])
+        };
+        var invalid = Save(product, type) with
+        {
+            AddedOptions = addedOptions,
+            AddedVariants = [new("AXIS-RED", 100, null, new() { ["COLOR"] = "RED", ["SIZE"] = "S" })]
+        };
+        await Assert.ThrowsAsync<DomainException>(() => service.SaveEditorAsync(invalid, default));
+
+        using var retryScope = f.Scope(Guid.NewGuid());
+        var retryService = Service(retryScope);
+        var canonical = await retryService.GetAsync(product.Id, false, default);
+        Assert.Equal(product.Version, canonical.Version);
+        Assert.Single(canonical.Options);
+        Assert.Equal(7, (await retryService.InventoryAsync(1, 100, default, product.Id)).Items
+            .Single(item => item.VariantId == red.Id).OnHand);
+
+        var saved = await retryService.SaveEditorAsync(Save(canonical, type) with
+        {
+            AddedOptions = addedOptions,
+            AddedVariants =
+            [
+                new("AXIS-RED-M", 100, null, new() { ["COLOR"] = "RED", ["SIZE"] = "M" }),
+                new("AXIS-BLUE-M", 120, null, new() { ["COLOR"] = "BLUE", ["SIZE"] = "M" })
+            ]
+        }, default);
+
+        Assert.Equal(2, saved.Options.Count);
+        Assert.Equal(4, saved.Variants.Count);
+        var size = saved.Options.Single(option => option.Code == "SIZE");
+        var small = size.Values.Single(value => value.Code == "S");
+        Assert.Contains(saved.Variants.Single(variant => variant.Id == red.Id).Selections,
+            selection => selection.OptionId == size.Id && selection.OptionValueId == small.Id);
+        Assert.Contains(saved.Variants.Single(variant => variant.Id == blue.Id).Selections,
+            selection => selection.OptionId == size.Id && selection.OptionValueId == small.Id);
+        Assert.Equal(red.Id, saved.Variants.Single(variant => variant.IsDefault).Id);
+        var balances = (await retryService.InventoryAsync(1, 100, default, product.Id)).Items;
+        Assert.Equal(7, balances.Single(item => item.VariantId == red.Id).OnHand);
+        Assert.Equal(0, balances.Single(item => item.VariantId == blue.Id).OnHand);
+        Assert.All(saved.Variants.Where(variant => variant.Id != red.Id && variant.Id != blue.Id),
+            variant => Assert.Equal(0, balances.Single(item => item.VariantId == variant.Id).OnHand));
+    }
+
+    [Theory, Trait("Category", "ProviderIntegration")]
+    [InlineData("mssql"), InlineData("postgresql")]
     public async Task FailedEditorStateAndStaleVersionsRollBackEveryChange(string provider)
     {
         await using var f = new FoundationDatabase(provider, true);
@@ -326,6 +393,88 @@ public sealed class CatalogEditorTests
             Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsync("/api/media", denied)).StatusCode);
         Assert.Equal(assetsBefore, await db.MediaAssets.CountAsync());
         Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync("/api/products/bulk-status", new BulkProductStatus([new(p.Id, p.Version)], ProductStatus.Archived))).StatusCode);
+    }
+
+    private static CatalogConfiguration Configuration(ProductDto product) => new(
+        product.Options.Select(option => new CatalogOptionState(option.Id, option.Name,
+            option.Values.Select(value => new CatalogChoiceState(value.Id, value.Label)).ToList())).ToList(),
+        product.Variants.Select(variant => new CatalogVariantState(variant.Id, variant.Sku, variant.Price, variant.CompareAtPrice,
+            variant.Selections.ToDictionary(selection => selection.OptionId, selection => selection.OptionValueId),
+            variant.IsActive, variant.ImageMediaId, variant.TrackInventory, variant.Images?.ToList(), variant.Weight, variant.Width, variant.Height, variant.Length,
+            variant.Quantity, variant.InventoryVersion, Guid.NewGuid())).ToList(), product.Variants.Single(variant => variant.IsDefault).Id);
+
+    [Fact, Trait("Category", "ProviderIntegration")]
+    public async Task WebflowConfigurationPersistsIdentityOptionalDuplicateSkusImagesStockAndRetirement()
+    {
+        await using var fixture = new FoundationDatabase("mssql", true);
+        await fixture.CreateAsync();
+        using var scope = fixture.Scope(Guid.NewGuid());
+        var service = Service(scope);
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await service.InitializeAsync(default);
+        var type = await service.CreateTypeAsync(new("", "Webflow", []), default);
+        var asset = await Asset(db);
+        var color = Guid.NewGuid(); var red = Guid.NewGuid(); var blue = Guid.NewGuid();
+        var first = Guid.NewGuid(); var second = Guid.NewGuid();
+        var configuration = new CatalogConfiguration([new(color, "Màu sắc", [new(red, "Đỏ"), new(blue, "Xanh")])],
+            [new(first, "", 100, null, new() { [color] = red }, ImageMediaId:asset.Id, Images:[new(asset.Id,0,"Ảnh đỏ")], Weight:120, Quantity:7, InventoryOperationId:Guid.NewGuid()),
+             new(second, "", 120, null, new() { [color] = blue })], first);
+        var product = await service.CreateAsync(new(type.Id, type.Version, Content("webflow-draft"), [], [], Configuration:configuration), default);
+        Assert.Equal(2, product.Variants.Count);
+        Assert.All(product.Variants, variant => Assert.Empty(variant.Sku));
+        var original = product.Variants.Single(variant => variant.IsDefault);
+        Assert.Equal(7, original.Quantity); Assert.Equal(120, original.Weight);
+        Assert.Equal(asset.Id, original.Images!.Single().MediaAssetId);
+        configuration = Configuration(product);
+        configuration = configuration with { Variants = configuration.Variants.Select(variant => variant with { Sku="DUPLICATE", Quantity=variant.Id == original.Id ? 9 : variant.Quantity }).ToList(), DefaultVariantId=product.Variants.Single(v => !v.IsDefault).Id };
+        product = await service.SaveEditorAsync(Save(product,type) with { Configuration=configuration },default);
+        Assert.All(product.Variants, variant => Assert.Equal("DUPLICATE",variant.Sku));
+        Assert.Equal(9,product.Variants.Single(v => v.Id == original.Id).Quantity);
+        configuration = Configuration(product);
+        var option = configuration.Options.Single(); var survivor = product.Variants.Single(v => v.Id == original.Id);
+        var selected = survivor.Selections.Single().OptionValueId;
+        configuration = configuration with { Options=[option with { Name="Màu", Values=[new(selected,"Đỏ đậm")] }], Variants=[configuration.Variants.Single(v => v.Id == survivor.Id) with { TrackInventory=false }], DefaultVariantId=survivor.Id };
+        product = await service.SaveEditorAsync(Save(product,type) with { Configuration=configuration },default);
+        Assert.Single(product.Variants); Assert.Equal(survivor.Id,product.Variants.Single().Id);
+        Assert.False(product.Variants.Single().TrackInventory); Assert.Equal("Đỏ đậm",product.Options.Single().Values.Single().Label);
+        Assert.Equal(1,await db.ProductVariants.CountAsync(v => v.ProductId == product.Id && v.IsRetired));
+        await service.DeleteProductAsync(product.Id,product.Version,default);
+        await Assert.ThrowsAsync<NotFoundException>(() => service.GetAsync(product.Id,false,default));
+        Assert.Equal(2,await db.InventoryItems.CountAsync(i => db.ProductVariants.Any(v => v.Id == i.VariantId && v.ProductId == product.Id)));
+    }
+
+    [Fact, Trait("Category", "ProviderIntegration")]
+    public async Task WebflowKeepsLegacyConfigurationAboveThreeGroupsAndFiftyVariants()
+    {
+        await using var fixture = new FoundationDatabase("mssql", true);
+        await fixture.CreateAsync();
+        using var scope = fixture.Scope(Guid.NewGuid());
+        var service = Service(scope);
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await service.InitializeAsync(default);
+        var type = await service.CreateTypeAsync(new("", "Legacy limits", []), default);
+        var legacy = new Product(type.Id, "Legacy", "webflow-legacy", null);
+        var combinations = new List<Dictionary<Guid, Guid>> { new() };
+        for (var axis = 0; axis < 4; axis++)
+        {
+            var option = legacy.AddOption($"AXIS{axis}", $"Axis {axis}", 10);
+            var values = Enumerable.Range(0, 3).Select(value => option.AddValue($"VALUE{value}", $"Value {value}")).ToArray();
+            combinations = combinations.SelectMany(selection => values.Select(value => new Dictionary<Guid, Guid>(selection) { [option.Id] = value.Id })).ToList();
+        }
+        foreach (var selection in combinations) legacy.AddVariant("", 100, null, selection, 1000);
+        db.Products.Add(legacy);
+        await db.SaveChangesAsync();
+        var product = await service.GetAsync(legacy.Id, false, default);
+        var configuration = Configuration(product);
+        configuration = configuration with { Options = configuration.Options.Select((option, index) => index == 0 ? option with { Name = "Đổi nhãn cũ" } : option).ToList() };
+        product = await service.SaveEditorAsync(Save(product, type) with { Configuration = configuration }, default);
+        Assert.Equal(4, product.Options.Count);
+        Assert.Equal(81, product.Variants.Count);
+        Assert.Equal(configuration.Variants.Select(variant => variant.Id).Order(), product.Variants.Select(variant => variant.Id).Order());
+        var fresh = Guid.NewGuid();
+        var rejected = configuration with { Variants = configuration.Variants.Select(variant => variant with { Id = Guid.NewGuid() }).ToList(), DefaultVariantId = fresh };
+        rejected = rejected with { DefaultVariantId = rejected.Variants[0].Id };
+        await Assert.ThrowsAsync<DomainException>(() => service.CreateAsync(new(type.Id, type.Version, Content("webflow-over-limit"), [], [], Configuration: rejected), default));
     }
 
     private static MultipartFormDataContent ImageForm()

@@ -190,6 +190,7 @@ public sealed class OrderItem : BaseEntity
     public Guid VariantId { get; private set; }
     public string Name { get; private set; } = null!;
     public string Sku { get; private set; } = null!;
+    public bool TrackInventory { get; private set; } = true;
     public string OptionDescription { get; private set; } = null!;
     public ProductFulfillmentKind FulfillmentKind { get; private set; }
     public decimal UnitPrice { get; private set; }
@@ -202,7 +203,7 @@ public sealed class OrderItem : BaseEntity
     }
 
     public OrderItem(Guid productId, Guid variantId, string name, string sku, string optionDescription,
-        ProductFulfillmentKind kind, decimal unitPrice, int quantity)
+        ProductFulfillmentKind kind, decimal unitPrice, int quantity, bool trackInventory = true)
     {
         if (productId == Guid.Empty || variantId == Guid.Empty || quantity is < 1 or > 999 || !Enum.IsDefined(kind))
             throw new DomainException("Order snapshots require valid product/SKU IDs, fulfillment kind and quantity from 1 to 999.");
@@ -213,9 +214,11 @@ public sealed class OrderItem : BaseEntity
         ProductId = productId;
         VariantId = variantId;
         Name = CatalogRules.Required(name, 256, "Name");
-        Sku = CatalogRules.Required(sku, 100, "Sku");
+        Sku = (sku ?? "").Trim();
+        if (Sku.Length > 100) throw new DomainException("SKU must not exceed 100 characters.");
         OptionDescription = optionDescription;
         FulfillmentKind = kind;
+        TrackInventory = trackInventory;
         UnitPrice = unitPrice;
         Quantity = quantity;
     }

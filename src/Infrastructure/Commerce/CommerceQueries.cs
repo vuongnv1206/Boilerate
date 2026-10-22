@@ -11,7 +11,7 @@ public sealed partial class CommerceService
 {
     private IQueryable<ProductVariant> StockedVariants(IQueryable<ProductVariant> variants) => variants.Where(v =>
         db.Products.Any(p => p.Id == v.ProductId &&
-            ((p.FulfillmentKind == ProductFulfillmentKind.Physical && db.InventoryItems.Any(i => i.VariantId == v.Id && i.OnHand > i.Reserved)) ||
+            ((p.FulfillmentKind == ProductFulfillmentKind.Physical && (!v.TrackInventory || db.InventoryItems.Any(i => i.VariantId == v.Id && i.OnHand > i.Reserved))) ||
              ((p.FulfillmentKind == ProductFulfillmentKind.DigitalUnique || p.FulfillmentKind == ProductFulfillmentKind.DigitalShared) &&
                 db.DigitalStockItems.Any(i => i.VariantId == v.Id && i.State == DigitalStockState.Available)) ||
              p.FulfillmentKind == ProductFulfillmentKind.ManualExtension)));
@@ -21,6 +21,10 @@ public sealed partial class CommerceService
         var p = await ProductGraph().AsNoTracking().SingleOrDefaultAsync(p => p.Id == id && (!publishedOnly || p.Status == ProductStatus.Published), ct)
             ?? throw new NotFoundException("Product not found.");
         var ids = p.Variants.Select(v => v.Id).ToArray();
+        var canInventory = !publishedOnly && await users.HasPermissionAsync(actor.GetUserId().ToString(), "Permissions.Inventory.View", ct);
+        var inventory = canInventory ? await db.InventoryItems.AsNoTracking().Where(i => ids.Contains(i.VariantId) &&
+            db.Set<InventoryLocation>().Any(l => l.Id == i.LocationId && l.Code == "MAIN")).ToDictionaryAsync(i => i.VariantId, ct)
+            : new Dictionary<Guid, InventoryItem>();
         var stocked = await StockedVariants(db.ProductVariants.Where(v => ids.Contains(v.Id) && v.IsActive)).Select(v => v.Id).ToListAsync(ct);
         var fields = p.FieldValues.ToArray();
         var categories = p.Categories.Select(c => c.CategoryId).ToArray();
@@ -32,11 +36,13 @@ public sealed partial class CommerceService
         }
         var definitions = await db.Set<ProductFieldDefinition>().AsNoTracking().Where(f => f.ProductTypeId == p.ProductTypeId).Include(f => f.Choices).ToListAsync(ct);
         return new(p.Id,p.ProductTypeId,p.Name,p.Slug,p.Description,p.Status,p.Version,categories,
-            p.Options.OrderBy(o => o.SortOrder).ThenBy(o => o.Id).Select(o => new OptionDto(o.Id,o.Code,o.Name,o.SortOrder,
-                o.Values.OrderBy(v => v.SortOrder).ThenBy(v => v.Id).Select(v => new OptionValueDto(v.Id,v.Code,v.Label,v.SortOrder)).ToArray())).ToArray(),
-            p.Variants.Where(v => !publishedOnly || v.IsActive).OrderByDescending(v => v.IsDefault).ThenBy(v => v.Id)
+            p.Options.Where(o => !o.IsRetired).OrderBy(o => o.SortOrder).ThenBy(o => o.Id).Select(o => new OptionDto(o.Id,o.Code,o.Name,o.SortOrder,
+                o.Values.Where(v => !v.IsRetired).OrderBy(v => v.SortOrder).ThenBy(v => v.Id).Select(v => new OptionValueDto(v.Id,v.Code,v.Label,v.SortOrder)).ToArray())).ToArray(),
+            p.Variants.Where(v => !v.IsRetired && (!publishedOnly || v.IsActive)).OrderByDescending(v => v.IsDefault).ThenBy(v => v.Id)
                 .Select(v => new VariantDto(v.Id,v.Sku,v.CombinationKey,v.Price,v.CompareAtPrice,v.Currency,v.IsDefault,v.IsActive,v.ImageMediaId,stocked.Contains(v.Id),
-                    v.Selections.Select(s => new VariantSelectionDto(s.OptionId,s.OptionValueId)).ToArray())).ToArray(),
+                    v.Selections.Select(s => new VariantSelectionDto(s.OptionId,s.OptionValueId)).ToArray(), v.TrackInventory, v.Weight, v.Width, v.Height, v.Length,
+                    v.Images.OrderBy(m => m.SortOrder).Select(m => new MediaInput(m.MediaAssetId,m.SortOrder,m.AltText)).ToArray(),
+                    inventory.GetValueOrDefault(v.Id)?.OnHand, inventory.GetValueOrDefault(v.Id)?.Version)).ToArray(),
             fields.Select(f =>
             {
                 var definition = definitions.Single(d => d.Id == f.FieldDefinitionId);
@@ -49,7 +55,7 @@ public sealed partial class CommerceService
     public async Task<ProductDto> GetBySlugAsync(string slug, CancellationToken ct)
     {
         slug = CatalogRules.Slug(slug);
-        var id = await db.Products.Where(p => p.NormalizedSlug == slug && p.Status == ProductStatus.Published).Select(p => (Guid?)p.Id).SingleOrDefaultAsync(ct)
+        var id = await db.Products.Where(p => p.NormalizedSlug == slug && !p.IsDeleted && p.Status == ProductStatus.Published).Select(p => (Guid?)p.Id).SingleOrDefaultAsync(ct)
             ?? throw new NotFoundException("Product not found.");
         return await GetAsync(id, true, ct);
     }
@@ -67,7 +73,7 @@ public sealed partial class CommerceService
             throw new DomainException("Invalid filters.");
         CatalogRules.Money(r.MinimumPrice, null);
         CatalogRules.Money(r.MaximumPrice, null);
-        var q = db.Products.AsNoTracking();
+        var q = db.Products.AsNoTracking().Where(p => !p.IsDeleted);
         if (publishedOnly)
             q = q.Where(p => p.Status == ProductStatus.Published);
         else if (r.Status.HasValue)
@@ -85,7 +91,7 @@ public sealed partial class CommerceService
             q = q.Where(p => p.Categories.Any(c => c.CategoryId == r.CategoryId));
         if (r.MinimumPrice.HasValue || r.MaximumPrice.HasValue || r.OptionValueIds.Count > 0 || r.InStock.HasValue)
         {
-            var variants = db.ProductVariants.Where(v => v.IsActive);
+            var variants = db.ProductVariants.Where(v => !v.IsRetired && v.IsActive);
             if (r.MinimumPrice.HasValue)
                 variants = variants.Where(v => v.Price >= r.MinimumPrice);
             if (r.MaximumPrice.HasValue)
@@ -153,7 +159,7 @@ public sealed partial class CommerceService
             q = q.Where(p => values.Any(v => v.ProductId == p.Id));
         }
         int total = await q.CountAsync(ct);
-        var availableVariantIds = StockedVariants(db.ProductVariants.Where(v => v.IsActive)).Select(v => v.Id);
+        var availableVariantIds = StockedVariants(db.ProductVariants.Where(v => !v.IsRetired && v.IsActive)).Select(v => v.Id);
         var ordered = (r.SortBy, r.SortDirection) switch
         {
             ("name", "asc") => q.OrderBy(p => p.Name),
@@ -176,7 +182,7 @@ public sealed partial class CommerceService
     }
     public Task<List<Category>> CategoriesAsync(bool publicOnly, CancellationToken ct) => db.Categories.AsNoTracking().Where(c => !publicOnly || c.IsActive).OrderBy(c => c.SortOrder).ThenBy(c => c.Id).ToListAsync(ct);
     public Task<List<CategorySummary>> CategorySummariesAsync(CancellationToken ct) => db.Categories.AsNoTracking().OrderBy(c => c.Id)
-        .Select(c => new CategorySummary(c.Id, db.Set<ProductCategory>().Count(pc => pc.CategoryId == c.Id))).ToListAsync(ct);
+        .Select(c => new CategorySummary(c.Id, db.Set<ProductCategory>().Count(pc => pc.CategoryId == c.Id && db.Products.Any(p => p.Id == pc.ProductId && !p.IsDeleted)))).ToListAsync(ct);
     private static DateTime CatalogTimestamp(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);
     public Task<List<ProductType>> TypesAsync(CancellationToken ct) => db.ProductTypes.AsNoTracking().OrderBy(t => t.Id).ToListAsync(ct);
     public async Task<ProductType> TypeAsync(Guid id, CancellationToken ct) => await db.ProductTypes.AsNoTracking().Include(t => t.Fields).ThenInclude(f => f.Choices).AsSplitQuery().SingleOrDefaultAsync(t => t.Id == id, ct) ?? throw new NotFoundException("Product type not found.");

@@ -15,12 +15,13 @@ public sealed record FieldInput(Guid FieldDefinitionId, ProductFieldType FieldTy
 public sealed record MediaInput(Guid MediaAssetId, int SortOrder, string? AltText);
 public sealed record ProductContent(string Name, string Slug, string? Description, List<Guid> CategoryIds, List<FieldInput> Fields, List<MediaInput> Media);
 public sealed record CreateProduct(Guid ProductTypeId, string ProductTypeVersion, ProductContent Content, List<OptionInput> Options, List<VariantInput> Variants,
-    ProductFulfillmentKind FulfillmentKind = ProductFulfillmentKind.Physical, string? DefaultVariantSku = null) : IRequest<ProductDto>;
+    ProductFulfillmentKind FulfillmentKind = ProductFulfillmentKind.Physical, string? DefaultVariantSku = null, CatalogConfiguration? Configuration = null) : IRequest<ProductDto>;
 public sealed record EditProduct(Guid Id, string Version, string ProductTypeVersion, ProductContent Content) : IRequest<ProductDto>;
 public sealed record OptionEditorInput(Guid OptionId, string Name, int SortOrder, List<ChoiceInput> AddValues, List<OptionValueEdit> Values);
 public sealed record VariantEditorInput(Guid VariantId, decimal? Price, decimal? CompareAtPrice, bool IsActive, Guid? ImageMediaId);
 public sealed record SaveProductEditor(Guid Id, string Version, string ProductTypeVersion, ProductContent Content,
-    List<OptionEditorInput> OptionEdits, List<VariantEditorInput> VariantEdits, List<VariantInput> AddedVariants, string DefaultVariantSku) : IRequest<ProductDto>;
+    List<OptionEditorInput> OptionEdits, List<VariantEditorInput> VariantEdits, List<VariantInput> AddedVariants, string DefaultVariantSku,
+    List<OptionInput>? AddedOptions = null, CatalogConfiguration? Configuration = null) : IRequest<ProductDto>;
 public sealed record ProductVersionInput(Guid Id, string Version);
 public sealed record BulkProductStatus(List<ProductVersionInput> Items, ProductStatus Status) : IRequest<BulkProductStatusResult>;
 public sealed record ProductStatusResult(Guid Id, ProductStatus Status, string Version);
@@ -42,7 +43,9 @@ public sealed record FieldChoiceEdit(Guid Id, string Label, bool IsActive, int S
 public sealed record AdjustInventory(Guid InventoryItemId, string Version, Guid OperationId, int Delta, string Reason) : IRequest<MovementDto>;
 public sealed record InitializeCommerce : IRequest<Guid>;
 public sealed record ReplayOutbox(Guid MessageId) : IRequest<bool>;
-public sealed record VariantDto(Guid Id, string Sku, string CombinationKey, decimal? Price, decimal? CompareAtPrice, string Currency, bool IsDefault, bool IsActive, Guid? ImageMediaId, bool InStock, IReadOnlyCollection<VariantSelectionDto> Selections);
+public sealed record VariantDto(Guid Id, string Sku, string CombinationKey, decimal? Price, decimal? CompareAtPrice, string Currency, bool IsDefault, bool IsActive, Guid? ImageMediaId, bool InStock, IReadOnlyCollection<VariantSelectionDto> Selections, bool TrackInventory = true,
+    decimal? Weight = null, decimal? Width = null, decimal? Height = null, decimal? Length = null,
+    IReadOnlyCollection<MediaInput>? Images = null, int? Quantity = null, string? InventoryVersion = null);
 public sealed record ProductDto(Guid Id, Guid ProductTypeId, string Name, string Slug, string? Description, ProductStatus Status, string Version,
     IReadOnlyCollection<Guid> CategoryIds, IReadOnlyCollection<OptionDto> Options, IReadOnlyCollection<VariantDto> Variants,
     IReadOnlyCollection<FieldValueDto> Fields, IReadOnlyCollection<MediaInput> Media, ProductFulfillmentKind FulfillmentKind = ProductFulfillmentKind.Physical,
@@ -107,6 +110,7 @@ public interface ICommerceService
     Task<ProductDto> CreateAsync(CreateProduct request, CancellationToken ct);
     Task<ProductDto> EditAsync(EditProduct request, CancellationToken ct);
     Task<ProductDto> SaveEditorAsync(SaveProductEditor request, CancellationToken ct);
+    Task<bool> DeleteProductAsync(Guid id, string version, CancellationToken ct);
     Task<BulkProductStatusResult> BulkStatusAsync(BulkProductStatus request, CancellationToken ct);
     Task<ProductDto> StatusAsync(ChangeProductStatus request, CancellationToken ct);
     Task<ProductDto> AddVariantAsync(AddVariant request, CancellationToken ct);
@@ -141,3 +145,13 @@ public interface ICommerceMediaService
     Task<MediaDto> UploadAsync(IFormFile file, CancellationToken ct);
     Task<(Stream Stream, string ContentType)> OpenAsync(Guid id, bool publishedOnly, CancellationToken ct);
 }
+
+// Stable IDs identify draft rows; labels and optional SKU never serve as identity.
+public sealed record CatalogChoiceState(Guid Id, string Label);
+public sealed record CatalogOptionState(Guid Id, string Name, List<CatalogChoiceState> Values);
+public sealed record CatalogVariantState(Guid Id, string? Sku, decimal? Price, decimal? CompareAtPrice,
+    Dictionary<Guid, Guid> Selections, bool IsActive = true, Guid? ImageMediaId = null,
+    bool TrackInventory = true, List<MediaInput>? Images = null, decimal? Weight = null,
+    decimal? Width = null, decimal? Height = null, decimal? Length = null, int? Quantity = null,
+    string? InventoryVersion = null, Guid? InventoryOperationId = null);
+public sealed record CatalogConfiguration(List<CatalogOptionState> Options, List<CatalogVariantState> Variants, Guid DefaultVariantId);

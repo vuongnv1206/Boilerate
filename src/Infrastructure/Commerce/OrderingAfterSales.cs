@@ -176,7 +176,13 @@ public sealed partial class OrderingService
             foreach (var line in input.Items)
             {
                 var origin = origins[(line.ShipmentId, line.OrderItemId)];
-                if (!movements.TryGetValue(origin.StockMovementId, out var dispatch) || dispatch.Delta != -origin.Quantity ||
+                if (!origin.StockMovementId.HasValue)
+                {
+                    if (line.RestockQuantity != 0) throw new DomainException("Hàng không theo dõi tồn kho không cần nhập lại số lượng kho.");
+                    lines.Add(new(line.ShipmentId, line.OrderItemId, origin.VariantId, line.Quantity, 0, null));
+                    continue;
+                }
+                if (!movements.TryGetValue(origin.StockMovementId.Value, out var dispatch) || dispatch.Delta != -origin.Quantity ||
                     !balances.TryGetValue(dispatch.InventoryItemId, out var balance) || balance.VariantId != origin.VariantId)
                     throw new ConflictException("The original dispatch evidence is inconsistent; review before restocking.");
                 Guid? movementId = null;
