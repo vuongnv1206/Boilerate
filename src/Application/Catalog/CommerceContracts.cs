@@ -35,6 +35,9 @@ public sealed record OptionValueEdit(Guid Id, string Label, int SortOrder);
 public sealed record PreviewVariants(List<OptionInput> Options) : IRequest<List<Dictionary<string, string>>>;
 public sealed record SaveCategory(Guid? Id, string? Version, string Name, string Slug, string? Description, Guid? ParentId, int SortOrder, bool IsActive) : IRequest<Category>;
 public sealed record DeleteCategory(Guid Id, string Version) : IRequest<bool>;
+public sealed record CategoryProductChange(Guid ProductId, string Version, bool Included);
+public sealed record SetCategoryProducts(Guid CategoryId, List<CategoryProductChange> Changes) : IRequest<List<CategoryProductResult>>;
+public sealed record CategoryProductResult(Guid ProductId, string Version, bool Included);
 public sealed record CreateProductType(string Code, string Name, List<FieldDefinitionInput> Fields) : IRequest<ProductType>;
 public sealed record FieldDefinitionInput(string Code, ProductFieldType DataType, string Label, string? HelpText, bool IsRequired, bool IsFilterable, List<ChoiceInput> Choices);
 public sealed record EditProductType(Guid Id, string Version, string Name, bool IsActive, List<FieldDefinitionInput> AddFields, List<FieldDefinitionEdit> Fields) : IRequest<ProductType>;
@@ -120,6 +123,7 @@ public interface ICommerceService
     List<Dictionary<string, string>> Preview(PreviewVariants request);
     Task<Category> CategoryAsync(SaveCategory request, CancellationToken ct);
     Task<bool> DeleteCategoryAsync(DeleteCategory request, CancellationToken ct);
+    Task<List<CategoryProductResult>> SetCategoryProductsAsync(SetCategoryProducts request, CancellationToken ct);
     Task<ProductType> CreateTypeAsync(CreateProductType request, CancellationToken ct);
     Task<ProductType> EditTypeAsync(EditProductType request, CancellationToken ct);
     Task<MovementDto> AdjustAsync(AdjustInventory request, CancellationToken ct);

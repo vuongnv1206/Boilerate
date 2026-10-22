@@ -15,6 +15,21 @@ public sealed class ProductContentValidator : AbstractValidator<ProductContent>
         RuleForEach(x => x.Media).NotNull();
     }
 }
+public sealed class SetCategoryProductsValidator : AbstractValidator<SetCategoryProducts>
+{
+    public SetCategoryProductsValidator()
+    {
+        RuleFor(x => x.CategoryId).NotEmpty();
+        RuleFor(x => x.Changes).NotNull().Must(x => x is { Count: <= 1000 });
+        RuleForEach(x => x.Changes).NotNull().ChildRules(change =>
+        {
+            change.RuleFor(x => x.ProductId).NotEmpty();
+            change.RuleFor(x => x.Version).NotEmpty();
+        });
+        RuleFor(x => x.Changes).Must(x => x is null || x.Select(change => change.ProductId).Distinct().Count() == x.Count)
+            .WithMessage("A product can appear only once in a category update.");
+    }
+}
 public sealed class VariantInputValidator : AbstractValidator<VariantInput>
 {
     public VariantInputValidator()

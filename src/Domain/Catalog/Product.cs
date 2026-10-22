@@ -62,6 +62,27 @@ public sealed class Product : CommerceEntity, IAggregateRoot
             _categories.Add(new(Id, id));
         Touch();
     }
+    public void SetCategoryMembership(Guid categoryId, bool included)
+    {
+        if (categoryId == Guid.Empty)
+            throw new DomainException("Invalid category.");
+        var current = _categories.SingleOrDefault(c => c.CategoryId == categoryId);
+        if (included)
+        {
+            if (current is not null)
+                return;
+            if (_categories.Count >= 100)
+                throw new DomainException("A product cannot belong to more than 100 categories.");
+            _categories.Add(new(Id, categoryId));
+        }
+        else
+        {
+            if (current is null)
+                return;
+            _categories.Remove(current);
+        }
+        Touch();
+    }
     public ProductOption AddOption(string code, string name, int maximumOptions)
     {
         if (_options.Count(o => !o.IsRetired) >= maximumOptions)

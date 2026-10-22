@@ -46,6 +46,10 @@ public sealed class DeleteCategoryHandler(ICommerceService service) : IRequestHa
 {
     public Task<bool> Handle(DeleteCategory request, CancellationToken ct) => service.DeleteCategoryAsync(request, ct);
 }
+public sealed class SetCategoryProductsHandler(ICommerceService service) : IRequestHandler<SetCategoryProducts, List<CategoryProductResult>>
+{
+    public Task<List<CategoryProductResult>> Handle(SetCategoryProducts request, CancellationToken ct) => service.SetCategoryProductsAsync(request, ct);
+}
 public sealed class CreateProductTypeHandler(ICommerceService service) : IRequestHandler<CreateProductType, ProductType>
 {
     public Task<ProductType> Handle(CreateProductType request, CancellationToken ct) => service.CreateTypeAsync(request, ct);

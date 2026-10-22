@@ -19,6 +19,7 @@ Giá chỉ nhận VND nguyên đồng. Mọi mã SKU được giữ duy nhất t
 | GET/POST `/api/product-types`, GET/PUT `/{id}` | List, create, schema detail, edit schema | ProductType.View/Create/Update |
 | GET/POST `/api/categories`, PUT/DELETE `/{id}` | Cây danh mục; DELETE có query version | Category.View/Create/Update/Delete |
 | GET `/api/categories/summaries` | `{id,productCount}`: số Product liên kết trực tiếp, mọi trạng thái, không cộng cây con | Category.View |
+| PUT `/api/categories/{id}/products` | `{categoryId,changes:[{productId,version,included}]}`; thêm/bỏ liên kết theo Product.Version, tối đa 1.000 delta, nguyên lô hoặc rollback | Product.Update |
 | POST `/api/products/search`, GET `/api/products/{id}` | Đọc quản trị gồm mọi trạng thái | Product.View |
 | POST `/api/products` | Tạo Draft + SKU, thêm MAIN=0 nếu Physical | Product.Create; thêm Price.Update khi gửi giá |
 | PUT `/api/products/{id}` | Thay nội dung/categoryIds/fields/gallery | Product.Update |
@@ -46,6 +47,10 @@ Giá chỉ nhận VND nguyên đồng. Mọi mã SKU được giữ duy nhất t
 | GET `/api/catalog/products/{slug}` | Chi tiết Published Product | Công khai |
 | GET `/api/catalog/categories` | Category active | Công khai |
 | GET `/api/catalog/media/{id}` | Ảnh có liên kết Product Published | Công khai |
+
+### Product–Category membership
+
+PUT `/api/categories/{id}/products` chỉ nhận delta sản phẩm thực sự thêm/bỏ. `version` là Product.Version hiện tại, response trả `{productId,version,included}` để client cập nhật token. Lệnh khóa Category gate rồi ProductType theo thứ tự ổn định và Product theo ProductTypeId/Id; audit và Product.Version tăng khi membership đổi. Các category khác của từng Product được giữ nguyên. Một version lỗi rollback cả lô; category không đổi version vì Product sở hữu bảng nối. Product vẫn tối đa100 category; một request có tối đa1.000 sản phẩm. Không đổi bảng nối, schema hoặc migration.
 
 Các request có ID trong body phải khớp route. Đọc lại version sau mỗi write. Stale version hoặc constraint conflict trả 409; client tải lại và quyết định thay đổi, không retry ghi đè mù quáng. Adjustment, checkout, xác nhận tiền, shipment, refund/return và các thao tác renewal có OperationId để replay kết quả thành công theo hợp đồng riêng; request khác cần đọc trạng thái nếu mất response sau commit.
 

@@ -6,5 +6,6 @@ Các thay đổi về nghiệp vụ/quy trình/tài liệu chung từ khi tách 
 - 2026-10-19: [Quy tắc generic và đóng gói tài liệu](2026-10-19-02-generic-project-rules.md).
 - 2026-10-19: [Hợp nhất toàn bộ hướng dẫn vào AGENTS.md](2026-10-19-03-agents-consolidation.md).
 - 2026-10-22: Catalog Webflow-like thêm trục option cho sản phẩm đã lưu; [quy tắc mapping SKU cũ và bằng chứng](../features/catalog-workspace.md).
+- 2026-10-22: Editor danh mục theo Webflow có chip Product membership và Parent category riêng của shop; API cập nhật delta có version; [kế hoạch và trạng thái tích hợp](../features/catalog-workspace.md).
 
 Lịch sử trước lần tách, kể cả bối cảnh phỏng vấn nghiệp vụ, giữ nguyên tại [history BE](../../backend/history/README.md). Các quyết định nghiệp vụ hiện hành ở [shared index](../README.md); không diễn giải lại nguồn cũ thành nghiệm thu FE.

@@ -1,8 +1,20 @@
 # Catalog workspace — điều phối BE–FE
 
-Ngày cập nhật: 2026-10-22 (Asia/Saigon). Trạng thái: Catalog BE/FE đã triển khai và kiểm chứng local; chưa nghiệm thu deployment. CSV là bước sau, không chặn Catalog.
+Ngày cập nhật: 2026-10-22 (Asia/Saigon). Trạng thái: Product workspace đã kiểm chứng local; editor danh mục theo Webflow và API membership versioned đã có source/build, chưa kiểm chứng runtime/API/browser. CSV là bước sau, không chặn Catalog.
 
 ## Mục tiêu và phạm vi
+
+### Danh mục theo Webflow — source đã triển khai, chờ kiểm chứng tích hợp
+
+Màn sửa danh mục đi theo ảnh Webflow: Basic info (Name, Slug, URL preview, Description), ô tìm kiếm sản phẩm và chip liên kết, Item details (Parent category, thứ tự, trạng thái, ID), Activity và các thao tác cuối trang. Danh mục cha là trường mở rộng riêng của shop. Sitemap indexing/Published/Queued to publish không có trong hợp đồng hiện tại nên không giả lập.
+
+API bổ sung một lệnh versioned batch theo delta; mỗi Product giữ nguyên các Category khác, membership được audit qua Product.Version và batch rollback toàn bộ khi một sản phẩm conflict. Không thay database vì bảng nối ProductCategories đã là nguồn quan hệ N–N. FE tải các membership hiện tại từ Products search, tìm sản phẩm ứng viên, giữ chip đã chọn qua phân trang và gửi delta cùng bước Lưu.
+
+Thao tác cuối trang dùng khả năng hiện có: Archive đặt IsActive=false, Delete gọi xóa có kiểm tra version/tham chiếu, Duplicate tạo danh mục mới cùng thông tin và các product memberships. Kết quả không mô tả trạng thái publish hay indexing vốn chưa có API.
+
+Các bước 1–3 đã có source: versioned command/API, chip selector/hydrate membership, layout Webflow, Parent category và thao tác tương ứng. FE production build và BE Host build đã đạt. Bước tích hợp API HTTP/browser, quyền, conflict rollback và duplicate/archive/delete còn chờ xác nhận runtime; API local đang chạy chưa được reload sang bản mới.
+
+Tiêu chí tích hợp còn lại: tìm/thêm/bỏ nhiều sản phẩm; sản phẩm vẫn giữ các danh mục khác; version conflict rollback cả lô và giữ draft; lưu Parent cùng Name/Slug; archive/delete/duplicate chỉ báo thành công sau phản hồi API. Kiểm quyền Product.View/Product.Update độc lập với Category.View/Update.
 
 ### Quyết định triển khai 2026-10-22 — editor Webflow
 

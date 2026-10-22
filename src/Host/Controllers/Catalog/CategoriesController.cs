@@ -20,4 +20,11 @@ public sealed class CategoriesController(ICommerceService commerce) : BaseApiCon
         => id != request.Id ? BadRequest() : Ok(await Mediator.Send(request, ct));
     [HttpDelete("{id:guid}"), MustHavePermission(AppAction.Delete, AppFunction.Category)]
     public Task<bool> Delete(Guid id, [FromQuery] string version, CancellationToken ct) => Mediator.Send(new DeleteCategory(id, version), ct);
+    [HttpPut("{id:guid}/products"), MustHavePermission(AppAction.Update, AppFunction.Product)]
+    public async Task<ActionResult<List<CategoryProductResult>>> SetProducts(Guid id, SetCategoryProducts request, CancellationToken ct)
+    {
+        if (id != request.CategoryId)
+            return BadRequest();
+        return Ok(await Mediator.Send(request, ct));
+    }
 }
