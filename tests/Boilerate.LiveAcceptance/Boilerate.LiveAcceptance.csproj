@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Reuse the existing fixture's internal current-user contract via the test friend assembly. -->
+    <AssemblyName>Boilerate.Tests</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Host/Host.csproj" />
+    <Compile Include="../Boilerate.Tests/FoundationDatabase.cs" Link="FoundationDatabase.cs" />
+    <Compile Include="../../src/Host/Configurations/CatalogControllerFeatureProvider.cs" Link="CatalogControllerFeatureProvider.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="../../src/Host/EmailTemplates/*.cshtml" Link="EmailTemplates/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

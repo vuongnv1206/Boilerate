@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Boilerate.Application.Catalog;
 using Boilerate.Application.Common.Exceptions;
@@ -26,7 +27,8 @@ public sealed partial class OrderingService
 
     private IDataProtector TargetProtector(Guid id) => protection.CreateProtector("Boilerate.Renewals.Target.v1", id.ToString("N"));
     private IDataProtector EvidenceProtector(Guid id) => protection.CreateProtector("Boilerate.Renewals.Evidence.v1", id.ToString("N"));
-    private static string RenewalHash(object value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(value))));
+    private static readonly JsonSerializerOptions UnsafeJsonOptions = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+    private static string RenewalHash(object value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(value, UnsafeJsonOptions))));
 
     private async Task<bool> RenewalReplay(Guid id, Guid operationId, string action, string hash, CancellationToken ct)
     {
@@ -214,7 +216,7 @@ public sealed partial class OrderingService
         return await ChangeRenewal(id, input.Version, input.OperationId, input.Applied ? "VerifyApplied" : "VerifyNotApplied", payload, false, async request =>
         {
             request.Verify(input.AttemptId, input.Applied, expiry, Customer(), Now,
-                EvidenceProtector(input.AttemptId).Protect(JsonSerializer.Serialize(new { Note = note, Evidence = evidence })));
+                EvidenceProtector(input.AttemptId).Protect(JsonSerializer.Serialize(new { Note = note, Evidence = evidence }, UnsafeJsonOptions)));
             var order = await RenewalOrder(request.OrderId, false, ct);
             if (order.PaymentStatus == OrderPaymentStatus.Paid && order.Status is not (OrderStatus.Cancelled or OrderStatus.Expired) &&
                 order.FulfillmentStatus != OrderFulfillmentStatus.NeedsReview)

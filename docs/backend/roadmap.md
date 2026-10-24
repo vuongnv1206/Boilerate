@@ -1,6 +1,6 @@
 # Lộ trình backend shop
 
-Cập nhật: 2026-10-19. Lộ trình được cập nhật cùng code và [nhật ký phát triển](history/README.md). Trạng thái dưới đây mô tả bằng chứng hiện có; không coi cấu hình CI hoặc test adapter giả là nghiệm thu môi trường thật.
+Cập nhật: 2026-10-23 (Asia/Saigon), đối chiếu BE `bab1df5` và FE working tree dựa trên `ee1eb03`, còn thay đổi chưa commit. Lộ trình được cập nhật cùng code và [nhật ký phát triển](history/README.md). Trạng thái dưới đây mô tả bằng chứng hiện có; không coi cấu hình CI hoặc test adapter giả là nghiệm thu môi trường thật.
 
 Lộ trình này chỉ theo dõi BE. Xem [roadmap FE](../frontend/roadmap.md) cho công việc giao diện và [shared](../shared/README.md) cho nghiệp vụ/quy trình. Việc tổ chức lại docs ngày 2026-10-19 không thay đổi kết quả kiểm chứng hoặc nghiệm thu BE.
 
@@ -44,15 +44,24 @@ Các mốc 2–6 có phần triển khai song song. Tồn tại code ở mốc s
 
 ## Việc ưu tiên tiếp theo
 
-Ngày 21/10, [browser session](features/browser-session.md) bổ sung cookie HttpOnly để FE giữ đăng nhập khi reload, dùng cơ chế phiên/thu hồi hiện có. [Báo cáo](verification/2026-10-21-browser-session.md) ghi HTTP contract và SQL Server local; không thay các gate deployment bên dưới.
+Core commerce từ Catalog/kho đến checkout, nhận tiền, giao số/vật lý, gia hạn và hậu mãi đã có code. Regression **468/468 ngày 19/10 là bằng chứng lịch sử**, không xác nhận HEAD sau thay đổi Webflow editor/category ngày 22/10. Source FE đã có Orders, Shipping/After-sales, Renewals và System; hành trình UI hiện tại còn cần nghiệm thu theo [kế hoạch FE](../../../Frontend/PRODUCT.md).
 
-1. **MVP cho shop nhỏ — đang ưu tiên:** đã có [kế hoạch gọn](features/shop-mvp.md) từ các quyết định được ghi nhận. Dừng mở rộng phỏng vấn; triển khai các luồng bán hàng/admin thông thường và xử lý chi tiết khi tới bước liên quan. Chưa đưa rule builder/page builder/PC BOM hoặc nhiều adapter vào MVP.
-2. **Bước tiếp theo:** nghiệm thu toàn luồng MVP và triển khai, sau [4C hậu mãi](features/refunds-returns.md) local468/468. Đối chiếu hành trình Catalog→checkout→nhận tiền→giao/gia hạn→refund/return cùng quyền, docs/OpenAPI; xử lý chỗ thiếu trước khi mở gateway/RMA/đổi hàng. Nhận tiền và hoàn tiền hiện là nhân viên xác nhận thực tế; chưa có provider/webhook tự động. Mỗi lát giữ thiết kế/DDD/transaction/quyền và migrations hai DB theo [mẫu](../shared/templates/feature-plan.md).
-3. **Admin Orders:** hoàn tất gate runtime cho mốc 12: chạy `--seed-dev` replay trên SQL Server/PostgreSQL, test filter/history/version conflict qua HTTP, rồi chạy FE E2E với actor development. Giữ invariant snapshot; không mở API edit Order để “bù” UI.
-4. **Nghiệm thu runtime trước vận hành thật:** chạy Linux CI và container non-root trên SQL Server/PostgreSQL theo [runbook](operations-runbook.md); kiểm operator CLI, volume media/Data Protection keys, health và thay container. Local proxy đã đạt, nhưng chưa chứng minh cấu hình proxy của deployment cụ thể.
-5. **Vận hành/adapter trước vận hành thật:** [native recovery drill local](verification/2026-10-18-operations.md) đã đạt trên hai DB; tiếp tục staging restore/RPO/RTO/session policy và smoke các adapter được bật bằng cấu hình thật.
+Lượt kiểm tra trước trong ngày 23/10 trên BE `bab1df5`: `dotnet test Boilerate.sln --no-restore --filter 'Category!=ProviderIntegration'` đạt **231/231, 0 fail, 0 skip**, kèm build các project cần cho test; còn analyzer warnings. Log/TRX trong `artifacts/progress-2026-10-23-tests.log` và `artifacts/progress-2026-10-23/progress-2026-10-23.trx` (ignored). Rà soát hiện tại đọc lại artifact, không chạy lại vì source/tests BE không đổi; database integration, PostgreSQL và deployment mới vẫn chưa được kiểm. Kết quả FE hiện tại và phạm vi fixture/browser nằm ở [PRODUCT](../../../Frontend/PRODUCT.md); các lỗi DI của lượt kiểm tra FE cũ đã được xử lý.
 
-Docker daemon chưa hoạt động là giới hạn của lần nghiệm thu hiện tại; cần kiểm tra lại điều kiện đó khi tiếp tục, không coi đây là trạng thái cố định của dự án.
+| Ưu tiên | Phần việc BE | Đầu ra để đóng đợt | Phối hợp/phụ thuộc |
+|---|---|---|---|
+| Đã đạt — nền kiểm tra | Build/non-provider BE và FE checks đã đạt; duy trì khi sửa code | Chốt mốc source cho working tree FE trước vòng tích hợp, mỗi revision có bằng chứng riêng | Browser fixture chưa xác nhận API/DB live; không thay dữ liệu đang vận hành |
+| P0 — Catalog mới | Bắt đầu bằng coverage trực tiếp `SetCategoryProducts`: add/remove/no-op, giữ category khác, stale Product.Version rollback toàn batch, quyền và cạnh tranh với editor/delete; tiếp theo hồi quy Webflow migration/retirement/media, tracking=false qua checkout/ship/return | HTTP và UI thật lưu/reload đúng; conflict không ghi dở membership, UI giữ draft và phản ánh đúng metadata đã lưu riêng; không phá đơn/kho/lịch sử | Xác nhận Host artifact/revision, migration và SQL Server test đích trước write; [Catalog BE](features/catalog-workspace.md), [điều phối](../shared/features/catalog-workspace.md) |
+| P1 — Admin Orders | HTTP filters/paging ổn định/history safe/ACL/409; seed replay DB trống và DB có operator edits; kiểm receipt, shipping/COD, refund/return và renewal commands | Cùng data set thực đi được qua list/detail/command/history; replay không tạo side effect lần hai; seed không ghi đè operator | [Orders](features/admin-orders.md), [Shipping](features/physical-shipping.md), [Renewal](features/manual-renewals.md), [After-sales](features/refunds-returns.md); FE chạy authenticated browser |
+| P1 — toàn luồng API | Physical COD; mixed prepaid Unique/Shared; trả muộn thiếu hàng/retry; PendingVerification; refund/return/restock; quyền owner/staff và concurrency món cuối | Mỗi kịch bản có input/kết quả, rollback/idempotency và nguồn bằng chứng trên đúng source | [Tiêu chí MVP](features/shop-mvp.md#4-tiêu-chí-chấp-nhận-dự-kiến); giữ xác nhận nhận/hoàn tiền thủ công |
+| P2 — hỗ trợ hành trình khách mua | Đối chiếu contract public/cart/checkout/my-orders với FE; chỉ bổ sung API khi phát hiện khoảng trống thực tế | Khách mua được hàng Published, tổng tiền/kho do server xác định và chỉ đọc nội dung của mình | FE storefront là phần chưa có; [kế hoạch FE](../../../Frontend/PRODUCT.md), lập hồ sơ phối hợp trước implementation |
+| P3 — staging/release | Xác minh CI cho revision release; non-root container, migration riêng/operator CLI, media/keys volume, health/proxy/restart; restore và session policy; smoke SMTP/adapter được bật | Bản deploy cụ thể vượt các gate runbook và có bằng chứng; không suy từ build/configuration | Chuẩn bị môi trường song song P1; nghiệm thu toàn luồng sau giao diện mua; [runbook](operations-runbook.md) |
+
+SQL Server là môi trường local ưu tiên hiện tại. `BOILERATE_TEST_POSTGRES` chưa có trong lần kiểm tra 23/10; chưa chạy integration PostgreSQL mới. Trước khi tuyên bố release hỗ trợ cả hai provider, chạy migration fresh/upgrade và các hồi quy mới trên PostgreSQL; ba regression Webflow đang hardcode MSSQL cần mở rộng theo provider. Không dùng các ca cũ chạy PG để nghiệm thu editor mới.
+
+Ngày 21/10, [browser session](features/browser-session.md) có HTTP contract/SQL Server local và [báo cáo CI](verification/2026-10-21-browser-session.md) ghi Linux đã qua integration hai DB, container còn đang chạy tại lúc ghi. Kết quả cuối workflow và runtime revision mới **chưa xác minh trong lần rà soát này**; tình trạng Docker bị chặn ở các báo cáo cũ không phải kết luận hiện tại.
+
+Gateway/webhook, carrier tự động, RMA/đổi hàng phức tạp, CSV, rule/page builder và nhiều shop tiếp tục ngoài đợt hoàn tất MVP này. Mỗi lát thay đổi hành vi/database giữ feature plan, transaction/quyền và migrations hai DB theo [mẫu](../shared/templates/feature-plan.md).
 
 ## Hướng database cho các mốc sau
 
@@ -73,4 +82,4 @@ Mỗi tính năng BE tạo hồ sơ trong `docs/backend/features/` theo [quy tr�
 
 Các lần kiểm chứng commerce trước đây được lưu tại [báo cáo kiểm chứng](verification/2026-10-17-commerce.md) và [review ngày 2026-10-17](commerce-review.md); raw evidence cục bộ tại `artifacts/commerce-review/report.md` khi còn trong workspace. Lần kiểm chứng mới phải ghi kết quả riêng, không thay thế âm thầm kết quả cũ.
 
-Đợt tiếp theo đã thực hiện: [nghiệm thu vận hành](features/operations-acceptance.md), [bằng chứng ngày 2026-10-18](verification/2026-10-18-operations.md). Container hiện vẫn blocked tại host Windows/Docker engine timeout; không chuyển mốc runtime thành hoàn tất.
+Đợt nghiệm thu vận hành trước đây có [hồ sơ](features/operations-acceptance.md) và [bằng chứng ngày 2026-10-18](verification/2026-10-18-operations.md). Lượt đó bị chặn bởi Windows/Docker engine timeout; trạng thái môi trường hiện tại cần kiểm tra lại, không chuyển mốc runtime thành hoàn tất từ bằng chứng cũ.

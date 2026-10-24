@@ -8,6 +8,7 @@ Phần này mô tả sản phẩm cần làm gì và cách BE–FE phối hợp.
 | [Giao hàng số và gia hạn](business/digital-fulfillment.md) | Unique/Shared/Extension, giao sau nhận tiền và kết quả gia hạn cần xác minh |
 | [Discovery nghiệp vụ](features/business-discovery.md) | Nguồn câu trả lời/quyết định; các vòng hỏi cũ không tự trở thành tính năng bắt buộc |
 | [Phối hợp và tích hợp BE–FE](contracts/frontend-backend.md) | Nguồn hợp đồng, trách nhiệm, version/retry/quyền và cách bàn giao một lát tính năng |
+| [Nghiệm thu admin local](features/admin-acceptance.md) | Phạm vi SQL Server cô lập, runner, các bước và tiêu chí nghiệm thu admin hiện có |
 | [Quy trình phát triển](development-workflow.md) | Các bước từ phạm vi đến triển khai, kiểm chứng, tài liệu và commit |
 | [Mẫu feature plan](templates/feature-plan.md) | Mẫu dùng cho BE, FE hoặc thay đổi chung |
 | [Hướng dẫn agent](../../AGENTS.md) | Một nguồn duy nhất ở root: nguyên tắc chung và quy ước riêng của repository |

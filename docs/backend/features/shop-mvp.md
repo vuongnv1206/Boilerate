@@ -1,7 +1,7 @@
 # Shop MVP — hoàn chỉnh luồng bán hàng cho một shop nhỏ
 
-Ngày bắt đầu: 2026-10-18. Cập nhật: 2026-10-19, Asia/Saigon.
-Trạng thái: bước1 kho số,2 Ordering,3 payment/giao số, [4A shipping/COD](physical-shipping.md), [4B gia hạn](manual-renewals.md) và [4C hậu mãi](refunds-returns.md) đã triển khai/kiểm chứng local; regression mới nhất468/468. Deployment/adapter thật và nghiệm thu toàn bộ MVP chưa hoàn tất.
+Ngày bắt đầu: 2026-10-18. Cập nhật: 2026-10-23, Asia/Saigon.
+Trạng thái: bước1 kho số,2 Ordering,3 payment/giao số, [4A shipping/COD](physical-shipping.md), [4B gia hạn](manual-renewals.md) và [4C hậu mãi](refunds-returns.md) đã triển khai/kiểm chứng local; regression468/468 thuộc ngày 19/10, không đại diện HEAD sau editor mới. Deployment/adapter thật và nghiệm thu toàn bộ MVP chưa hoàn tất. Lần đối chiếu 23/10/2026 ưu tiên đóng Catalog mới, Admin Orders và kiểm toàn luồng theo [roadmap hiện tại](../roadmap.md#việc-ưu-tiên-tiếp-theo); [FE](../../../../Frontend/PRODUCT.md) đã có các màn admin nhưng chưa có storefront/cart/checkout/My Orders.
 Mốc roadmap: [Ordering, Payment và Fulfillment](../roadmap.md).
 
 ## 1. Mục tiêu và phạm vi

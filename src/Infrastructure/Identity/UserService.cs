@@ -36,6 +36,12 @@ internal partial class UserService : IUserService
     private readonly AclGuard _guard;
     private readonly ICurrentUser _actor;
 
+    static UserService()
+    {
+        TypeAdapterConfig.GlobalSettings.NewConfig<ApplicationUser, UserDetailDto>()
+            .Map(dest => dest.Version, src => src.ConcurrencyStamp);
+    }
+
     public UserService(
         UserManager<ApplicationUser> userManager,
         RoleManager<ApplicationRole> roleManager,
