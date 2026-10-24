@@ -403,10 +403,11 @@ public sealed class CatalogEditorTests
             variant.IsActive, variant.ImageMediaId, variant.TrackInventory, variant.Images?.ToList(), variant.Weight, variant.Width, variant.Height, variant.Length,
             variant.Quantity, variant.InventoryVersion, Guid.NewGuid())).ToList(), product.Variants.Single(variant => variant.IsDefault).Id);
 
-    [Fact, Trait("Category", "ProviderIntegration")]
-    public async Task WebflowConfigurationPersistsIdentityOptionalDuplicateSkusImagesStockAndRetirement()
+    [Theory, Trait("Category", "ProviderIntegration")]
+    [InlineData("mssql"), InlineData("postgresql")]
+    public async Task WebflowConfigurationPersistsIdentityOptionalDuplicateSkusImagesStockAndRetirement(string provider)
     {
-        await using var fixture = new FoundationDatabase("mssql", true);
+        await using var fixture = new FoundationDatabase(provider, true);
         await fixture.CreateAsync();
         using var scope = fixture.Scope(Guid.NewGuid());
         var service = Service(scope);
@@ -443,10 +444,11 @@ public sealed class CatalogEditorTests
         Assert.Equal(2,await db.InventoryItems.CountAsync(i => db.ProductVariants.Any(v => v.Id == i.VariantId && v.ProductId == product.Id)));
     }
 
-    [Fact, Trait("Category", "ProviderIntegration")]
-    public async Task WebflowKeepsLegacyConfigurationAboveThreeGroupsAndFiftyVariants()
+    [Theory, Trait("Category", "ProviderIntegration")]
+    [InlineData("mssql"), InlineData("postgresql")]
+    public async Task WebflowKeepsLegacyConfigurationAboveThreeGroupsAndFiftyVariants(string provider)
     {
-        await using var fixture = new FoundationDatabase("mssql", true);
+        await using var fixture = new FoundationDatabase(provider, true);
         await fixture.CreateAsync();
         using var scope = fixture.Scope(Guid.NewGuid());
         var service = Service(scope);

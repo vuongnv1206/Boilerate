@@ -85,10 +85,11 @@ public sealed class ShippingIntegrationTests
 
     private static DeliverShipment Deliver(ShipmentDto shipment) => new(shipment.OrderVersion, shipment.Version, Guid.NewGuid());
 
-    [Fact, Trait("Category", "ProviderIntegration")]
-    public async Task WebflowUntrackedVariantCanCheckoutShipAndDeliverWithEmptySku()
+    [Theory, Trait("Category", "ProviderIntegration")]
+    [InlineData("mssql"), InlineData("postgresql")]
+    public async Task WebflowUntrackedVariantCanCheckoutShipDeliverAndReturnWithEmptySku(string provider)
     {
-        await using var fixture = new FoundationDatabase("mssql", true);
+        await using var fixture = new FoundationDatabase(provider, true);
         await fixture.CreateAsync();
         using var scope = fixture.Scope(Guid.NewGuid());
         var catalog = Catalog(scope); var ordering = Ordering(scope);
@@ -101,11 +102,23 @@ public sealed class ShippingIntegrationTests
         var order = await Checkout(ordering,OrderPaymentMethod.CashOnDelivery,(product.Variants.Single().Id,2));
         Assert.Empty(order.Items.Single().Sku);
         var shipment = await ordering.DispatchShipmentAsync(order.Id,Dispatch(order,(order.Items.Single().Id,2)),default);
-        await ordering.DeliverShipmentAsync(order.Id,shipment.Id,Deliver(shipment),default);
+        var delivered = await ordering.DeliverShipmentAsync(order.Id,shipment.Id,Deliver(shipment),default);
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         Assert.Empty(await db.PhysicalStockReservations.ToListAsync());
         Assert.Null((await db.Set<ShipmentItem>().SingleAsync()).StockMovementId);
         Assert.Equal(0,(await catalog.InventoryAsync(1,100,default,product.Id)).Items.Single().OnHand);
+        var invalidReturn = new ReceiveReturn(delivered.OrderVersion, Guid.NewGuid(), "UNTRACKED-RETURN", "Received untracked goods",
+            [new(shipment.Id, order.Items.Single().Id, 2, 1)], CloseRemainingCod: true);
+        await Assert.ThrowsAsync<DomainException>(() => ordering.ReceiveReturnAsync(order.Id, invalidReturn, default));
+        Assert.Empty(await db.PhysicalReturns.ToListAsync());
+        var validReturn = invalidReturn with { OperationId = Guid.NewGuid(), Items = [new(shipment.Id, order.Items.Single().Id, 2, 0)] };
+        var returned = await ordering.ReceiveReturnAsync(order.Id, validReturn, default);
+        Assert.True(returned.Closed);
+        Assert.Equal(0, Assert.Single(returned.Return.Items).RestockQuantity);
+        Assert.Equal(returned.Return.Id, (await ordering.ReceiveReturnAsync(order.Id, validReturn, default)).Return.Id);
+        Assert.Single(await db.PhysicalReturns.ToListAsync());
+        Assert.Empty(await db.StockMovements.ToListAsync());
+        Assert.Equal(0, (await catalog.InventoryAsync(1, 100, default, product.Id)).Items.Single().OnHand);
     }
 
     private sealed class PrecisionClock : TimeProvider

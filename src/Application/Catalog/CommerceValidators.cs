@@ -26,7 +26,8 @@ public sealed class SetCategoryProductsValidator : AbstractValidator<SetCategory
             change.RuleFor(x => x.ProductId).NotEmpty();
             change.RuleFor(x => x.Version).NotEmpty();
         });
-        RuleFor(x => x.Changes).Must(x => x is null || x.Select(change => change.ProductId).Distinct().Count() == x.Count)
+        RuleFor(x => x.Changes).Must(x => x is null || x.Exists(change => change is null) ||
+                x.Select(change => change.ProductId).Distinct().Count() == x.Count)
             .WithMessage("A product can appear only once in a category update.");
     }
 }
