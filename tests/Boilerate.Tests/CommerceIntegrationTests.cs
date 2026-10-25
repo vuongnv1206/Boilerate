@@ -68,7 +68,7 @@ public sealed class CommerceIntegrationTests
     {
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<LocalFileStorageService>(), Options.Create(new CommerceSettings { MaximumAttempts = attempts }), NullLogger<OutboxProcessor>.Instance,
-            scope.ServiceProvider.GetRequiredService<IMailService>());
+            scope.ServiceProvider.GetRequiredService<IMailService>(), scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>());
     }
     [Theory, Trait("Category", "ProviderIntegration")]
     [InlineData("mssql"), InlineData("postgresql")]

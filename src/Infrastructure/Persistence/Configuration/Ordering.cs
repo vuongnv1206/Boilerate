@@ -10,7 +10,7 @@ internal static class OrderingModel
 {
     internal static void Configure(ModelBuilder m, bool postgres)
     {
-        foreach (var type in new[] { typeof(Cart), typeof(Order), typeof(PhysicalStockReservation) })
+        foreach (var type in new[] { typeof(Cart), typeof(Order), typeof(PhysicalStockReservation), typeof(GuestEmailChallenge), typeof(StorefrontPaymentSettings) })
         {
             var entity = m.Entity(type);
             entity.HasBaseType((Type?)null);
@@ -54,13 +54,33 @@ internal static class OrderingModel
         order.Property(x => x.PhysicalDispatchStarted).HasDefaultValue(false);
         order.Property(x => x.RecipientName).HasMaxLength(256).IsRequired();
         order.Property(x => x.Email).HasMaxLength(256).IsRequired();
+        order.Property(x => x.NormalizedEmail).HasMaxLength(256);
         order.Property(x => x.Phone).HasMaxLength(30).IsRequired();
         order.Property(x => x.ShippingAddress).HasMaxLength(1000);
         order.HasIndex(x => x.Number).IsUnique();
         order.HasIndex(x => new { x.CustomerId, x.OperationId }).IsUnique();
         order.HasIndex(x => new { x.CustomerId, x.CreatedOn, x.Id });
+        order.Property(x => x.IsGuestOrder).HasDefaultValue(false);
+        order.HasIndex(x => new { x.NormalizedEmail, x.CreatedOn, x.Id }).HasFilter(postgres ? "\"IsGuestOrder\" = true" : "[IsGuestOrder] = 1");
         order.HasIndex(x => new { x.Status, x.ExpiresAt });
         order.HasOne<Cart>().WithMany().HasForeignKey(x => x.CartId).OnDelete(DeleteBehavior.Restrict);
+
+        var guestChallenge = m.Entity<GuestEmailChallenge>();
+        guestChallenge.ToTable("GuestEmailChallenges", "Ordering", t =>
+            t.HasCheckConstraint("CK_GuestEmailChallenge_Attempts", "\"Attempts\" BETWEEN 0 AND 5"));
+        guestChallenge.Property(x => x.NormalizedEmail).HasMaxLength(256).IsRequired();
+        guestChallenge.Property(x => x.CodeHash).HasMaxLength(64).IsUnicode(false).IsRequired();
+        guestChallenge.HasIndex(x => new { x.NormalizedEmail, x.CreatedAtUtc });
+        guestChallenge.HasIndex(x => new { x.NormalizedEmail, x.ConsumedAtUtc, x.ExpiresAtUtc });
+
+        var storefrontSettings = m.Entity<StorefrontPaymentSettings>();
+        storefrontSettings.ToTable("StorefrontPaymentSettings", "Ordering");
+        storefrontSettings.Property(x => x.BankName).HasMaxLength(120);
+        storefrontSettings.Property(x => x.AccountNumber).HasMaxLength(64);
+        storefrontSettings.Property(x => x.AccountHolder).HasMaxLength(160);
+        storefrontSettings.Property(x => x.Branch).HasMaxLength(160);
+        storefrontSettings.Property(x => x.Instructions).HasMaxLength(1000);
+        storefrontSettings.Property(x => x.BankTransferEnabled).HasDefaultValue(false);
 
         var orderItem = m.Entity<OrderItem>();
         orderItem.Property(x => x.TrackInventory).HasDefaultValue(true);

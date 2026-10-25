@@ -176,6 +176,16 @@ public sealed partial class OrderingService
         return shipments.Select(s => MapShipment(s, order)).ToList();
     }
 
+    public async Task<List<ShipmentDto>> GuestShipmentsAsync(Guid orderId, string verifiedEmail, CancellationToken ct)
+    {
+        var email = OrderingService.NormalizeEmail(verifiedEmail);
+        var order = await db.Orders.AsNoTracking().SingleOrDefaultAsync(o => o.Id == orderId && o.IsGuestOrder && o.NormalizedEmail == email, ct)
+            ?? throw new NotFoundException("Order not found.");
+        var shipments = await Shipments().AsNoTracking().Where(s => s.OrderId == orderId)
+            .OrderBy(s => s.DispatchedAtUtc).ThenBy(s => s.Id).ToListAsync(ct);
+        return shipments.Select(s => MapShipment(s, order)).ToList();
+    }
+
     private static ShipmentDto MapShipment(Shipment shipment, Order order) => new(shipment.Id, order.Id, order.Version, shipment.Version,
         shipment.Carrier, shipment.TrackingNumber, shipment.Status, UtcTimestamp(shipment.DispatchedAtUtc), UtcTimestamp(shipment.DeliveredAtUtc),
         shipment.Items.OrderBy(i => i.OrderItemId).Select(i => new ShipmentLineDto(i.OrderItemId, i.Quantity)).ToList());

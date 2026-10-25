@@ -2,7 +2,7 @@
 
 Khu vực này sở hữu tài liệu kỹ thuật và bằng chứng BE. [FE](../frontend/README.md) có lộ trình riêng; [nghiệp vụ/quy trình chung](../shared/README.md) dùng cho cả hai bên. Khi nối giao diện, bắt đầu từ [hướng dẫn tích hợp BE–FE](../shared/contracts/frontend-backend.md).
 
-Ưu tiên BE tiếp theo: nghiệm thu toàn luồng [MVP gọn cho một shop nhỏ](features/shop-mvp.md) và môi trường triển khai, theo [roadmap](roadmap.md). Các quyết định nghiệp vụ nằm ở [discovery](../shared/features/business-discovery.md); các gate vận hành còn mở không được tự đóng từ kết quả kiểm thử local.
+Guest storefront đã qua integration và live acceptance trên SQL Server cô lập; PostgreSQL runtime, SMTP thật và deployment còn mở. Ưu tiên BE tiếp theo là P0 Catalog: kiểm chứng HTTP/UI `SetCategoryProducts`, conflict, quyền và hồi quy Webflow theo [roadmap](roadmap.md). Xem [feature guest storefront](features/guest-storefront.md), [MVP gọn cho một shop nhỏ](features/shop-mvp.md) và các quyết định nghiệp vụ tại [discovery](../shared/features/business-discovery.md).
 
 Tài liệu được cập nhật cùng phần code liên quan. Mỗi tính năng có kế hoạch, các bước thực hiện, bằng chứng kiểm chứng và lịch sử thay đổi để người tiếp theo biết dự án đang ở đâu, vì sao chọn thiết kế đó và còn thiếu gì.
 
@@ -32,6 +32,7 @@ Tài liệu được cập nhật cùng phần code liên quan. Mỗi tính năn
 
 22. [Phân quyền theo nhóm](features/grouped-authorization.md): API nhóm chức năng, ngữ cảnh quyền hiện tại, tương thích và script migration để review.
 23. [Catalog workspace](features/catalog-workspace.md): unified editor save, gallery/ảnh/default SKU, list metadata/filter/sort/count và bulk publish/archive; CSV hoãn.
+24. [Guest storefront](features/guest-storefront.md): cookie giỏ khách, OTP email, checkout, My Orders/digital delivery và cài đặt chuyển khoản; live acceptance theo hồ sơ.
 
 Hướng dẫn dựng installation mới, cấu hình và các lệnh operator nằm tại [README dự án](../../README.md). [plan.md](../../plan.md) chỉ điều hướng; tiến độ chính thức nằm trong roadmap và từng hồ sơ BE.
 

@@ -10,4 +10,5 @@ public interface IPaymentService
     Task<OrderDto> ConfirmPaymentAsync(Guid orderId, ConfirmPayment request, CancellationToken ct);
     Task<OrderDto> RetryFulfillmentAsync(Guid orderId, RetryFulfillment request, CancellationToken ct);
     Task<List<DigitalDeliveryDto>> DigitalDeliveriesAsync(Guid orderId, CancellationToken ct);
+    Task<List<DigitalDeliveryDto>> GuestDigitalDeliveriesAsync(Guid orderId, string verifiedEmail, CancellationToken ct);
 }

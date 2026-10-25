@@ -6,12 +6,14 @@ namespace Boilerate.Application.Ordering;
 
 public sealed record CartLineInput(Guid VariantId, int Quantity);
 public sealed record SaveCart(string? Version, List<CartLineInput> Items);
-public sealed record CartLineDto(Guid VariantId, int Quantity, string Name, string Sku, decimal? UnitPrice, bool IsAvailable);
+public sealed record CartLineDto(Guid VariantId, int Quantity, string Name, string Sku, decimal? UnitPrice, bool IsAvailable,
+    ProductFulfillmentKind FulfillmentKind = ProductFulfillmentKind.Physical);
 public sealed record CartDto(Guid Id, string? Version, List<CartLineDto> Items, decimal Subtotal, decimal ShippingAmount = 0)
 {
     public decimal Total => Subtotal + ShippingAmount;
     public bool CanCheckout => Items.Count > 0 && Total >= 0 && Total <= 9999999999999999m && decimal.Truncate(Total) == Total &&
         Items.All(i => i.IsAvailable && i.UnitPrice.HasValue);
+    public bool HasDigitalItems => Items.Any(i => i.FulfillmentKind != ProductFulfillmentKind.Physical);
 }
 public sealed record Checkout(string CartVersion, Guid OperationId, OrderPaymentMethod PaymentMethod,
     string RecipientName, string Email, string Phone, string? ShippingAddress, decimal ExpectedTotal);
@@ -60,4 +62,37 @@ public interface IOrderingService
     Task<Page<OrderSummary>> OrdersAsync(AdminOrderQuery query, bool admin, CancellationToken ct);
     Task<OrderDto> CancelAsync(Guid id, CancelOrder request, bool admin, CancellationToken ct);
     Task<int> ExpireAsync(CancellationToken ct);
+}
+
+public interface IGuestOrderingService
+{
+    Task<CartDto> GetGuestCartAsync(Guid guestId, CancellationToken ct);
+    Task<CartDto> SaveGuestCartAsync(Guid guestId, SaveCart request, CancellationToken ct);
+    Task<OrderDto> CheckoutGuestAsync(Guid guestId, string verifiedEmail, Checkout request, CancellationToken ct);
+    Task<Page<OrderSummary>> GuestOrdersAsync(string verifiedEmail, int page, int size, CancellationToken ct);
+    Task<OrderDto> GetGuestOrderAsync(string verifiedEmail, Guid id, CancellationToken ct);
+    Task<OrderDto> CancelGuestOrderAsync(string verifiedEmail, Guid id, CancelOrder request, CancellationToken ct);
+}
+
+public sealed record GuestAccessRequest(string Email);
+public sealed record GuestAccessVerification(string Email, string Code);
+public sealed record GuestAccessResult(string Email);
+public sealed record GuestPaymentSettingsDto(string? BankName, string? AccountNumber, string? AccountHolder,
+    string? Branch, string? Instructions, bool BankTransferEnabled);
+public sealed record AdminStorefrontSettingsDto(string? BankName, string? AccountNumber, string? AccountHolder,
+    string? Branch, string? Instructions, bool BankTransferEnabled, string Version);
+public sealed record UpdateStorefrontSettings(string? BankName, string? AccountNumber, string? AccountHolder,
+    string? Branch, string? Instructions, bool BankTransferEnabled, string Version);
+
+public interface IGuestAccessService
+{
+    Task RequestCodeAsync(string email, CancellationToken ct);
+    Task VerifyCodeAsync(string email, string code, CancellationToken ct);
+}
+
+public interface IStorefrontSettingsService
+{
+    Task<GuestPaymentSettingsDto> GetPublicAsync(CancellationToken ct);
+    Task<AdminStorefrontSettingsDto> GetAdminAsync(CancellationToken ct);
+    Task<AdminStorefrontSettingsDto> UpdateAsync(UpdateStorefrontSettings request, CancellationToken ct);
 }

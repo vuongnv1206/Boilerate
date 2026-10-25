@@ -111,7 +111,7 @@ public abstract class BaseDbContext : IdentityDbContext<
             throw new InvalidOperationException("Order item snapshots are immutable.");
         var immutableOrderProperties = new HashSet<string>(StringComparer.Ordinal)
         {
-            "CartId", "CustomerId", "OperationId", "RequestHash", "Number", "PaymentMethod",
+            "CartId", "CustomerId", "IsGuestOrder", "NormalizedEmail", "OperationId", "RequestHash", "Number", "PaymentMethod",
             "Currency", "Subtotal", "ShippingAmount", "Total", "RecipientName", "Email", "Phone", "ShippingAddress"
         };
         if (ChangeTracker.Entries<Boilerate.Domain.Ordering.Order>()

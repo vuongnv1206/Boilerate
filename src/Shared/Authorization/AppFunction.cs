@@ -25,6 +25,7 @@ public static class AppFunction
     public const string Inventory = nameof(Inventory);
     public const string DigitalInventory = nameof(DigitalInventory);
     public const string Order = nameof(Order);
+    public const string StorefrontSettings = nameof(StorefrontSettings);
     public const string Payment = nameof(Payment);
     public const string Shipping = nameof(Shipping);
     public const string Renewal = nameof(Renewal);

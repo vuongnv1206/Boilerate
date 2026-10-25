@@ -29,6 +29,8 @@ public sealed class Order : CommerceEntity, IAggregateRoot
     private readonly List<OrderItem> _items = [];
     public Guid CartId { get; private set; }
     public Guid CustomerId { get; private set; }
+    public bool IsGuestOrder { get; private set; }
+    public string? NormalizedEmail { get; private set; }
     public Guid OperationId { get; private set; }
     public string RequestHash { get; private set; } = null!;
     public string Number { get; private set; } = null!;
@@ -55,7 +57,7 @@ public sealed class Order : CommerceEntity, IAggregateRoot
 
     public Order(Guid customerId, Guid cartId, Guid operationId, string requestHash, OrderPaymentMethod paymentMethod,
         string recipientName, string email, string phone, string? address, decimal shippingAmount, DateTime now,
-        int reservationMinutes, IEnumerable<OrderItem> items)
+        int reservationMinutes, IEnumerable<OrderItem> items, bool isGuestOrder = false)
     {
         if (customerId == Guid.Empty || cartId == Guid.Empty || operationId == Guid.Empty)
             throw new DomainException("Customer, cart and operation IDs are required.");
@@ -85,6 +87,8 @@ public sealed class Order : CommerceEntity, IAggregateRoot
         Email = CatalogRules.Required(email, 256, "Email");
         if (!System.Net.Mail.MailAddress.TryCreate(Email, out var parsedEmail) || parsedEmail.Address != Email)
             throw new DomainException("A valid customer email address is required.");
+        IsGuestOrder = isGuestOrder;
+        NormalizedEmail = isGuestOrder ? Email.Trim().ToUpperInvariant() : null;
         Phone = CatalogRules.Required(phone, 30, "Phone");
         ShippingAddress = hasPhysical ? CatalogRules.Required(address, 1000, "ShippingAddress") : null;
         CustomerId = customerId;

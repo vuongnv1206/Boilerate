@@ -224,9 +224,18 @@ public sealed partial class OrderingService
     public async Task<List<DigitalDeliveryDto>> DigitalDeliveriesAsync(Guid orderId, CancellationToken ct)
     {
         var customer = Customer();
+        return await DigitalDeliveriesForAsync(orderId, customer, null, ct);
+    }
+
+    public Task<List<DigitalDeliveryDto>> GuestDigitalDeliveriesAsync(Guid orderId, string verifiedEmail, CancellationToken ct) =>
+        DigitalDeliveriesForAsync(orderId, null, OrderingService.NormalizeEmail(verifiedEmail), ct);
+
+    private async Task<List<DigitalDeliveryDto>> DigitalDeliveriesForAsync(Guid orderId, Guid? customer, string? verifiedEmail, CancellationToken ct)
+    {
         return await work.ExecuteAsync(async () =>
         {
-            var order = await db.Orders.AsNoTracking().SingleOrDefaultAsync(o => o.Id == orderId && o.CustomerId == customer, ct)
+            var order = await db.Orders.AsNoTracking().SingleOrDefaultAsync(o => o.Id == orderId &&
+                (customer.HasValue ? !o.IsGuestOrder && o.CustomerId == customer.Value : o.IsGuestOrder && o.NormalizedEmail == verifiedEmail), ct)
                 ?? throw new NotFoundException("Order not found.");
             if (order.PaymentStatus != OrderPaymentStatus.Paid)
                 throw new ConflictException("Digital content is available only after payment confirmation.");
@@ -239,7 +248,7 @@ public sealed partial class OrderingService
                     DeliveryProtector(delivery.Id).Unprotect(delivery.ProtectedContent)));
                 db.Trails.Add(new Trail
                 {
-                    UserId = customer, TableName = "DigitalDeliveries", PrimaryKey = delivery.Id.ToString(),
+                    UserId = customer ?? Guid.Empty, TableName = "DigitalDeliveries", PrimaryKey = delivery.Id.ToString(),
                     Type = TrailType.Read, DateTime = Now, NewValues = "{\"Action\":\"Reveal\"}"
                 });
             }

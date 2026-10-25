@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using Boilerate.Domain.Identity;
+using Boilerate.Application.Common.Mailing;
+using Boilerate.Infrastructure.Commerce;
 using Boilerate.Host.Configurations;
 using Boilerate.Host.Controllers.Identity;
 using Boilerate.Infrastructure;
@@ -87,6 +89,7 @@ using (var scope = database.Scope())
     adminActorId = Guid.Parse(await db.Users.Where(user => user.Email == adminEmail).Select(user => user.Id).SingleAsync());
 }
 var acceptance = await AdminAcceptanceData.SeedAsync(database, adminActorId, password);
+var storefront = await GuestStorefrontAcceptanceData.SeedAsync(database, adminActorId);
 
 // Same application services/controllers/middleware as TestHostApplication, on a real socket.
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -98,6 +101,8 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 builder.Configuration.Sources.Clear();
 builder.Configuration.AddConfiguration(database.Configuration);
 database.ConfigureServices(builder.Services);
+builder.Services.AddSingleton<AcceptanceMailSink>();
+builder.Services.Replace(ServiceDescriptor.Transient<IMailService>(services => services.GetRequiredService<AcceptanceMailSink>()));
 builder.Services.Replace(ServiceDescriptor.Singleton<IHostEnvironment>(builder.Environment));
 builder.Services.AddRateLimiter(options => options.AddFixedWindowLimiter("authentication", limiter =>
 {
@@ -110,6 +115,18 @@ builder.WebHost.UseUrls("http://127.0.0.1:0");
 await using var app = builder.Build();
 app.UseInfrastructure(database.Configuration);
 app.MapEndpoints();
+app.MapPost("/__acceptance/outbox/drain", async (IServiceScopeFactory scopes, CancellationToken ct) =>
+{
+    var processed = 0;
+    while (processed < 200)
+    {
+        using var scope = scopes.CreateScope();
+        if (!await scope.ServiceProvider.GetRequiredService<OutboxProcessor>().RunOneAsync(ct)) break;
+        processed++;
+    }
+    return Results.Ok(new { processed });
+});
+app.MapGet("/__acceptance/mail-sink/messages", (AcceptanceMailSink sink) => Results.Ok(sink.Snapshot()));
 await app.StartAsync();
 
 try
@@ -130,6 +147,7 @@ try
         },
         actors = acceptance.Actors,
         scenarios = acceptance.Scenarios,
+        storefront,
         products = await db.Products.AsNoTracking().OrderBy(product => product.Slug)
             .Select(product => new { product.Id, product.Slug, product.Name, product.Version, product.ProductTypeId }).ToListAsync(),
         categories = await db.Categories.AsNoTracking().OrderBy(category => category.Slug)

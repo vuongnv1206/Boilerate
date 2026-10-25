@@ -10,10 +10,11 @@ using Boilerate.Infrastructure.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.DataProtection;
 namespace Boilerate.Infrastructure.Commerce;
 
 public sealed class OutboxProcessor(ApplicationDbContext db, CommerceUnitOfWork work, LocalFileStorageService storage,
-    IOptions<CommerceSettings> settings, ILogger<OutboxProcessor> logger, IMailService mail)
+    IOptions<CommerceSettings> settings, ILogger<OutboxProcessor> logger, IMailService mail, IDataProtectionProvider protection)
 {
     public async Task<bool> RunOneAsync(CancellationToken ct)
     {
@@ -49,6 +50,9 @@ public sealed class OutboxProcessor(ApplicationDbContext db, CommerceUnitOfWork 
                         ?? throw new InvalidOperationException("Invalid digital delivery notification payload.");
                     await NotifyDigitalDeliveryAsync(delivery.OrderId, message.MessageId, ct);
                     break;
+                case "GuestEmailVerification":
+                    await SendGuestVerificationAsync(message.Payload, message.MessageId, ct);
+                    break;
                 default:
                     throw new InvalidOperationException("Unsupported message type.");
             }
@@ -80,12 +84,24 @@ public sealed class OutboxProcessor(ApplicationDbContext db, CommerceUnitOfWork 
         var number = HtmlEncoder.Default.Encode(order.Number);
         var request = new MailRequest([order.Email], $"Đơn hàng {order.Number}: hàng số đã sẵn sàng",
             $"<p>Nội dung hàng số của đơn hàng <strong>{number}</strong> đã sẵn sàng.</p>" +
-            "<p>Vui lòng đăng nhập và xem mục <strong>Đơn hàng của tôi</strong> để nhận nội dung.</p>",
+            "<p>Vui lòng đăng nhập hoặc xác minh email tại mục <strong>Đơn hàng của tôi</strong> để nhận nội dung.</p>",
             headers: new Dictionary<string, string>
             {
                 // Stable across retries; SMTP delivery is still at-least-once, not deduplicated by this header.
                 ["Message-Id"] = $"<outbox.{messageId:N}@boilerate.invalid>"
             });
+        await mail.SendAsync(request, ct);
+    }
+
+    private async Task SendGuestVerificationAsync(string protectedPayload, Guid messageId, CancellationToken ct)
+    {
+        var json = protection.CreateProtector("Boilerate.GuestStorefront.EmailOtp.Outbox.v1").Unprotect(protectedPayload);
+        var data = JsonSerializer.Deserialize<GuestEmailVerificationMessage>(json)
+            ?? throw new InvalidOperationException("Invalid guest email verification payload.");
+        var code = HtmlEncoder.Default.Encode(data.Code);
+        var request = new MailRequest([data.Email], "Mã xác minh email mua hàng",
+            $"<p>Mã xác minh email của bạn là <strong>{code}</strong>.</p><p>Mã có hiệu lực trong 10 phút. Nếu bạn không yêu cầu mã này, có thể bỏ qua email.</p>",
+            headers: new Dictionary<string, string> { ["Message-Id"] = $"<outbox.{messageId:N}@boilerate.invalid>" });
         await mail.SendAsync(request, ct);
     }
     public async Task CleanupAsync(Guid mediaId, CancellationToken ct)
@@ -116,6 +132,7 @@ public sealed class OutboxProcessor(ApplicationDbContext db, CommerceUnitOfWork 
     public async Task SweepAsync(CancellationToken ct)
     {
         var now = DateTime.UtcNow;
+        await db.Set<GuestEmailChallenge>().Where(c => c.ExpiresAtUtc <= now.AddDays(-1)).ExecuteDeleteAsync(ct);
         var requested = (await db.OutboxMessages.AsNoTracking()
             .Where(m => m.Type == "MediaCleanupRequested" && m.State != OutboxState.Completed)
             .Select(m => m.Payload).ToListAsync(ct)).ToHashSet(StringComparer.Ordinal);

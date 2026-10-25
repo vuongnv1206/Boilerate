@@ -61,9 +61,18 @@ public sealed class OutboxMessage
             CorrelationId = correlation
         };
     }
+
+    public static OutboxMessage GuestEmailVerification(string protectedPayload, string? correlation = null) => new()
+    {
+        Type = "GuestEmailVerification",
+        Payload = protectedPayload,
+        ActorId = Guid.Empty,
+        CorrelationId = correlation
+    };
 }
 public sealed record MediaCleanupRequested(Guid MediaId);
 public sealed record DigitalDeliveryReady(Guid OrderId);
+public sealed record GuestEmailVerificationMessage(string Email, string Code);
 // Stable rows serialize only topology/initialization operations; normal Product/stock writes have their own locks.
 public sealed class CommerceLock
 {

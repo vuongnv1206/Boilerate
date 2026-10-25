@@ -26,11 +26,14 @@ public static class CommerceStartup
         services.TryAddSingleton<TimeProvider>(TimeProvider.System);
         services.AddScoped<OrderingService>();
         services.AddScoped<IOrderingService>(sp => sp.GetRequiredService<OrderingService>());
+        services.AddScoped<IGuestOrderingService>(sp => sp.GetRequiredService<OrderingService>());
         services.AddScoped<IOrderHistoryService>(sp => sp.GetRequiredService<OrderingService>());
         services.AddScoped<IPaymentService>(sp => sp.GetRequiredService<OrderingService>());
         services.AddScoped<IShippingService>(sp => sp.GetRequiredService<OrderingService>());
         services.AddScoped<IRenewalService>(sp => sp.GetRequiredService<OrderingService>());
         services.AddScoped<IAfterSalesService>(sp => sp.GetRequiredService<OrderingService>());
+        services.AddScoped<IGuestAccessService, GuestAccessService>();
+        services.AddScoped<IStorefrontSettingsService, StorefrontSettingsService>();
         services.AddScoped<OutboxProcessor>();
         services.AddSingleton(new LocalFileStorageService(Path.GetFullPath(config["Storage:Root"] ?? "Files")));
         services.AddSingleton<IFileStorageService>(sp => sp.GetRequiredService<LocalFileStorageService>());

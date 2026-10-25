@@ -15,4 +15,5 @@ public interface IShippingService
     Task<ShipmentDto> DispatchShipmentAsync(Guid orderId, DispatchShipment request, CancellationToken ct);
     Task<ShipmentDto> DeliverShipmentAsync(Guid orderId, Guid shipmentId, DeliverShipment request, CancellationToken ct);
     Task<List<ShipmentDto>> ShipmentsAsync(Guid orderId, bool admin, CancellationToken ct);
+    Task<List<ShipmentDto>> GuestShipmentsAsync(Guid orderId, string verifiedEmail, CancellationToken ct);
 }

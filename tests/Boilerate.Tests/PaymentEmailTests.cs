@@ -30,7 +30,8 @@ public sealed class PaymentEmailTests
     {
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<LocalFileStorageService>(),
-            Options.Create(new CommerceSettings { MaximumAttempts = attempts }), NullLogger<OutboxProcessor>.Instance, mail);
+            Options.Create(new CommerceSettings { MaximumAttempts = attempts }), NullLogger<OutboxProcessor>.Instance, mail,
+            scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
     }
 
     private static CommerceService Catalog(IServiceScope scope)

@@ -20,7 +20,7 @@ using Microsoft.AspNetCore.DataProtection;
 namespace Boilerate.Infrastructure.Commerce;
 
 public sealed partial class OrderingService(ApplicationDbContext db, CommerceUnitOfWork work, ICurrentUser actor,
-    IUserService users, IOptions<OrderingSettings> settings, TimeProvider clock, IDataProtectionProvider protection) : IOrderingService, IOrderHistoryService, IPaymentService, IShippingService, IRenewalService, IAfterSalesService
+    IUserService users, IOptions<OrderingSettings> settings, TimeProvider clock, IDataProtectionProvider protection) : IOrderingService, IGuestOrderingService, IOrderHistoryService, IPaymentService, IShippingService, IRenewalService, IAfterSalesService
 {
     private DateTime Now => clock.GetUtcNow().UtcDateTime;
     private Guid Customer()
@@ -51,7 +51,13 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
 
     public async Task<CartDto> GetCartAsync(CancellationToken ct)
     {
-        var customer = Customer();
+        return await GetCartForAsync(Customer(), ct);
+    }
+
+    public Task<CartDto> GetGuestCartAsync(Guid guestId, CancellationToken ct) => GetCartForAsync(RequireGuestId(guestId), ct);
+
+    private async Task<CartDto> GetCartForAsync(Guid customer, CancellationToken ct)
+    {
         var cart = await Carts().AsNoTracking().SingleOrDefaultAsync(c => c.CustomerId == customer, ct);
         if (cart is null)
             return new(Guid.Empty, null, [], 0);
@@ -60,7 +66,14 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
 
     public async Task<CartDto> SaveCartAsync(SaveCart r, CancellationToken ct)
     {
-        var customer = Customer();
+        return await SaveCartForAsync(Customer(), r, ct);
+    }
+
+    public Task<CartDto> SaveGuestCartAsync(Guid guestId, SaveCart request, CancellationToken ct) =>
+        SaveCartForAsync(RequireGuestId(guestId), request, ct);
+
+    private async Task<CartDto> SaveCartForAsync(Guid customer, SaveCart r, CancellationToken ct)
+    {
         if (r.Items is null || r.Items.Count > 50 || r.Items.Any(i => i is null))
             throw new DomainException("Cart requires at most 50 lines.");
         await work.ExecuteAsync(async () =>
@@ -84,7 +97,7 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
             cart.ReplaceItems(r.Items.Select(i => (i.VariantId, i.Quantity)));
             return true;
         }, ct);
-        return await GetCartAsync(ct);
+        return await GetCartForAsync(customer, ct);
     }
 
     private async Task<CartDto> MapCart(Cart cart, CancellationToken ct)
@@ -108,7 +121,7 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
                     ProductFulfillmentKind.ManualExtension => true,
                     _ => false
                 };
-            return new CartLineDto(variant.Id, line.Quantity, product.Name, variant.Sku, variant.Price, available);
+            return new CartLineDto(variant.Id, line.Quantity, product.Name, variant.Sku, variant.Price, available, product.FulfillmentKind);
         }).ToList();
         var subtotal = lines.Sum(i => (i.UnitPrice ?? 0) * i.Quantity);
         var shipping = products.Any(p => p.FulfillmentKind == ProductFulfillmentKind.Physical) ? settings.Value.FlatShippingAmount : 0;
@@ -138,7 +151,19 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
 
     public async Task<OrderDto> CheckoutAsync(Checkout r, CancellationToken ct)
     {
-        var customer = Customer();
+        return await CheckoutForAsync(Customer(), null, r, ct);
+    }
+
+    public Task<OrderDto> CheckoutGuestAsync(Guid guestId, string verifiedEmail, Checkout request, CancellationToken ct)
+    {
+        var email = NormalizeEmail(verifiedEmail);
+        if (!string.Equals(NormalizeEmail(request.Email), email, StringComparison.Ordinal))
+            throw new Boilerate.Application.Common.Exceptions.ForbiddenException("Checkout email must match the verified email.");
+        return CheckoutForAsync(RequireGuestId(guestId), email, request, ct);
+    }
+
+    private async Task<OrderDto> CheckoutForAsync(Guid customer, string? verifiedGuestEmail, Checkout r, CancellationToken ct)
+    {
         if (r.OperationId == Guid.Empty || string.IsNullOrWhiteSpace(r.CartVersion))
             throw new DomainException("OperationId and CartVersion are required.");
         CatalogRules.Money(r.ExpectedTotal, null);
@@ -178,8 +203,15 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
             }
             var shipping = items.Any(i => i.FulfillmentKind == ProductFulfillmentKind.Physical) ? settings.Value.FlatShippingAmount : 0;
             CatalogRules.Money(shipping, null);
+            if (verifiedGuestEmail is not null && r.PaymentMethod == OrderPaymentMethod.Prepaid)
+            {
+                var payment = await db.Set<StorefrontPaymentSettings>().AsNoTracking().SingleOrDefaultAsync(s => s.Id == StorefrontPaymentSettings.SingletonId, ct);
+                if (payment is null || !payment.BankTransferEnabled || string.IsNullOrWhiteSpace(payment.BankName) ||
+                    string.IsNullOrWhiteSpace(payment.AccountNumber) || string.IsNullOrWhiteSpace(payment.AccountHolder))
+                    throw new ConflictException("Bank transfer is not configured for checkout.");
+            }
             var order = new Order(customer, cart.Id, r.OperationId, hash, r.PaymentMethod, r.RecipientName, r.Email, r.Phone,
-                r.ShippingAddress, shipping, Now, settings.Value.ReservationMinutes, items);
+                r.ShippingAddress, shipping, Now, settings.Value.ReservationMinutes, items, verifiedGuestEmail is not null);
             if (order.Total != r.ExpectedTotal)
                 throw new ConflictException("Prices or shipping changed; confirm the current total before checkout.");
             db.Orders.Add(order);
@@ -188,6 +220,55 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
             cart.ReplaceItems([]);
             return MapOrder(order);
         }, ct);
+    }
+
+    public async Task<Page<OrderSummary>> GuestOrdersAsync(string verifiedEmail, int page, int size, CancellationToken ct)
+    {
+        var email = NormalizeEmail(verifiedEmail);
+        CommerceService.ValidatePage(page, size);
+        var query = db.Orders.AsNoTracking().Where(o => o.IsGuestOrder && o.NormalizedEmail == email);
+        var total = await query.CountAsync(ct);
+        var items = await query.OrderByDescending(o => o.CreatedOn).ThenByDescending(o => o.Id).Skip((page - 1) * size).Take(size)
+            .Select(o => new OrderSummary(o.Id, o.Number, o.Status, o.PaymentMethod, o.Total, o.Currency, o.CreatedOn, o.ExpiresAt,
+                o.PaymentStatus, o.FulfillmentStatus, o.PaidAtUtc, o.RecipientName, o.Email, o.Phone)).ToListAsync(ct);
+        items = items.Select(o => o with { CreatedOn = UtcTimestamp(o.CreatedOn), ExpiresAt = UtcTimestamp(o.ExpiresAt), PaidAtUtc = UtcTimestamp(o.PaidAtUtc) }).ToList();
+        return new(items, total, page, size);
+    }
+
+    public async Task<OrderDto> GetGuestOrderAsync(string verifiedEmail, Guid id, CancellationToken ct)
+    {
+        var email = NormalizeEmail(verifiedEmail);
+        var order = await Orders().AsNoTracking().SingleOrDefaultAsync(o => o.Id == id && o.IsGuestOrder && o.NormalizedEmail == email, ct)
+            ?? throw new NotFoundException("Order not found.");
+        return MapOrder(order);
+    }
+
+    public async Task<OrderDto> CancelGuestOrderAsync(string verifiedEmail, Guid id, CancelOrder request, CancellationToken ct)
+    {
+        var email = NormalizeEmail(verifiedEmail);
+        return await work.ExecuteAsync(async () =>
+        {
+            await Gate(ct);
+            var order = await Orders().SingleOrDefaultAsync(o => o.Id == id && o.IsGuestOrder && o.NormalizedEmail == email, ct)
+                ?? throw new NotFoundException("Order not found.");
+            CheckVersion(request.Version, order.Version);
+            if (order.PaymentStatus == OrderPaymentStatus.Paid)
+                throw new ConflictException("Paid orders require staff review and cannot be cancelled here.");
+            if (order.PhysicalDispatchStarted)
+                throw new ConflictException("Dispatched orders require staff review and cannot be cancelled here.");
+            if (order.Status is OrderStatus.Cancelled or OrderStatus.Expired) return MapOrder(order);
+            await Release(order, ct);
+            order.Cancel();
+            return MapOrder(order);
+        }, ct);
+    }
+
+    private static Guid RequireGuestId(Guid id) => id == Guid.Empty ? throw new DomainException("A guest session is required.") : id;
+    public static string NormalizeEmail(string email)
+    {
+        if (!System.Net.Mail.MailAddress.TryCreate(email?.Trim(), out var parsed) || parsed.Address != email?.Trim())
+            throw new DomainException("A valid email address is required.");
+        return parsed.Address.ToUpperInvariant();
     }
 
     private async Task Reserve(Order order, CancellationToken ct)

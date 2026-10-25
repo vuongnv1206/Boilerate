@@ -1637,6 +1637,67 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Boilerate.Domain.Ordering.GuestEmailChallenge", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("ConsumedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("LastModifiedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("LastModifiedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastSentAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NormalizedEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedEmail", "CreatedAtUtc");
+
+                    b.HasIndex("NormalizedEmail", "ConsumedAtUtc", "ExpiresAtUtc");
+
+                    b.ToTable("GuestEmailChallenges", "Ordering", t =>
+                        {
+                            t.HasCheckConstraint("CK_GuestEmailChallenge_Attempts", "\"Attempts\" BETWEEN 0 AND 5");
+                        });
+                });
+
             modelBuilder.Entity("Boilerate.Domain.Ordering.Order", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1672,11 +1733,20 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(1);
 
+                    b.Property<bool>("IsGuestOrder")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<Guid>("LastModifiedBy")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("LastModifiedOn")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NormalizedEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<string>("Number")
                         .IsRequired()
@@ -1757,6 +1827,9 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
                     b.HasIndex("Status", "ExpiresAt");
 
                     b.HasIndex("CustomerId", "CreatedOn", "Id");
+
+                    b.HasIndex("NormalizedEmail", "CreatedOn", "Id")
+                        .HasFilter("\"IsGuestOrder\" = true");
 
                     b.ToTable("Orders", "Ordering", t =>
                         {
@@ -1901,6 +1974,59 @@ namespace Boilerate.Migrators.PostgreSQL.Migrations
 
                             t.HasCheckConstraint("CK_PhysicalStockReservation_State", "(\"State\" IN (1,4) AND \"ConsumedQuantity\" < \"Quantity\") OR (\"State\" = 2 AND \"ConsumedQuantity\" = 0) OR (\"State\" = 3 AND \"ConsumedQuantity\" = \"Quantity\")");
                         });
+                });
+
+            modelBuilder.Entity("Boilerate.Domain.Ordering.StorefrontPaymentSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AccountHolder")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("AccountNumber")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("BankName")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<bool>("BankTransferEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Branch")
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Instructions")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("LastModifiedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("LastModifiedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("StorefrontPaymentSettings", "Ordering");
                 });
 
             modelBuilder.Entity("Boilerate.Domain.Payments.PaymentReceipt", b =>
