@@ -43,6 +43,12 @@ public sealed class Order : CommerceEntity, IAggregateRoot
     public string Currency { get; private set; } = "VND";
     public decimal Subtotal { get; private set; }
     public decimal ShippingAmount { get; private set; }
+    public Guid? DiscountId { get; private set; }
+    public string? DiscountCode { get; private set; }
+    public DiscountKind? DiscountKind { get; private set; }
+    public decimal? DiscountValue { get; private set; }
+    public decimal DiscountAmount { get; private set; }
+    public bool DiscountUsageHeld { get; private set; }
     public decimal Total { get; private set; }
     public string RecipientName { get; private set; } = null!;
     public string Email { get; private set; } = null!;
@@ -116,6 +122,34 @@ public sealed class Order : CommerceEntity, IAggregateRoot
         Status = OrderStatus.Cancelled;
         Touch();
     }
+
+    public void ApplyDiscount(Discount discount, decimal amount)
+    {
+        if (DiscountId.HasValue || amount <= 0 || amount >= Subtotal || decimal.Truncate(amount) != amount)
+            throw new DomainException("Discount must leave a positive item subtotal.");
+        DiscountId = discount.Id;
+        DiscountCode = discount.Code;
+        DiscountKind = discount.Kind;
+        DiscountValue = discount.Value;
+        DiscountAmount = amount;
+        DiscountUsageHeld = true;
+        Total = Subtotal + ShippingAmount - amount;
+
+        // Largest remainder, with VariantId as the deterministic tie-breaker.
+        var whole = new System.Numerics.BigInteger(Subtotal);
+        var shares = _items.Select(item =>
+        {
+            var quotient = System.Numerics.BigInteger.DivRem(new System.Numerics.BigInteger(item.Amount) *
+                new System.Numerics.BigInteger(amount), whole, out var remainder);
+            return (Item: item, Amount: (decimal)quotient, Remainder: remainder);
+        }).OrderByDescending(x => x.Remainder).ThenBy(x => x.Item.VariantId).ToArray();
+        var left = (int)(amount - shares.Sum(x => x.Amount));
+        for (var i = 0; i < shares.Length; i++) shares[i].Item.SetDiscount(shares[i].Amount + (i < left ? 1 : 0));
+        Touch();
+    }
+
+    public void ReleaseDiscountUsage() { if (DiscountUsageHeld) { DiscountUsageHeld = false; Touch(); } }
+    public void HoldDiscountUsage() { if (DiscountId.HasValue && !DiscountUsageHeld) { DiscountUsageHeld = true; Touch(); } }
 
     public bool Expire(DateTime now)
     {
@@ -198,9 +232,17 @@ public sealed class OrderItem : BaseEntity
     public string OptionDescription { get; private set; } = null!;
     public ProductFulfillmentKind FulfillmentKind { get; private set; }
     public decimal UnitPrice { get; private set; }
+    public decimal DiscountAmount { get; private set; }
     public int Quantity { get; private set; }
     [NotMapped]
     public decimal Amount => UnitPrice * Quantity;
+
+    internal void SetDiscount(decimal amount)
+    {
+        if (amount < 0 || amount > Amount || decimal.Truncate(amount) != amount)
+            throw new DomainException("Invalid item discount amount.");
+        DiscountAmount = amount;
+    }
 
     private OrderItem()
     {

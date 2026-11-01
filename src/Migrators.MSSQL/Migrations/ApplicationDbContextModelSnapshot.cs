@@ -1531,6 +1531,11 @@ namespace Boilerate.Migrators.MSSQL.Migrations
                     b.Property<Guid>("CustomerId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("DiscountCode")
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
                     b.Property<Guid>("LastModifiedBy")
                         .HasColumnType("uniqueidentifier");
 
@@ -1639,6 +1644,78 @@ namespace Boilerate.Migrators.MSSQL.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Boilerate.Domain.Ordering.Discount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("EndsAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("LastModifiedBy")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("LastModifiedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("MinimumSubtotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<DateTime?>("StartsAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UsageLimit")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Value")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Discounts", "Ordering", t =>
+                        {
+                            t.HasCheckConstraint("CK_Discount_KindValue", "(\"Kind\" = 1 AND \"Value\" BETWEEN 1 AND 99) OR (\"Kind\" = 2 AND \"Value\" >= 1 AND \"Value\" <= 9007199254740991)");
+
+                            t.HasCheckConstraint("CK_Discount_LimitPeriod", "(\"UsageLimit\" IS NULL OR \"UsageLimit\" > 0) AND (\"StartsAtUtc\" IS NULL OR \"EndsAtUtc\" IS NULL OR \"StartsAtUtc\" < \"EndsAtUtc\")");
+
+                            t.HasCheckConstraint("CK_Discount_WholeValues", "\"Value\" = FLOOR(\"Value\") AND \"MinimumSubtotal\" >= 0 AND \"MinimumSubtotal\" <= 9007199254740991 AND \"MinimumSubtotal\" = FLOOR(\"MinimumSubtotal\")");
+                        });
+                });
+
             modelBuilder.Entity("Boilerate.Domain.Ordering.GuestEmailChallenge", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1721,6 +1798,32 @@ namespace Boilerate.Migrators.MSSQL.Migrations
 
                     b.Property<Guid>("CustomerId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<string>("DiscountCode")
+                        .HasMaxLength(32)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<Guid?>("DiscountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("DiscountKind")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("DiscountUsageHeld")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<decimal?>("DiscountValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -1826,6 +1929,8 @@ namespace Boilerate.Migrators.MSSQL.Migrations
                     b.HasIndex("CustomerId", "OperationId")
                         .IsUnique();
 
+                    b.HasIndex("DiscountId", "DiscountUsageHeld");
+
                     b.HasIndex("Status", "ExpiresAt");
 
                     b.HasIndex("CustomerId", "CreatedOn", "Id");
@@ -1835,11 +1940,13 @@ namespace Boilerate.Migrators.MSSQL.Migrations
 
                     b.ToTable("Orders", "Ordering", t =>
                         {
-                            t.HasCheckConstraint("CK_Order_Amounts", "\"Currency\" = 'VND' AND \"Subtotal\" >= 0 AND \"Subtotal\" = FLOOR(\"Subtotal\") AND \"ShippingAmount\" >= 0 AND \"ShippingAmount\" = FLOOR(\"ShippingAmount\") AND \"Total\" >= 0 AND \"Total\" = FLOOR(\"Total\") AND \"Total\" = \"Subtotal\" + \"ShippingAmount\"");
+                            t.HasCheckConstraint("CK_Order_Amounts", "\"Currency\" = 'VND' AND \"Subtotal\" >= 0 AND \"Subtotal\" = FLOOR(\"Subtotal\") AND \"ShippingAmount\" >= 0 AND \"ShippingAmount\" = FLOOR(\"ShippingAmount\") AND \"DiscountAmount\" >= 0 AND \"DiscountAmount\" = FLOOR(\"DiscountAmount\") AND \"DiscountAmount\" <= \"Subtotal\" AND \"Total\" >= 0 AND \"Total\" = FLOOR(\"Total\") AND \"Total\" = \"Subtotal\" + \"ShippingAmount\" - \"DiscountAmount\"");
 
                             t.HasCheckConstraint("CK_Order_Closure", "(\"Status\" = 6 AND \"FulfillmentStatus\" = 5 AND (\"PaymentStatus\" = 2 OR \"PaymentMethod\" = 2)) OR (\"Status\" <> 6 AND \"FulfillmentStatus\" <> 5)");
 
                             t.HasCheckConstraint("CK_Order_Completion", "\"Status\" <> 5 OR (\"PaymentStatus\" = 2 AND \"FulfillmentStatus\" = 4)");
+
+                            t.HasCheckConstraint("CK_Order_Discount", "(\"DiscountId\" IS NULL AND \"DiscountCode\" IS NULL AND \"DiscountKind\" IS NULL AND \"DiscountValue\" IS NULL AND \"DiscountAmount\" = 0) OR (\"DiscountId\" IS NOT NULL AND \"DiscountCode\" IS NOT NULL AND \"DiscountKind\" IN (1,2) AND \"DiscountValue\" IS NOT NULL AND \"DiscountAmount\" > 0 AND \"DiscountAmount\" < \"Subtotal\")");
 
                             t.HasCheckConstraint("CK_Order_Expiry", "(\"Status\" <> 1 OR \"ExpiresAt\" IS NOT NULL) AND (\"PaymentMethod\" <> 2 OR \"ExpiresAt\" IS NULL)");
 
@@ -1859,6 +1966,12 @@ namespace Boilerate.Migrators.MSSQL.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("DiscountAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
 
                     b.Property<int>("FulfillmentKind")
                         .HasColumnType("int");
@@ -1908,6 +2021,8 @@ namespace Boilerate.Migrators.MSSQL.Migrations
 
                     b.ToTable("OrderItems", "Ordering", t =>
                         {
+                            t.HasCheckConstraint("CK_OrderItem_Discount", "\"DiscountAmount\" >= 0 AND \"DiscountAmount\" = FLOOR(\"DiscountAmount\") AND \"DiscountAmount\" <= \"UnitPrice\" * \"Quantity\"");
+
                             t.HasCheckConstraint("CK_OrderItem_FulfillmentKind", "\"FulfillmentKind\" IN (1,2,3,4)");
 
                             t.HasCheckConstraint("CK_OrderItem_Price", "\"UnitPrice\" >= 0 AND \"UnitPrice\" = FLOOR(\"UnitPrice\")");
@@ -2105,6 +2220,8 @@ namespace Boilerate.Migrators.MSSQL.Migrations
                     b.HasIndex("OrderId")
                         .IsUnique();
 
+                    b.HasIndex("ReceivedAtUtc", "Id");
+
                     b.HasIndex("Source", "NormalizedReference")
                         .IsUnique();
 
@@ -2197,6 +2314,8 @@ namespace Boilerate.Migrators.MSSQL.Migrations
 
                     b.HasIndex("OperationId")
                         .IsUnique();
+
+                    b.HasIndex("RefundedAtUtc", "Id");
 
                     b.HasIndex("Source", "NormalizedReference")
                         .IsUnique();
@@ -3065,6 +3184,11 @@ namespace Boilerate.Migrators.MSSQL.Migrations
                         .HasForeignKey("CartId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Boilerate.Domain.Ordering.Discount", null)
+                        .WithMany()
+                        .HasForeignKey("DiscountId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Boilerate.Domain.Ordering.OrderItem", b =>

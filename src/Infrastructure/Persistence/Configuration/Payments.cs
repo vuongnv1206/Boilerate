@@ -34,6 +34,7 @@ internal static class PaymentModel
         receipt.HasIndex(x => x.OperationId).IsUnique();
         receipt.HasIndex(x => new { x.Source, x.NormalizedReference }).IsUnique();
         receipt.HasIndex(x => x.OrderId).IsUnique();
+        receipt.HasIndex(x => new { x.ReceivedAtUtc, x.Id });
         receipt.HasOne<Order>().WithMany().HasForeignKey(x => x.OrderId).OnDelete(DeleteBehavior.Restrict);
 
         // Fulfillment kind is part of these keys so a Unique item cannot bypass its

@@ -109,12 +109,13 @@ public sealed partial class OrderingService
         }, ct);
     }
 
-    public async Task<Page<RenewalAdminDto>> RenewalsAdminAsync(int page, int size, RenewalStatus? status, CancellationToken ct)
+    public async Task<Page<RenewalAdminDto>> RenewalsAdminAsync(int page, int size, RenewalStatus? status, CancellationToken ct, string? queue = null)
     {
         await RenewalPermission("View", ct);
         CommerceService.ValidatePage(page, size);
         if (status.HasValue && !Enum.IsDefined(status.Value)) throw new DomainException("Invalid renewal status.");
         var query = RenewalRequests().AsNoTracking().Where(r => !status.HasValue || r.Status == status);
+        query = OverviewQueues.Renewals(query, db.Orders, queue);
         var total = await query.CountAsync(ct);
         var requests = await query.OrderBy(r => r.CreatedOn).ThenBy(r => r.Id).Skip((page - 1) * size).Take(size).ToListAsync(ct);
         var ids = requests.Select(r => r.OrderItemId).ToArray();

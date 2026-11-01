@@ -23,7 +23,7 @@ public sealed class MyRenewalsController(IRenewalService renewals) : BaseApiCont
 public sealed class AdminRenewalsController(IRenewalService renewals) : BaseApiController
 {
     [HttpGet, MustHavePermission(AppAction.View, AppFunction.Renewal)]
-    public Task<Page<RenewalAdminDto>> List(CancellationToken ct, int page = 1, int size = 20, RenewalStatus? status = null) => renewals.RenewalsAdminAsync(page, size, status, ct);
+    public Task<Page<RenewalAdminDto>> List(CancellationToken ct, int page = 1, int size = 20, RenewalStatus? status = null, string? queue = null) => renewals.RenewalsAdminAsync(page, size, status, ct, queue);
     [HttpGet("{id:guid}"), MustHavePermission(AppAction.View, AppFunction.Renewal)]
     public Task<RenewalAdminDto> Get(Guid id, CancellationToken ct) => renewals.GetRenewalAdminAsync(id, ct);
     [HttpPost("{id:guid}/claim"), MustHavePermission(AppAction.Process, AppFunction.Renewal)]

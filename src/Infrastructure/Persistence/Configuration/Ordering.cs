@@ -10,7 +10,7 @@ internal static class OrderingModel
 {
     internal static void Configure(ModelBuilder m, bool postgres)
     {
-        foreach (var type in new[] { typeof(Cart), typeof(Order), typeof(PhysicalStockReservation), typeof(GuestEmailChallenge), typeof(StorefrontPaymentSettings) })
+        foreach (var type in new[] { typeof(Cart), typeof(Order), typeof(PhysicalStockReservation), typeof(GuestEmailChallenge), typeof(StorefrontPaymentSettings), typeof(Discount) })
         {
             var entity = m.Entity(type);
             entity.HasBaseType((Type?)null);
@@ -22,6 +22,20 @@ internal static class OrderingModel
         var cart = m.Entity<Cart>();
         cart.ToTable("Carts", "Ordering");
         cart.HasIndex(x => x.CustomerId).IsUnique();
+        cart.Property(x => x.DiscountCode).HasMaxLength(32).IsUnicode(false);
+
+        var discount = m.Entity<Discount>();
+        discount.ToTable("Discounts", "Ordering", t =>
+        {
+            t.HasCheckConstraint("CK_Discount_KindValue", "(\"Kind\" = 1 AND \"Value\" BETWEEN 1 AND 99) OR (\"Kind\" = 2 AND \"Value\" >= 1 AND \"Value\" <= 9007199254740991)");
+            t.HasCheckConstraint("CK_Discount_WholeValues", "\"Value\" = FLOOR(\"Value\") AND \"MinimumSubtotal\" >= 0 AND \"MinimumSubtotal\" <= 9007199254740991 AND \"MinimumSubtotal\" = FLOOR(\"MinimumSubtotal\")");
+            t.HasCheckConstraint("CK_Discount_LimitPeriod", "(\"UsageLimit\" IS NULL OR \"UsageLimit\" > 0) AND (\"StartsAtUtc\" IS NULL OR \"EndsAtUtc\" IS NULL OR \"StartsAtUtc\" < \"EndsAtUtc\")");
+        });
+        discount.Property(x => x.Code).HasMaxLength(32).IsUnicode(false).IsRequired();
+        discount.Property(x => x.Name).HasMaxLength(160).IsRequired();
+        discount.Property(x => x.Value).HasPrecision(18, 2);
+        discount.Property(x => x.MinimumSubtotal).HasPrecision(18, 2);
+        discount.HasIndex(x => x.Code).IsUnique();
 
         var cartItem = m.Entity<CartItem>();
         cartItem.ToTable("CartItems", "Ordering", t =>
@@ -41,7 +55,8 @@ internal static class OrderingModel
             t.HasCheckConstraint("CK_Order_Completion", "\"Status\" <> 5 OR (\"PaymentStatus\" = 2 AND \"FulfillmentStatus\" = 4)");
             t.HasCheckConstraint("CK_Order_PaymentMethod", "\"PaymentMethod\" IN (1,2)");
             t.HasCheckConstraint("CK_Order_Expiry", "(\"Status\" <> 1 OR \"ExpiresAt\" IS NOT NULL) AND (\"PaymentMethod\" <> 2 OR \"ExpiresAt\" IS NULL)");
-            t.HasCheckConstraint("CK_Order_Amounts", "\"Currency\" = 'VND' AND \"Subtotal\" >= 0 AND \"Subtotal\" = FLOOR(\"Subtotal\") AND \"ShippingAmount\" >= 0 AND \"ShippingAmount\" = FLOOR(\"ShippingAmount\") AND \"Total\" >= 0 AND \"Total\" = FLOOR(\"Total\") AND \"Total\" = \"Subtotal\" + \"ShippingAmount\"");
+            t.HasCheckConstraint("CK_Order_Amounts", "\"Currency\" = 'VND' AND \"Subtotal\" >= 0 AND \"Subtotal\" = FLOOR(\"Subtotal\") AND \"ShippingAmount\" >= 0 AND \"ShippingAmount\" = FLOOR(\"ShippingAmount\") AND \"DiscountAmount\" >= 0 AND \"DiscountAmount\" = FLOOR(\"DiscountAmount\") AND \"DiscountAmount\" <= \"Subtotal\" AND \"Total\" >= 0 AND \"Total\" = FLOOR(\"Total\") AND \"Total\" = \"Subtotal\" + \"ShippingAmount\" - \"DiscountAmount\"");
+            t.HasCheckConstraint("CK_Order_Discount", "(\"DiscountId\" IS NULL AND \"DiscountCode\" IS NULL AND \"DiscountKind\" IS NULL AND \"DiscountValue\" IS NULL AND \"DiscountAmount\" = 0) OR (\"DiscountId\" IS NOT NULL AND \"DiscountCode\" IS NOT NULL AND \"DiscountKind\" IN (1,2) AND \"DiscountValue\" IS NOT NULL AND \"DiscountAmount\" > 0 AND \"DiscountAmount\" < \"Subtotal\")");
         });
         order.Property(x => x.Number).HasMaxLength(40).IsUnicode(false).IsRequired();
         order.Property(x => x.RequestHash).HasMaxLength(64).IsUnicode(false).IsRequired();
@@ -49,6 +64,12 @@ internal static class OrderingModel
         order.Property(x => x.Subtotal).HasPrecision(18, 2);
         order.Property(x => x.ShippingAmount).HasPrecision(18, 2);
         order.Property(x => x.Total).HasPrecision(18, 2);
+        order.Property(x => x.DiscountCode).HasMaxLength(32).IsUnicode(false);
+        order.Property(x => x.DiscountValue).HasPrecision(18, 2);
+        order.Property(x => x.DiscountAmount).HasPrecision(18, 2).HasDefaultValue(0m);
+        order.Property(x => x.DiscountUsageHeld).HasDefaultValue(false);
+        order.HasOne<Discount>().WithMany().HasForeignKey(x => x.DiscountId).OnDelete(DeleteBehavior.Restrict);
+        order.HasIndex(x => new { x.DiscountId, x.DiscountUsageHeld });
         order.Property(x => x.PaymentStatus).HasDefaultValue(OrderPaymentStatus.Unpaid);
         order.Property(x => x.FulfillmentStatus).HasDefaultValue(OrderFulfillmentStatus.Pending);
         order.Property(x => x.PhysicalDispatchStarted).HasDefaultValue(false);
@@ -89,6 +110,7 @@ internal static class OrderingModel
         {
             t.HasCheckConstraint("CK_OrderItem_Quantity", "\"Quantity\" BETWEEN 1 AND 999");
             t.HasCheckConstraint("CK_OrderItem_Price", "\"UnitPrice\" >= 0 AND \"UnitPrice\" = FLOOR(\"UnitPrice\")");
+            t.HasCheckConstraint("CK_OrderItem_Discount", "\"DiscountAmount\" >= 0 AND \"DiscountAmount\" = FLOOR(\"DiscountAmount\") AND \"DiscountAmount\" <= \"UnitPrice\" * \"Quantity\"");
             t.HasCheckConstraint("CK_OrderItem_FulfillmentKind", "\"FulfillmentKind\" IN (1,2,3,4)");
         });
         orderItem.HasKey(x => x.Id);
@@ -99,6 +121,7 @@ internal static class OrderingModel
         orderItem.Property(x => x.Sku).HasMaxLength(100).IsRequired();
         orderItem.Property(x => x.OptionDescription).HasMaxLength(2000).IsRequired();
         orderItem.Property(x => x.UnitPrice).HasPrecision(18, 2);
+        orderItem.Property(x => x.DiscountAmount).HasPrecision(18, 2).HasDefaultValue(0m);
         orderItem.HasOne<Order>().WithMany(x => x.Items).HasForeignKey(x => x.OrderId).OnDelete(DeleteBehavior.Restrict);
         orderItem.HasOne<ProductVariant>().WithMany().HasForeignKey(x => new { x.ProductId, x.VariantId })
             .HasPrincipalKey(x => new { x.ProductId, x.Id }).OnDelete(DeleteBehavior.Restrict);

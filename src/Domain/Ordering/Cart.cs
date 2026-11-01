@@ -7,6 +7,7 @@ public sealed class Cart : CommerceEntity, IAggregateRoot
 {
     private readonly List<CartItem> _items = [];
     public Guid CustomerId { get; private set; }
+    public string? DiscountCode { get; private set; }
     public IReadOnlyCollection<CartItem> Items => _items;
 
     private Cart()
@@ -38,6 +39,12 @@ public sealed class Cart : CommerceEntity, IAggregateRoot
             else
                 existing.SetQuantity(item.Quantity);
         }
+        Touch();
+    }
+
+    public void SetDiscountCode(string? code)
+    {
+        DiscountCode = string.IsNullOrWhiteSpace(code) ? null : Discount.NormalizeCode(code);
         Touch();
     }
 }

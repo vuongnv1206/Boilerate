@@ -28,6 +28,8 @@ public static class CommerceStartup
         services.AddScoped<IOrderingService>(sp => sp.GetRequiredService<OrderingService>());
         services.AddScoped<IGuestOrderingService>(sp => sp.GetRequiredService<OrderingService>());
         services.AddScoped<IOrderHistoryService>(sp => sp.GetRequiredService<OrderingService>());
+        services.AddScoped<IAdminOverviewService, AdminOverviewService>();
+        services.AddScoped<IDiscountService, DiscountService>();
         services.AddScoped<IPaymentService>(sp => sp.GetRequiredService<OrderingService>());
         services.AddScoped<IShippingService>(sp => sp.GetRequiredService<OrderingService>());
         services.AddScoped<IRenewalService>(sp => sp.GetRequiredService<OrderingService>());

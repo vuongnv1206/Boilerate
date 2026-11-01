@@ -35,6 +35,7 @@ internal static class AfterSalesModel
         refund.HasIndex(x => x.OperationId).IsUnique();
         refund.HasIndex(x => new { x.Source, x.NormalizedReference }).IsUnique();
         refund.HasIndex(x => new { x.OrderId, x.RefundedAtUtc, x.Id });
+        refund.HasIndex(x => new { x.RefundedAtUtc, x.Id });
         refund.HasOne<PaymentReceipt>().WithMany()
             .HasForeignKey(x => new { x.ReceiptId, x.OrderId, x.Currency })
             .HasPrincipalKey(x => new { x.Id, x.OrderId, x.Currency })

@@ -74,6 +74,11 @@ public sealed partial class OrderingService
             var receipt = new PaymentReceipt(order.Id, r.OperationId, hash, r.Reference, r.Amount, currency, r.ReceivedAtUtc, Now, r.Source);
             db.PaymentReceipts.Add(receipt);
             order.RecordPayment(r.ReceivedAtUtc);
+            if (order.Status is not (OrderStatus.Cancelled or OrderStatus.Closed) && !await HoldDiscountUsage(order, ct))
+            {
+                order.MarkFulfillmentReview();
+                return MapOrder(order);
+            }
             await EnsureRenewalRequests(order, ct);
             if (order.PhysicalDispatchStarted)
                 await ReconcileOrderFulfillment(order, ct);
@@ -94,6 +99,8 @@ public sealed partial class OrderingService
             CheckVersion(r.Version, order.Version);
             if (order.PaymentStatus != OrderPaymentStatus.Paid || order.Status is OrderStatus.Cancelled or OrderStatus.Closed)
                 throw new ConflictException("Only paid, non-cancelled orders can resume fulfillment.");
+            if (!await HoldDiscountUsage(order, ct))
+                throw new ConflictException("Mã giảm giá đã hết lượt; cần đối chiếu đơn trước khi tiếp tục xử lý.");
             await EnsureRenewalRequests(order, ct);
             if (order.FulfillmentStatus == OrderFulfillmentStatus.NeedsReview)
             {
@@ -103,6 +110,18 @@ public sealed partial class OrderingService
             }
             return MapOrder(order);
         }, ct);
+    }
+
+    // Ordering gate is held by the caller. Reacquire quota released by expiry without
+    // changing the historic price or losing an already received payment.
+    private async Task<bool> HoldDiscountUsage(Order order, CancellationToken ct)
+    {
+        if (!order.DiscountId.HasValue || order.DiscountUsageHeld) return true;
+        var discount = await db.Set<Discount>().AsNoTracking().SingleAsync(d => d.Id == order.DiscountId.Value, ct);
+        var used = await db.Orders.CountAsync(o => o.DiscountId == discount.Id && o.DiscountUsageHeld, ct);
+        if (discount.UsageLimit.HasValue && used >= discount.UsageLimit.Value) return false;
+        order.HoldDiscountUsage();
+        return true;
     }
 
     // Call only inside the ordering transaction. Product locks also serialize digital inventory edits.

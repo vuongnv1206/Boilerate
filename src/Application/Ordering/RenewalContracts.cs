@@ -25,7 +25,7 @@ public interface IRenewalService
     Task<List<RenewalDto>> RenewalsAsync(Guid orderId, CancellationToken ct);
     Task<RenewalDto> SetRenewalTargetAsync(Guid orderId, Guid id, SetRenewalTarget request, CancellationToken ct);
     Task<RenewalContentDto> RevealRenewalTargetAsync(Guid orderId, Guid id, CancellationToken ct);
-    Task<Page<RenewalAdminDto>> RenewalsAdminAsync(int page, int size, RenewalStatus? status, CancellationToken ct);
+    Task<Page<RenewalAdminDto>> RenewalsAdminAsync(int page, int size, RenewalStatus? status, CancellationToken ct, string? queue = null);
     Task<RenewalAdminDto> GetRenewalAdminAsync(Guid id, CancellationToken ct);
     Task<List<RenewalDto>> ProvisionRenewalsAsync(Guid orderId, ProvisionRenewals request, CancellationToken ct);
     Task<RenewalAdminDto> ClaimRenewalAsync(Guid id, ClaimRenewal request, CancellationToken ct);

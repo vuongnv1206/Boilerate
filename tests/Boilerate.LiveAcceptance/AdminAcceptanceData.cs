@@ -96,6 +96,7 @@ internal static class AdminAcceptanceData
             "Payment.Confirm", "Shipping.View", "Shipping.Dispatch", "Shipping.Deliver", "AfterSales.View", "Refund.Confirm", "Return.Receive", "Renewal.View"],
         ["renewalProcessor"] = ["Order.View", "Renewal.View", "Renewal.Process", "Renewal.Reveal"],
         ["renewalVerifier"] = ["Order.View", "Renewal.View", "Renewal.Verify"],
+        ["financialViewer"] = ["FinancialSummary.View"],
     };
 
     private static async Task<AcceptanceActor> CreateActorAsync(IServiceProvider services, string profile, string role,

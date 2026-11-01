@@ -33,6 +33,14 @@ public sealed class GuestStorefrontController(IGuestOrderingService ordering, IG
         return await ordering.SaveGuestCartAsync(id, request, ct);
     }
 
+    [HttpPut("cart/discount")]
+    public async Task<CartDto> Discount(SetCartDiscount request, CancellationToken ct)
+    {
+        var id = GetCartId() ?? NewCartId();
+        SetProtectedCookie(CartCookieName, "Boilerate.GuestStorefront.CartCookie.v1", new CookieData(id.ToString("N"), DateTime.UtcNow.Add(SessionLifetime)));
+        return await ordering.SetGuestDiscountAsync(id, request, ct);
+    }
+
     [HttpPost("access/request-code")]
     [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("authentication")]
     public async Task<IActionResult> RequestCode(GuestAccessRequest request, CancellationToken ct)

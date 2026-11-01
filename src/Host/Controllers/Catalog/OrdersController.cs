@@ -14,6 +14,8 @@ public sealed class CartController(IOrderingService ordering) : BaseApiControlle
     public Task<CartDto> Get(CancellationToken ct) => ordering.GetCartAsync(ct);
     [HttpPut]
     public Task<CartDto> Save(SaveCart request, CancellationToken ct) => ordering.SaveCartAsync(request, ct);
+    [HttpPut("discount")]
+    public Task<CartDto> Discount(SetCartDiscount request, CancellationToken ct) => ordering.SetDiscountAsync(request, ct);
 }
 
 [Authorize, Route("api/orders"), ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]

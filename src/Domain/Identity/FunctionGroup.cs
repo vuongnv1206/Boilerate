@@ -20,7 +20,7 @@ public sealed class FunctionGroup : BaseEntity
     {
         "ACTION" or "FUNCTION" or "ROLE" or "USER" or "USERS" or "HANGFIRE" or "OUTBOX" or "NOTIFICATIONS" => SystemId,
         "PRODUCT" or "PRODUCTS" or "CATEGORY" or "CATEGORIES" or "PRODUCTTYPE" or "PRICE" or "INVENTORY" or "DIGITALINVENTORY" => CatalogId,
-        "ORDER" or "PAYMENT" or "SHIPPING" or "RENEWAL" or "AFTERSALES" or "REFUND" or "RETURN" => OrdersId,
+        "ORDER" or "PAYMENT" or "FINANCIALSUMMARY" or "DISCOUNT" or "SHIPPING" or "RENEWAL" or "AFTERSALES" or "REFUND" or "RETURN" => OrdersId,
         _ => OtherId
     };
 

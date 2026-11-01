@@ -72,6 +72,35 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
     public Task<CartDto> SaveGuestCartAsync(Guid guestId, SaveCart request, CancellationToken ct) =>
         SaveCartForAsync(RequireGuestId(guestId), request, ct);
 
+    public Task<CartDto> SetDiscountAsync(SetCartDiscount request, CancellationToken ct) => SetDiscountForAsync(Customer(), request, ct);
+    public Task<CartDto> SetGuestDiscountAsync(Guid guestId, SetCartDiscount request, CancellationToken ct) =>
+        SetDiscountForAsync(RequireGuestId(guestId), request, ct);
+
+    private async Task<CartDto> SetDiscountForAsync(Guid customer, SetCartDiscount request, CancellationToken ct)
+    {
+        await work.ExecuteAsync(async () =>
+        {
+            await Gate(ct);
+            var cart = await Carts().SingleOrDefaultAsync(c => c.CustomerId == customer, ct)
+                ?? throw new ConflictException("Cart is empty.");
+            CheckVersion(request.Version, cart.Version);
+            if (cart.Items.Count == 0) throw new ConflictException("Cart is empty.");
+            cart.SetDiscountCode(request.Code);
+            return true;
+        }, ct);
+        return await GetCartForAsync(customer, ct);
+    }
+
+    private async Task<(Discount? Discount, decimal Amount, string? Error)> DiscountQuote(string? code, decimal subtotal, CancellationToken ct)
+    {
+        if (code is null) return (null, 0, null);
+        var discount = await db.Set<Discount>().AsNoTracking().SingleOrDefaultAsync(d => d.Code == code, ct);
+        if (discount is null) return (null, 0, "Mã giảm giá không tồn tại.");
+        var used = await db.Orders.CountAsync(o => o.DiscountId == discount.Id && o.DiscountUsageHeld, ct);
+        var quote = discount.Quote(subtotal, Now, used);
+        return (discount, quote.Amount, quote.Error);
+    }
+
     private async Task<CartDto> SaveCartForAsync(Guid customer, SaveCart r, CancellationToken ct)
     {
         if (r.Items is null || r.Items.Count > 50 || r.Items.Any(i => i is null))
@@ -126,8 +155,9 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
         var subtotal = lines.Sum(i => (i.UnitPrice ?? 0) * i.Quantity);
         var shipping = products.Any(p => p.FulfillmentKind == ProductFulfillmentKind.Physical) ? settings.Value.FlatShippingAmount : 0;
         CatalogRules.Money(shipping, null);
+        var discount = await DiscountQuote(cart.DiscountCode, subtotal, ct);
         // Keep a repriced/oversized cart readable and editable; Order enforces persistable money bounds.
-        return new(cart.Id, cart.Version, lines, subtotal, shipping);
+        return new(cart.Id, cart.Version, lines, subtotal, shipping, cart.DiscountCode, discount.Amount, discount.Error);
     }
 
     private static string RequestHash(Checkout r) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
@@ -212,12 +242,16 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
             }
             var order = new Order(customer, cart.Id, r.OperationId, hash, r.PaymentMethod, r.RecipientName, r.Email, r.Phone,
                 r.ShippingAddress, shipping, Now, settings.Value.ReservationMinutes, items, verifiedGuestEmail is not null);
+            var discount = await DiscountQuote(cart.DiscountCode, order.Subtotal, ct);
+            if (discount.Error is not null) throw new ConflictException(discount.Error);
+            if (discount.Discount is not null) order.ApplyDiscount(discount.Discount, discount.Amount);
             if (order.Total != r.ExpectedTotal)
                 throw new ConflictException("Prices or shipping changed; confirm the current total before checkout.");
             db.Orders.Add(order);
             await Reserve(order, ct);
             db.Set<CartItem>().RemoveRange(cart.Items.ToArray());
             cart.ReplaceItems([]);
+            cart.SetDiscountCode(null);
             return MapOrder(order);
         }, ct);
     }
@@ -332,6 +366,7 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
             throw new DomainException("CreatedFrom must be earlier than CreatedTo.");
 
         var query = db.Orders.AsNoTracking().Where(o => admin || o.CustomerId == customer);
+        query = OverviewQueues.Orders(query, request.Queue, Now);
         if (request.Status.HasValue)
             query = query.Where(o => o.Status == request.Status.Value);
         if (request.PaymentStatus.HasValue)
@@ -385,6 +420,7 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
     }
     private async Task Release(Order order, CancellationToken ct)
     {
+        order.ReleaseDiscountUsage();
         await LockProducts(order.Items.Select(i => i.ProductId), ct);
         var itemIds = order.Items.Select(i => i.Id).ToArray();
         var reservations = await db.PhysicalStockReservations.Where(r => itemIds.Contains(r.OrderItemId) && r.State == HoldState.Held).ToListAsync(ct);
@@ -418,8 +454,8 @@ public sealed partial class OrderingService(ApplicationDbContext db, CommerceUni
     private static OrderDto MapOrder(Order order) => new(order.Id, order.Number, order.Version, order.Status, order.PaymentMethod,
         order.Subtotal, order.ShippingAmount, order.Total, order.Currency, UtcTimestamp(order.ExpiresAt), order.RecipientName, order.Email, order.Phone,
         order.ShippingAddress, order.Items.OrderBy(i => i.Id).Select(i => new OrderLineDto(i.Id, i.ProductId, i.VariantId, i.Name, i.Sku,
-            i.OptionDescription, i.FulfillmentKind, i.UnitPrice, i.Quantity)).ToList(), order.PaymentStatus, order.FulfillmentStatus,
-        UtcTimestamp(order.PaidAtUtc), UtcTimestamp(order.CreatedOn), order.PhysicalDispatchStarted);
+            i.OptionDescription, i.FulfillmentKind, i.UnitPrice, i.Quantity, i.DiscountAmount)).ToList(), order.PaymentStatus, order.FulfillmentStatus,
+        UtcTimestamp(order.PaidAtUtc), UtcTimestamp(order.CreatedOn), order.PhysicalDispatchStarted, order.DiscountCode, order.DiscountAmount);
 
     private static DateTime UtcTimestamp(DateTime value) => DateTime.SpecifyKind(value, DateTimeKind.Utc);
     private static DateTime? UtcTimestamp(DateTime? value) => value.HasValue ? UtcTimestamp(value.Value) : null;
