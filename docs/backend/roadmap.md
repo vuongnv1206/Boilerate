@@ -1,6 +1,6 @@
 # Lộ trình backend shop
 
-Cập nhật: 2026-10-24 (Asia/Saigon), đối chiếu BE/FE working tree còn thay đổi chưa commit. Lộ trình được cập nhật cùng code và [nhật ký phát triển](history/README.md). Trạng thái dưới đây mô tả bằng chứng hiện có; không coi cấu hình CI hoặc test adapter giả là nghiệm thu môi trường thật.
+Cập nhật: 2026-10-27 (Asia/Saigon), gồm mốc Tổng quan vận hành trên BE `4ff259b` cộng working tree tính năng. Lộ trình được cập nhật cùng code và [nhật ký phát triển](history/README.md). Trạng thái dưới đây mô tả bằng chứng hiện có; không coi cấu hình CI hoặc test adapter giả là nghiệm thu môi trường thật.
 
 Lộ trình này chỉ theo dõi BE. Xem [roadmap FE](../frontend/roadmap.md) cho công việc giao diện và [shared](../shared/README.md) cho nghiệp vụ/quy trình. Việc tổ chức lại docs ngày 2026-10-19 không thay đổi kết quả kiểm chứng hoặc nghiệm thu BE.
 
@@ -39,6 +39,7 @@ Theo chỉ dẫn mới nhất ngày 2026-10-18, ưu tiên **shop nhỏ, đủ lu
 | 11. Hậu mãi4C | Refund ledger, nhận/restock theo shipment, Closed/Stopped và COD trả về | **Đã triển khai/kiểm chứng local; regression468/468 đạt**,32 domain/32 integration/6 migration mới; [hồ sơ](features/refunds-returns.md), [báo cáo](verification/2026-10-19-aftersales.md) | Nghiệm thu toàn luồng/runtime/adapter; gateway/RMA/đổi hàng ở lát riêng |
 | 12. Admin Orders workspace | List filter server-side, detail snapshot read-only, cancel/payment confirmation/retry fulfillment, safe history và development seed | **Đã triển khai source; build pass, targeted seed tests 3/3**, [hồ sơ](features/admin-orders.md), [bằng chứng](verification/2026-10-21-admin-orders.md) | Full DB/provider replay, HTTP conflict/history tests, authenticated FE E2E và runtime acceptance |
 | 13. Catalog workspace | Unified editor save, gallery/ảnh/default SKU, metadata/filter/sort/count, bulk publish/archive và editor danh mục kiểu Webflow | Product workspace đã kiểm chứng local; editor danh mục v2 đã có source/build, API membership versioned; [hồ sơ](features/catalog-workspace.md) | Chưa test API HTTP/browser E2E cho editor danh mục; nghiệm thu quyền, conflict và runtime; full provider suite còn chờ cấu hình ổn định; CSV là giai đoạn sau |
+| 14. Tổng quan vận hành Admin | Ba GET chỉ đọc cho việc hiện tại, tiền theo ngày Việt Nam và cảnh báo kho; queue dùng chung với Orders/Renewals; quyền FinancialSummary.View riêng | **Đã triển khai và kiểm chứng BE trên SQL Server cô lập; rollout DB local đã áp index và cấp riêng quyền cho Admin**; [hợp đồng](features/admin-overview.md), [bằng chứng tích hợp](../../../Frontend/docs/verification/2026-10-26-admin-overview.md) | Browser/live cuối đợt theo báo cáo tích hợp; PostgreSQL runtime thiếu connection test, staging và mobile chưa nghiệm thu |
 
 Các mốc 2–6 có phần triển khai song song. Tồn tại code ở mốc sau không làm các điều kiện nghiệm thu của mốc trước tự hoàn tất.
 
@@ -46,7 +47,7 @@ Các mốc 2–6 có phần triển khai song song. Tồn tại code ở mốc s
 
 Core commerce từ Catalog/kho đến checkout, nhận tiền, giao số/vật lý, gia hạn và hậu mãi đã có code. Regression **468/468 ngày 19/10 là bằng chứng lịch sử**, không xác nhận HEAD sau thay đổi Webflow editor/category ngày 22/10. Source FE đã có Orders, Shipping/After-sales, Renewals và System; hành trình UI hiện tại còn cần nghiệm thu theo [kế hoạch FE](../../../Frontend/PRODUCT.md).
 
-Lượt kiểm tra trước trong ngày 23/10 trên BE `bab1df5`: `dotnet test Boilerate.sln --no-restore --filter 'Category!=ProviderIntegration'` đạt **231/231, 0 fail, 0 skip**, kèm build các project cần cho test; còn analyzer warnings. Log/TRX trong `artifacts/progress-2026-10-23-tests.log` và `artifacts/progress-2026-10-23/progress-2026-10-23.trx` (ignored). Rà soát hiện tại đọc lại artifact, không chạy lại vì source/tests BE không đổi; database integration, PostgreSQL và deployment mới vẫn chưa được kiểm. Kết quả FE hiện tại và phạm vi fixture/browser nằm ở [PRODUCT](../../../Frontend/PRODUCT.md); các lỗi DI của lượt kiểm tra FE cũ đã được xử lý.
+Mốc Tổng quan ngày 26/10 đã chạy Release non-provider regression và integration SQL Server cô lập, kiểm tra tiền, queue/count, tồn khả dụng, quyền độc lập và GET không ghi DB. Local `BoilerateDevelopment` đã backup/verify trước migration index; rollout chỉ đăng ký/cấp `FinancialSummary.View` cho Admin và giữ nguyên 55 dòng quyền cũ. Kết quả browser/live cuối đợt, source/build và giới hạn được giữ tại [báo cáo tích hợp](../../../Frontend/docs/verification/2026-10-26-admin-overview.md). PostgreSQL runtime và deployment chưa được xác nhận. Kết quả 231/231 trên `bab1df5` ngày 23/10 là bằng chứng lịch sử, không thay cho đợt này.
 
 | Ưu tiên | Phần việc BE | Đầu ra để đóng đợt | Phối hợp/phụ thuộc |
 |---|---|---|---|

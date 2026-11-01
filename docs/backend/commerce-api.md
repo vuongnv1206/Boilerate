@@ -5,7 +5,7 @@ Thiết kế quan hệ, khóa và kiểu cột: [commerce-database.md](commerce-
 ## Khởi tạo
 
 1. Cấu hình provider/connection/JWT secret của installation mới theo README.
-2. Apply đủ chín migrations InitialFoundation, CommerceCatalog, DigitalInventory, OrderingCheckout, PaymentDigitalDelivery, PhysicalShipping, ManualRenewals, RefundsReturns và GuestStorefront bằng EF CLI của provider đã chọn; Host không tự migrate. Installation đã ở baseline repo chỉ apply migration còn thiếu. PhysicalShipping có ID `20261018151738` trên SQL Server và `20261018151746` trên PostgreSQL. ManualRenewals có ID `20261018160428`/`20261018160441` tương ứng; thêm schema Renewals, không tự tạo việc cho đơn Paid cũ; dùng provision rõ ràng khi cần. RefundsReturns có ID `20261019112431`/`20261019112442` tương ứng. GuestStorefront có ID `20261024082919`/`20261024082938` tương ứng; thêm guest email access và storefront payment settings, không sửa baseline.
+2. Apply đủ migrations từ assembly provider đã chọn bằng EF CLI; Host không tự migrate. Installation đã có schema chỉ apply migration còn thiếu sau backup/verify. PhysicalShipping có ID `20261018151738` trên SQL Server và `20261018151746` trên PostgreSQL. ManualRenewals có ID `20261018160428`/`20261018160441` tương ứng; thêm schema Renewals, không tự tạo việc cho đơn Paid cũ; dùng provision rõ ràng khi cần. RefundsReturns có ID `20261019112431`/`20261019112442` tương ứng. GuestStorefront có ID `20261024082919`/`20261024082938` tương ứng; thêm guest email access và storefront payment settings, không sửa baseline. AdminOverviewIndexes thêm index thời điểm nhận/hoàn tiền theo [feature overview](features/admin-overview.md). DiscountCodes có ID `20261030051435`/`20261030051447` tương ứng; xem [hồ sơ mã giảm giá](features/discount-codes.md) và giới hạn rollback trước khi rollout.
 3. Bootstrap admin, hoặc chạy `--register-capabilities` rồi `--grant-admin-capabilities` có chủ đích với Catalog bật. Restart không tự cấp quyền mới. Shipping có các cặp `Shipping.View`, `Shipping.Dispatch`, `Shipping.Deliver`; Renewal có `Renewal.View`, `Renewal.Process`, `Renewal.Verify`, `Renewal.Reveal`. Hậu mãi có `AfterSales.View`, `Refund.Confirm`, `Return.Receive`; return nhập lại kho còn cần `Inventory.Adjust`. `Payment.Confirm` dùng riêng để xác nhận tiền, kể cả COD. Đăng ký capability không tự cấp grant cho nhân viên; Process không suy ra Verify hoặc Reveal.
 4. Login, gọi POST `/api/inventory/initialize` một lần; gọi lại trả cùng kho MAIN. Quyền `Inventory.Initialize`.
 5. Tạo ProductType/schema, Category, upload media; sau đó tạo Product/SKU và chọn cách giao. Physical có balance ban đầu bằng 0, nhập kho bằng adjustment riêng; hàng số dùng API kho số bên dưới, không cần MAIN để tạo SKU số.
@@ -16,6 +16,10 @@ Giá chỉ nhận VND nguyên đồng. Mọi mã SKU được giữ duy nhất t
 
 | Endpoint | Dữ liệu/chức năng | Quyền |
 |---|---|---|
+| GET `/api/admin/overview/work` | Tổng và 5 bản ghi cũ nhất mỗi queue hiện tại, không có thông tin liên hệ khách/nội dung số | Order.View và/hoặc Renewal.View; chỉ trả nhóm được phép |
+| GET `/api/admin/overview/finance?from=YYYY-MM-DD&to=YYYY-MM-DD` | Đã nhận, đã hoàn, thu ròng và daily buckets theo ngày Việt Nam; VND nguyên dạng chuỗi số chính xác | FinancialSummary.View riêng |
+| GET `/api/admin/overview/stock?threshold=5&page=1&size=10` | Cảnh báo Physical tracked/Unique theo khả dụng, Shared khi thiếu nội dung; active SKU/Published | Inventory.View và/hoặc DigitalInventory.View |
+| GET/POST `/api/admin/discounts`, GET/PUT `/{id}` | Danh sách, chi tiết, tạo và sửa mã giảm giá; list nhận page, size, search, isActive | Discount.View/Create/Update tương ứng |
 | GET/POST `/api/product-types`, GET/PUT `/{id}` | List, create, schema detail, edit schema | ProductType.View/Create/Update |
 | GET/POST `/api/categories`, PUT/DELETE `/{id}` | Cây danh mục; DELETE có query version | Category.View/Create/Update/Delete |
 | GET `/api/categories/summaries` | `{id,productCount}`: số Product liên kết trực tiếp, mọi trạng thái, không cộng cây con | Category.View |
@@ -47,6 +51,14 @@ Giá chỉ nhận VND nguyên đồng. Mọi mã SKU được giữ duy nhất t
 | GET `/api/catalog/products/{slug}` | Chi tiết Published Product | Công khai |
 | GET `/api/catalog/categories` | Category active | Công khai |
 | GET `/api/catalog/media/{id}` | Ảnh có liên kết Product Published | Công khai |
+
+### Tổng quan vận hành
+
+Hợp đồng chi tiết và queue predicates nằm tại [Admin overview](features/admin-overview.md). Finance có khoảng ngày inclusive theo Asia/Ho_Chi_Minh, mặc định 7 ngày tới hôm nay, tối đa 90 ngày; backend chuyển thành nửa khoảng UTC và tổng hợp PaymentReceipt.ReceivedAtUtc/Refund.RefundedAtUtc. Không dùng Order.Total/PaidAt để tính tiền đã nhận. Tổng và từng ngày trả received/refunded/net là chuỗi số nguyên VND, có thể âm với net; client không ép các nhãn tiền thành Number.
+
+Work và stock là trạng thái hiện tại, không chịu khoảng ngày finance. Orders nhận queue awaiting-payment/awaiting-processing/needs-review; Renewals nhận queue awaiting-work/pending-verification, kết hợp AND với filter hiện có. Overview/count/list dùng cùng predicates, query không expire/release hoặc ghi nghiệp vụ. Phần thiếu quyền không được truy vấn hay giả thành số 0; GET là no-store.
+
+FinancialSummary.View thuộc nhóm Đơn hàng. Operator có thể scope registration/grant bằng `--function FinancialSummary`; khi omit filter giữ hành vi operator cũ. Dùng scope cụ thể để chỉ đăng ký/cấp quyền này cho Admin, không thay grant khác.
 
 ### Product–Category membership
 
@@ -157,6 +169,7 @@ Lát này dùng đăng nhập Identity hiện có; không nhận CustomerId tron
 | Endpoint | Nội dung/quyền |
 |---|---|
 | GET/PUT `/api/cart` | Giỏ của khách đăng nhập; PUT thay toàn bộ items với version |
+| PUT `/api/cart/discount`, PUT `/api/storefront/cart/discount` | Gắn/bỏ một mã vào giỏ khách đăng nhập hoặc guest; cần version giỏ hiện tại |
 | POST `/api/orders/checkout` | Tạo đơn, giữ hàng nguyên tử và clear giỏ; OperationId chống trùng |
 | GET `/api/orders/mine?page=1&size=20` | Danh sách đơn của chính khách |
 | GET `/api/orders/{id}` | Chi tiết đơn của khách; sai owner trả404 |
@@ -179,6 +192,14 @@ GET cart chưa tồn tại trả Id Guid.Empty, Version null, Items rỗng. PUT 
 ```
 
 Response cart gồm Items với tên/SKU/giá hiện tại/IsAvailable theo số lượng, Subtotal, ShippingAmount, Total và CanCheckout từ server. SKU ẩn/ngừng bán vẫn có thể xuất hiện trong giỏ cũ với IsAvailable=false; checkout sẽ từ chối. Tổng giỏ quá giới hạn tiền Order vẫn đọc/sửa được, giữ Version và CanCheckout=false để khách giảm số lượng; không lưu giỏ xong rồi mất khả năng đọc. Giỏ rỗng cũng CanCheckout=false. Max50 SKU/giỏ và quantity1..999.
+
+### Mã giảm giá
+
+Quản trị tạo/sửa qua `POST /api/admin/discounts` hoặc `PUT /api/admin/discounts/{id}` với `{code,name,kind,value,minimumSubtotal,startsAtUtc,endsAtUtc,usageLimit,isActive,version}`; `version` bắt buộc khi sửa. `kind` là Percentage=1 hoặc Fixed=2. Mã dài tối đa 32 ký tự, được chuẩn hóa chữ hoa và unique; tên tối đa 160 ký tự. Phần trăm là số nguyên 1–99, tiền cố định và mức tối thiểu là VND nguyên; mức tối thiểu có thể bằng 0. Giới hạn lượt nếu có là số nguyên dương. Thời điểm nếu có phải là UTC; khoảng hiệu lực gồm đầu và không gồm cuối. Ngày bắt đầu phải trước ngày kết thúc. List trả `items`, `total`, `pageNumber`, `pageSize`; DTO trả thêm `id`, `usedCount` và `version`. `usedCount` là số đơn đang giữ lượt, không phải số lần áp mã vào giỏ. Version cũ, mã trùng hoặc hạ giới hạn dưới số lượt đang giữ trả 409. Không có API xóa mã; tắt mã để ngừng nhận mới.
+
+Sau khi có giỏ không rỗng, PUT `{version,code}` vào endpoint phù hợp; `code` rỗng hoặc null bỏ mã. Phản hồi là cart mới cùng `discountCode`, `discountAmount`, `discountError` và version. Mã không tồn tại, tắt, chưa tới giờ, hết hạn, hết lượt hoặc không phù hợp subtotal được giữ trong giỏ với lỗi và `canCheckout=false`, để khách sửa hoặc bỏ mã. Quote làm tròn xuống VND cho phần trăm, chỉ tính tiền hàng; không áp phí vận chuyển và không cho giảm hết tiền hàng. Tổng là `subtotal + shippingAmount - discountAmount`.
+
+Checkout tính lại dưới khóa `ordering` cùng kiểm version và `expectedTotal`; xung đột trả 409, không tạo đơn hoặc mất giỏ. Khi mất phản hồi, retry cùng operation ID và payload checkout để tránh tạo đơn/lượt hai lần. Nếu đã nhận conflict và cần thay đổi version/tổng thì đọc giỏ, xác nhận lại và dùng operation mới. Chi tiết đơn trả `discountCode`, `discountAmount` và số giảm trên từng item; snapshot cấu hình và phân bổ được lưu khi tạo đơn, không đổi khi mã được sửa. Hủy hoặc hết hạn đơn chưa thanh toán nhả lượt. Khi tiền đến sau hết hạn, receipt vẫn được ghi; nếu không lấy lại được lượt, đơn Paid/NeedsReview và phải lấy lại lượt thành công trước khi retry fulfillment. Hợp đồng và rollout: [mã giảm giá](features/discount-codes.md).
 
 Checkout:
 

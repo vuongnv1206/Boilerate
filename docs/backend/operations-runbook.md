@@ -62,6 +62,26 @@ Khi restore, đối chiếu mọi công việc đã Start hoặc đã áp dụng
 
 Không sửa/xóa refund/return/movement để sửa chứng từ sai. API hiện không có đảo/chỉnh khoản hoàn hoặc RMA/đổi hàng; cần đối chiếu và lập nghiệp vụ hiệu chỉnh có thiết kế riêng trước khi sửa số liệu. Không coi restart/restore là hoàn tác tiền đã chuyển hoặc hàng đã nhận. Chưa có email/outbox hậu mãi mới; kiểm thử local không nghiệm thu ngân hàng/carrier/runtime thật.
 
+## Tổng quan vận hành
+
+Áp dụng migration `AdminOverviewIndexes` của đúng provider sau khi backup copy-only và xác minh checksum. Migration chỉ thêm index theo thời điểm nhận/hoàn tiền; không backfill hoặc sửa chứng từ. HTTP startup và ba GET overview không chạy migrate, expire hoặc release claim.
+
+Đăng ký và cấp riêng quyền xem tiền cho Admin bằng operator hiện có:
+
+```powershell
+dotnet run --project src/Host -- --register-capabilities --grant-admin-capabilities --function FinancialSummary
+```
+
+`--function CODE` giới hạn cả registration và grant vào đúng function trong manifest; mã thiếu, lặp, không biết hoặc dùng ngoài hai tác vụ này phải bị từ chối trước khi ghi. Bỏ tùy chọn vẫn giữ hành vi đầy đủ của lệnh cũ. Lượt rollout overview dùng phạm vi trên để giữ mọi grant khác. Quyền `FinancialSummary.View` độc lập với `Payment.Confirm`; không cấp cho role khác nếu operator chưa yêu cầu. Đọc [hợp đồng overview](features/admin-overview.md) để đối chiếu queue, ngày Việt Nam và nguồn tiền.
+
+## Mã giảm giá
+
+Trước rollout, backup và xác minh bản sao database; áp `DiscountCodes` đúng provider theo [API commerce](commerce-api.md#mã-giảm-giá). Migration Down có guard khi đã có mã, đơn mang mã hoặc giỏ đang giữ mã; ưu tiên forward fix hoặc phục hồi nhất quán, không xóa dữ liệu để vượt guard. Host không tự migrate, seed mã hoặc grant quyền.
+
+Sau khi operator quyết định cấp quyền, có thể đăng ký và cấp riêng `Discount.View/Create/Update` cho Admin với `dotnet run --project src/Host -- --register-capabilities --grant-admin-capabilities --function Discount`. Phạm vi này giữ grant của các function khác; kiểm tra quyền thực tế và readiness sau rollout. Không suy quyền Discount từ Order hay Payment. Trạng thái kiểm thử và deployment theo [hồ sơ tính năng](features/discount-codes.md).
+
+Theo dõi đơn Paid/NeedsReview khi tiền đến sau hết hạn: lượt có thể đã được đơn khác sử dụng. Giữ receipt và lịch sử nguyên vẹn; khắc phục điều kiện và gọi retry fulfillment theo quyền `Order.Fulfill` sau khi xác minh, không xác nhận tiền lần hai. Retry chỉ tiếp tục khi hệ thống lấy lại được lượt và các điều kiện giao khác.
+
 ## 1. Các gate độc lập
 
 Chạy PowerShell 7.2+ tại root repo. `scripts/verify-operations.ps1` tạo thư mục ngẫu nhiên `artifacts/operations/<time>-<id>`, ghi `summary.json`, log restore/build/test và TRX. Summary chỉ được ghi `passed` khi có ca thực sự chạy đạt, không có fail/skip; Recovery/Container phải có ca passed cho cả SQL Server/PostgreSQL. `blocked` và exit code khác 0 nghĩa là điều kiện môi trường chưa đáp ứng.

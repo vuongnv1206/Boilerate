@@ -32,7 +32,8 @@ Các bản ghi trước ngày tách tài liệu giữ nguyên bối cảnh nghi�
 - 2026-10-20: [Seed dữ liệu JSON qua ICustomSeeder](2026-10-20-development-seeding.md) — [kiểm chứng local](../verification/2026-10-20-development-seeding.md).
 - 2026-10-21: [Browser session qua HttpOnly cookie](2026-10-21-browser-session.md) — [kiểm chứng local](../verification/2026-10-21-browser-session.md).
 - 2026-10-22: Catalog editor thêm trục option cho sản phẩm đã lưu, giữ identity/kho SKU cũ; [hồ sơ và kiểm chứng](../../shared/features/catalog-workspace.md).
-- 2026-10-22: Category editor thêm Webflow-style product membership bằng delta Product.Version; không đổi bảng nối/migration; [hợp đồng và giới hạn tích hợp](features/catalog-workspace.md).
+- 2026-10-22: Category editor thêm Webflow-style product membership bằng delta Product.Version; không đổi bảng nối/migration; [hợp đồng và giới hạn tích hợp](../features/catalog-workspace.md).
+- 2026-10-26: [Tổng quan vận hành Admin](../features/admin-overview.md) tổng hợp việc hiện tại, tiền nhận/hoàn theo ngày Việt Nam và tồn khả dụng; queue dùng chung với danh sách và quyền xem tài chính độc lập. Đã kiểm chứng BE trên SQL Server cô lập, áp index local sau backup và cấp riêng quyền cho Admin; [phạm vi nghiệm thu và giới hạn](../../../../Frontend/docs/verification/2026-10-26-admin-overview.md).
 
 - 2026-10-18: [Lập kế hoạch nghiệm thu vận hành](2026-10-18-01-operations-plan.md).
 - 2026-10-18: [Gate runtime và trusted proxy](2026-10-18-02-runtime-gates.md).

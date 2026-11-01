@@ -8,6 +8,8 @@ Chọn khu vực theo công việc. BE và FE có kế hoạch, lịch sử và 
 | Frontend — FE | [Index FE](frontend/README.md), [roadmap FE](frontend/roadmap.md) | Điều hướng tới repo FE độc lập, có Collections, session và quyền theo BE |
 | Dùng chung | [Index shared](shared/README.md) | Nghiệp vụ đã chốt, nguồn quyết định, phối hợp BE–FE, workflow và mẫu kế hoạch |
 
+[Tổng quan vận hành Admin](shared/features/admin-overview.md) liên kết hợp đồng BE, hành vi FE và báo cáo tích hợp của mốc này.
+
 ## Luồng đọc
 
 1. Đọc [phạm vi sản phẩm linh hoạt](shared/business/product-flexibility.md) và [giao hàng số/gia hạn](shared/business/digital-fulfillment.md) để hiểu shop cần gì.
@@ -17,7 +19,7 @@ Chọn khu vực theo công việc. BE và FE có kế hoạch, lịch sử và 
 
 ## Quy ước tài liệu
 
-- BE và shared giữ tài liệu ở repository này; tài liệu FE hiện hành ở [repo FE](../../Boilerate.Frontend/docs/README.md). Không nhân bản quy chuẩn, tiến độ hay evidence FE tại hai repo.
+- BE và shared giữ tài liệu ở repository này; tài liệu FE hiện hành ở [repo FE](../../Frontend/docs/README.md). Không nhân bản quy chuẩn, tiến độ hay evidence FE tại hai repo.
 - `shared/business/` lưu quy tắc nghiệp vụ; `shared/contracts/` lưu cách phối hợp và dẫn tới hợp đồng kỹ thuật chính thức. Không sao chép danh sách endpoint hay bảng tiến độ BE vào tài liệu FE.
 - Thay đổi dùng chung có hồ sơ trong `shared/features/`, history và verification trong `shared/`. Một tính năng chạm cả BE và FE có một hồ sơ điều phối dùng chung, liên kết các bước của hai bên.
 - [Mẫu kế hoạch](shared/templates/feature-plan.md) dùng khi tính năng lớn cần chốt contract/thiết kế. Không bắt tạo plan, dated history hoặc report cho từng bước refactor/test.

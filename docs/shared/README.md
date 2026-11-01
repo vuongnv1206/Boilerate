@@ -4,6 +4,7 @@ Phần này mô tả sản phẩm cần làm gì và cách BE–FE phối hợp.
 
 | Tài liệu | Vai trò |
 |---|---|
+| [Tổng quan vận hành Admin](features/admin-overview.md) | Work queues, tiền theo ngày Việt Nam, cảnh báo kho, quyền tài chính riêng và rollout có phạm vi |
 | [Sản phẩm linh hoạt và đơn mua chung](business/product-flexibility.md) | Một phần mềm cho một shop; chủ shop cấu hình loại/trường/options/SKU và chọn cách giao đã hỗ trợ |
 | [Giao hàng số và gia hạn](business/digital-fulfillment.md) | Unique/Shared/Extension, giao sau nhận tiền và kết quả gia hạn cần xác minh |
 | [Discovery nghiệp vụ](features/business-discovery.md) | Nguồn câu trả lời/quyết định; các vòng hỏi cũ không tự trở thành tính năng bắt buộc |
