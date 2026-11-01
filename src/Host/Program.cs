@@ -12,10 +12,7 @@ Log.Information("Server Booting Up...");
 
 try
 {
-    var operatorFlags = new[] { "--bootstrap-admin", "--register-capabilities", "--grant-admin-capabilities", "--preflight", "--seed-dev" };
-    if (args.Contains("--seed-dev") && args.Any(argument => argument != "--seed-dev" && operatorFlags.Contains(argument)))
-        throw new InvalidOperationException("Run --seed-dev separately from foundation bootstrap/preflight commands.");
-    var builder = WebApplication.CreateBuilder(args.Where(a => !operatorFlags.Contains(a)).ToArray());
+    var builder = WebApplication.CreateBuilder(OperatorArguments.ConfigurationArguments(args));
 
     builder.AddConfigurations().RegisterSerilog();
 

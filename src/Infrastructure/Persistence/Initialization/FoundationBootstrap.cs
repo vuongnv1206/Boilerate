@@ -38,6 +38,8 @@ public sealed class FoundationBootstrap : IScopedService
             yield return ("Order", new[] { "View", "Cancel", "Fulfill" });
             yield return ("StorefrontSettings", new[] { "View", "Update" });
             yield return ("Payment", new[] { "Confirm" });
+            yield return ("FinancialSummary", new[] { "View" });
+            yield return ("Discount", new[] { "View", "Create", "Update" });
             yield return ("Shipping", new[] { "View", "Dispatch", "Deliver" });
             yield return ("Renewal", new[] { "View", "Process", "Verify", "Reveal" });
             yield return ("AfterSales", new[] { "View" });
@@ -55,6 +57,18 @@ public sealed class FoundationBootstrap : IScopedService
 
     public async Task RunAsync(string[] args, CancellationToken ct = default)
     {
+        var definitions = Manifest().ToArray();
+        var filters = args.Select((argument, index) => (argument, index)).Where(x => x.argument == "--function").ToArray();
+        if (filters.Length > 0)
+        {
+            if (filters.Length != 1 || filters[0].index + 1 >= args.Length || args[filters[0].index + 1].StartsWith("--", StringComparison.Ordinal) ||
+                args.Contains("--bootstrap-admin") || args.Contains("--preflight") || args.Contains("--seed-dev") ||
+                (!args.Contains("--register-capabilities") && !args.Contains("--grant-admin-capabilities")))
+                throw new InvalidOperationException("Use --function CODE only with capability registration/grant commands.");
+            var code = args[filters[0].index + 1];
+            definitions = definitions.Where(d => d.Function.Equals(code, StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (definitions.Length == 0) throw new InvalidOperationException("Unknown capability function for this module configuration.");
+        }
         if (args.Contains("--preflight")) { await PreflightAsync(ct); return; }
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
         if (await _db.AuthorizationLocks.Where(x => x.Id == 1).ExecuteUpdateAsync(s =>
@@ -81,17 +95,17 @@ public sealed class FoundationBootstrap : IScopedService
         }
         else
         {
-            if (args.Contains("--register-capabilities")) await RegisterAsync(ct);
-            if (args.Contains("--grant-admin-capabilities")) await GrantAdminAsync(ct);
+            if (args.Contains("--register-capabilities")) await RegisterAsync(ct, definitions);
+            if (args.Contains("--grant-admin-capabilities")) await GrantAdminAsync(ct, definitions);
         }
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         Console.WriteLine("Explicit bootstrap/registration completed. HTTP startup remains read-only to ACL state.");
     }
 
-    private async Task RegisterAsync(CancellationToken ct)
+    private async Task RegisterAsync(CancellationToken ct, IEnumerable<(string Function, string[] Actions)>? definitions = null)
     {
-        foreach (var definition in Manifest())
+        foreach (var definition in definitions ?? Manifest())
         {
             var function = await _db.Functions.SingleOrDefaultAsync(f => f.NormalizedCode == definition.Function.ToUpperInvariant(), ct);
             if (function is null)
@@ -114,13 +128,13 @@ public sealed class FoundationBootstrap : IScopedService
         }
     }
 
-    private async Task GrantAdminAsync(CancellationToken ct)
+    private async Task GrantAdminAsync(CancellationToken ct, IEnumerable<(string Function, string[] Actions)>? definitions = null)
     {
         var admin = await _roles.FindByNameAsync("Admin") ?? throw new ConflictException("Admin role is missing.");
         var changed = false;
         var before = await _db.Permissions.Where(p => p.RoleId == admin.Id)
             .Select(p => new { p.FunctionId, p.ActionId }).ToListAsync(ct);
-        foreach (var definition in Manifest())
+        foreach (var definition in definitions ?? Manifest())
         {
             var function = await _db.Functions.SingleAsync(f => f.NormalizedCode == definition.Function.ToUpperInvariant(), ct);
             foreach (var code in definition.Actions)
