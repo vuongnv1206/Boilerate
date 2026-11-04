@@ -45,4 +45,12 @@ Reference: independently worded guidance inspired by [multica-ai/andrej-karpathy
 - Report routine checks in the handoff. Keep one concise durable integration/acceptance report in `docs/<area>/verification/` only when needed for a milestone; keep raw generated logs, TRX files, packages, uploads, keys and secrets out of Git and template source.
 - Update the owning area's roadmap when scope or acceptance status changes. Keep `docs/README.md` and `plan.md` as navigation entries rather than duplicate roadmaps with conflicting statuses. Shared business decisions live in `docs/shared/`; the BE API/database contracts live in `docs/backend/` and FE references them.
 
-The independent FE rulebook is [Boilerate.Frontend/docs/coding-rules.md](../Boilerate.Frontend/docs/coding-rules.md). FE source, current feature docs, history and verification are maintained there; `docs/frontend/README.md` is a navigation entry, not a duplicate implementation standard.
+The independent FE rulebook is [Frontend/docs/coding-rules.md](../Frontend/docs/coding-rules.md). FE source, current feature docs, history and verification are maintained there; `docs/frontend/README.md` is a navigation entry, not a duplicate implementation standard.
+
+## Phạm vi và vị trí file
+
+Backend .NET: API, business rules, persistence và migrations; UI nằm trong repo Frontend.
+
+Tài liệu mới vào docs/; logs/screenshots vào artifacts bị ignore. Không thêm file rời ở root ngoài file điều khiển hoặc cấu hình công cụ cần. Giữ manifest, README và license/notices đúng vị trí. AGENTS.md và CLAUDE.md phải cùng nội dung. Skills cài local ở .agents/skills/, không yêu cầu checkout ngoài workspace.
+
+Skill local: .agents/skills/backend-workflow/SKILL.md, dùng cho thay đổi nghiệp vụ/API/database đáng kể.

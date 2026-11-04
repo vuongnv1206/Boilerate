@@ -43,6 +43,12 @@ Theo chỉ dẫn mới nhất ngày 2026-10-18, ưu tiên **shop nhỏ, đủ lu
 
 Các mốc 2–6 có phần triển khai song song. Tồn tại code ở mốc sau không làm các điều kiện nghiệm thu của mốc trước tự hoàn tất.
 
+## Cập nhật đối chiếu 04/11/2026
+
+Mã giảm giá đã có Admin/cart/checkout/quota/snapshot, theo hồ sơ discount ngày 01/11; không đưa vào backlog tính năng mới. Ba regression Webflow đã chuyển sang provider theories, chỉ SQL Server có bằng chứng thực thi trong lượt ghi nhận; PostgreSQL runtime vẫn chưa nghiệm thu. Các dòng ưu tiên cũ dưới đây cần đọc cùng hồ sơ tính năng mới nhất.
+
+Đợt hiện tại: [hoàn thiện UX local](../shared/features/local-usability-upgrade.md), giữ API/schema và database cửa hàng. Kiểm chứng lại trên đúng source FE/BE cuối, không dùng số ca lịch sử thay bằng chứng mới.
+
 ## Việc ưu tiên tiếp theo
 
 Core commerce từ Catalog/kho đến checkout, nhận tiền, giao số/vật lý, gia hạn và hậu mãi đã có code. Regression **468/468 ngày 19/10 là bằng chứng lịch sử**, không xác nhận HEAD sau thay đổi Webflow editor/category ngày 22/10. Source FE đã có Orders, Shipping/After-sales, Renewals và System; hành trình UI hiện tại còn cần nghiệm thu theo [kế hoạch FE](../../../Frontend/PRODUCT.md).
@@ -58,7 +64,7 @@ Mốc Tổng quan ngày 26/10 đã chạy Release non-provider regression và in
 | P2 — guest storefront | Guest cart/OTP/checkout/My Orders, cài đặt chuyển khoản Admin và hợp đồng API/database | **Đã triển khai; SQL Server integration 5/5, non-provider BE 233/233, live browser/API 12/12 trên bốn cấu hình** | PostgreSQL runtime chưa chạy do chưa có test connection; SMTP thật và deployment staging thuộc gate riêng. Xem [feature BE](features/guest-storefront.md), [phối hợp](../shared/features/guest-storefront-checkout.md), [bằng chứng](../../../Frontend/docs/verification/2026-10-24-guest-storefront.md) |
 | P3 — staging/release | Xác minh CI cho revision release; non-root container, migration riêng/operator CLI, media/keys volume, health/proxy/restart; restore và session policy; smoke SMTP/adapter được bật | Bản deploy cụ thể vượt các gate runbook và có bằng chứng; không suy từ build/configuration | Chuẩn bị môi trường song song P1; nghiệm thu toàn luồng sau giao diện mua; [runbook](operations-runbook.md) |
 
-SQL Server là môi trường local ưu tiên hiện tại. Ngày 24/10, live acceptance guest storefront chạy trên DB SQL Server cô lập và migration mới được áp dụng. `BOILERATE_TEST_POSTGRES` chưa có nên PostgreSQL runtime migration/integration vẫn chưa được kiểm tra. Trước khi tuyên bố release hỗ trợ cả hai provider, chạy migration fresh/upgrade và các hồi quy mới trên PostgreSQL; ba regression Webflow đang hardcode MSSQL cần mở rộng theo provider. Không dùng các ca cũ chạy PG để nghiệm thu editor mới.
+SQL Server là môi trường local ưu tiên hiện tại. Ngày 24/10, live acceptance guest storefront chạy trên DB SQL Server cô lập và migration mới được áp dụng. `BOILERATE_TEST_POSTGRES` chưa có nên PostgreSQL runtime migration/integration vẫn chưa được kiểm tra. Trước khi tuyên bố release hỗ trợ cả hai provider, chạy migration fresh/upgrade và các hồi quy mới trên PostgreSQL; ba regression Webflow đã chuyển sang provider theories; cần thực thi runtime PostgreSQL trước khi xác nhận parity. Không dùng các ca cũ chạy PG để nghiệm thu editor mới.
 
 Ngày 21/10, [browser session](features/browser-session.md) có HTTP contract/SQL Server local và [báo cáo CI](verification/2026-10-21-browser-session.md) ghi Linux đã qua integration hai DB, container còn đang chạy tại lúc ghi. Kết quả cuối workflow và runtime revision mới **chưa xác minh trong lần rà soát này**; tình trạng Docker bị chặn ở các báo cáo cũ không phải kết luận hiện tại.
 

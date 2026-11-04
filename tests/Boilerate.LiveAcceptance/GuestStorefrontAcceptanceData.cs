@@ -26,7 +26,8 @@ internal static class GuestStorefrontAcceptanceData
         var digitalVariantId = digital.Variants.Single().Id;
         var digitalContent = $"LIVE-GUEST-DELIVERY-{runKey}";
         await catalog.ImportDigitalAsync(new(digital.Id, digitalVariantId, digital.Version,
-            Enumerable.Range(1, 4).Select(index => new DigitalStockInput($"GUEST-{runKey}-{index}", digitalContent)).ToList()), ct);
+            // Desktop, tablet and mobile in both themes, with two spare codes for isolated replay checks.
+            Enumerable.Range(1, 8).Select(index => new DigitalStockInput($"GUEST-{runKey}-{index}", digitalContent)).ToList()), ct);
 
         var settingsService = scope.ServiceProvider.GetRequiredService<IStorefrontSettingsService>();
         var settings = await settingsService.GetAdminAsync(ct);
