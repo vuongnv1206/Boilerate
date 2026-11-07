@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using Boilerate.Application.Common.Exceptions;
 using Boilerate.Application.Identity.Tokens;
-using Boilerate.Application.Ordering;
+using Boilerate.Application.Ordering.Shared;
+using Boilerate.Application.Overview;
+using Boilerate.Application.Renewals;
 using Boilerate.Domain.Catalog;
 using Boilerate.Domain.DigitalInventory;
 using Boilerate.Domain.Identity;
@@ -195,9 +197,9 @@ public sealed class AdminOverviewTests
         {
             var endpoint = group.Kind == "order" ? "/api/admin/orders?queue=" + group.Key : "/api/admin/renewals?queue=" + group.Key[8..];
             if (group.Kind == "order")
-                Assert.Equal(group.Total, (await client.GetFromJsonAsync<Boilerate.Application.Catalog.Page<OrderSummary>>(endpoint))!.Total);
+                Assert.Equal(group.Total, (await client.GetFromJsonAsync<Page<OrderSummary>>(endpoint))!.Total);
             else
-                Assert.Equal(group.Total, (await client.GetFromJsonAsync<Boilerate.Application.Catalog.Page<RenewalAdminDto>>(endpoint))!.Total);
+                Assert.Equal(group.Total, (await client.GetFromJsonAsync<Page<RenewalAdminDto>>(endpoint))!.Total);
             Assert.All(group.Items, item => Assert.Equal(DateTimeKind.Utc, item.CreatedAtUtc.Kind));
         }
         Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync("/api/admin/orders?queue=invalid")).StatusCode);

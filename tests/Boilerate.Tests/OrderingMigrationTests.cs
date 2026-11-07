@@ -1,19 +1,14 @@
-using Boilerate.Application.Catalog;
-using Boilerate.Application.Common.Interfaces;
-using Boilerate.Application.Identity.Users;
-using Boilerate.Application.Ordering;
+using Boilerate.Application.Catalog.Products;
+using Boilerate.Application.Inventory.Digital;
+using Boilerate.Application.Ordering.Shared;
 using Boilerate.Domain.Catalog;
 using Boilerate.Domain.DigitalInventory;
 using Boilerate.Domain.Ordering;
-using Boilerate.Infrastructure.Commerce;
 using Boilerate.Infrastructure.Persistence.Context;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using NSubstitute;
 using Xunit;
 
 namespace Boilerate.Tests;
@@ -29,14 +24,8 @@ public sealed class OrderingMigrationTests
         await fixture.CreateAsync();
         using var scope = fixture.Scope(Guid.NewGuid());
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var actor = scope.ServiceProvider.GetRequiredService<ICurrentUser>();
-        var users = Substitute.For<IUserService>();
-        users.HasPermissionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
-        var work = new CommerceUnitOfWork(db);
-        var catalog = new CommerceService(db, work, actor, users, Options.Create(new CommerceSettings()),
-            scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
-        var ordering = new OrderingService(db, work, actor, users, Options.Create(new OrderingSettings()), TimeProvider.System,
-            scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
+        var catalog = CatalogTestClient.ForScope(scope);
+        var ordering = OrderingTestClient.ForScope(scope);
         await catalog.InitializeAsync(default);
         var type = await catalog.CreateTypeAsync(new("DOWNGRADE", "Downgrade fixture", []), default);
         async Task<ProductDto> CreatePublished(string slug, ProductFulfillmentKind kind)
@@ -66,6 +55,8 @@ public sealed class OrderingMigrationTests
         var blocked = await Record.ExceptionAsync(() => migrator.MigrateAsync(previous));
         Assert.True(blocked is Microsoft.Data.SqlClient.SqlException { Number: 51000 } ||
             blocked is Npgsql.PostgresException { SqlState: "P0001" }, blocked?.ToString() ?? "Downgrade must reject active stock holds.");
+        Assert.Contains(await db.Database.GetAppliedMigrationsAsync(), name => name.EndsWith("_OrderingCheckout", StringComparison.Ordinal));
+        await migrator.MigrateAsync();
         Assert.Equal(appliedBefore, (await db.Database.GetAppliedMigrationsAsync()).ToArray());
         Assert.Equal(1, (await db.InventoryItems.AsNoTracking().SingleAsync()).Reserved);
         Assert.Equal(1, (await db.InventoryItems.AsNoTracking().SingleAsync()).OnHand);

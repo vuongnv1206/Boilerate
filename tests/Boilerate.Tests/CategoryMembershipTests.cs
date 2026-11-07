@@ -1,20 +1,16 @@
 using System.Net;
 using System.Net.Http.Json;
-using Boilerate.Application.Catalog;
+using Boilerate.Application.Catalog.Categories;
+using Boilerate.Application.Catalog.Products;
 using Boilerate.Application.Common.Exceptions;
-using Boilerate.Application.Common.Interfaces;
 using Boilerate.Application.Identity.Tokens;
-using Boilerate.Application.Identity.Users;
 using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Common.Exceptions;
-using Boilerate.Infrastructure.Commerce;
 using Boilerate.Infrastructure.Persistence.Context;
 using Boilerate.Infrastructure.Persistence.Initialization;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using NSubstitute;
 using Xunit;
 
 namespace Boilerate.Tests;
@@ -22,26 +18,19 @@ namespace Boilerate.Tests;
 [Collection("Foundation")]
 public sealed class CategoryMembershipTests
 {
-    private static CommerceService Service(IServiceScope scope)
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var users = Substitute.For<IUserService>();
-        users.HasPermissionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
-        return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<ICurrentUser>(), users,
-            Options.Create(new CommerceSettings()), scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>());
-    }
+    private static CatalogTestClient Service(IServiceScope scope) => CatalogTestClient.ForScope(scope);
 
-    private static Task<ProductDto> Product(CommerceService service, ProductType type, string slug, params Guid[] categories) =>
+    private static Task<ProductDto> Product(CatalogTestClient service, ProductType type, string slug, params Guid[] categories) =>
         service.CreateAsync(new(type.Id, type.Version, new(slug, slug, null, categories.ToList(), [], []), [],
             [new(slug, 100, null, [])]), default);
 
-    private static Task<Category> Category(CommerceService service, string slug) =>
+    private static Task<Category> Category(CatalogTestClient service, string slug) =>
         service.CategoryAsync(new(null, null, slug, slug, null, null, 0, true), default);
 
     [Fact]
     public async Task ValidatorReturnsValidationErrorsForNullBatchEntries()
     {
-        var result = await new SetCategoryProductsValidator().ValidateAsync(new SetCategoryProducts(Guid.NewGuid(), [null!]));
+        var result = await new SetCategoryProductsRequestValidator().ValidateAsync(new SetCategoryProductsRequest(Guid.NewGuid(), [null!]));
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, error => error.PropertyName == "Changes[0]");
     }
@@ -154,9 +143,9 @@ public sealed class CategoryMembershipTests
             [new(active.Id, active.Version, true), new(deleted.Id, deleted.Version, true)]), default));
         await Assert.ThrowsAsync<NotFoundException>(() => service.SetCategoryProductsAsync(new(target.Id,
             [new(active.Id, active.Version, true), new(Guid.NewGuid(), "missing", true)]), default));
-        await Assert.ThrowsAsync<DomainException>(() => service.SetCategoryProductsAsync(new(target.Id,
+        await Assert.ThrowsAsync<FluentValidation.ValidationException>(() => service.SetCategoryProductsAsync(new(target.Id,
             Enumerable.Range(0, 1001).Select(_ => new CategoryProductChange(Guid.NewGuid(), "version", true)).ToList()), default));
-        await Assert.ThrowsAsync<DomainException>(() => service.SetCategoryProductsAsync(new(target.Id,
+        await Assert.ThrowsAsync<FluentValidation.ValidationException>(() => service.SetCategoryProductsAsync(new(target.Id,
             [new(active.Id, active.Version, true), new(active.Id, active.Version, false)]), default));
         var unchanged = await service.GetAsync(active.Id, false, default);
         Assert.Equal(active.Version, unchanged.Version);
@@ -261,13 +250,13 @@ public sealed class CategoryMembershipTests
         await using var app = await TestHostApplication.StartAsync(fixture, true);
         using var client = app.GetTestClient();
         var path = $"/api/categories/{target.Id}/products";
-        var request = new SetCategoryProducts(target.Id, [new(product.Id, product.Version, true)]);
+        var request = new SetCategoryProductsRequest(target.Id, [new(product.Id, product.Version, true)]);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PutAsJsonAsync(path, request)).StatusCode);
         var login = await client.PostAsJsonAsync("/api/tokens/get", new TokenRequest(email, password));
         login.EnsureSuccessStatusCode();
         client.DefaultRequestHeaders.Authorization = new("Bearer", (await login.Content.ReadFromJsonAsync<TokenResponse>())!.Token);
 
-        Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync(path, new SetCategoryProducts(target.Id, [null!]))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync(path, new SetCategoryProductsRequest(target.Id, [null!]))).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync(path, request with { CategoryId = Guid.NewGuid() })).StatusCode);
         Assert.Equal(product.Version, (await service.GetAsync(product.Id, false, default)).Version);
         var categoryFunction = await db.Functions.SingleAsync(function => function.Code == "Category");

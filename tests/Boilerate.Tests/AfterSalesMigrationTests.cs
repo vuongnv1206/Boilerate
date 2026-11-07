@@ -221,6 +221,8 @@ public sealed class AfterSalesMigrationTests
         var blocked = await Record.ExceptionAsync(() => migrator.MigrateAsync(previous));
         Assert.True(blocked is Microsoft.Data.SqlClient.SqlException { Number: 51000 } ||
             blocked is Npgsql.PostgresException { SqlState: "P0001" }, blocked?.ToString() ?? "Downgrade must retain closed order history.");
+        Assert.Contains(await db.Database.GetAppliedMigrationsAsync(), name => name.EndsWith("_RefundsReturns", StringComparison.Ordinal));
+        await migrator.MigrateAsync();
         Assert.Equal(before, (await db.Database.GetAppliedMigrationsAsync()).ToArray());
         Assert.Equal(OrderStatus.Closed, (await db.Orders.AsNoTracking().SingleAsync()).Status);
         Assert.Empty(await db.Refunds.AsNoTracking().ToListAsync());

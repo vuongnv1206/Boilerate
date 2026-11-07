@@ -1,15 +1,15 @@
 using Boilerate.Application.Common.Events;
 using Boilerate.Application.Common.Interfaces;
+using Boilerate.Application.Common.Persistence;
 using Boilerate.Domain.Auditing;
+using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Identity;
 using Boilerate.Domain.Notifications;
 using Microsoft.EntityFrameworkCore;
 
-using Boilerate.Domain.Catalog;
-
 namespace Boilerate.Infrastructure.Persistence.Context;
 
-public class ApplicationDbContext : BaseDbContext
+public class ApplicationDbContext : BaseDbContext, IApplicationDbContext
 {
     public ApplicationDbContext(
         DbContextOptions<ApplicationDbContext> options,
@@ -59,4 +59,9 @@ public class ApplicationDbContext : BaseDbContext
     public DbSet<NotificationReceipt> NotificationReceipts => Set<NotificationReceipt>();
     public DbSet<AuthorizationLock> AuthorizationLocks => Set<AuthorizationLock>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
+
+    public IQueryable<ProductFieldValue> FilterExactText(IQueryable<ProductFieldValue> query, string text) =>
+        Database.IsNpgsql()
+            ? query.Where(v => EF.Functions.Collate(v.TextValue!, "C") == text)
+            : query.Where(v => EF.Functions.Collate(v.TextValue!, "Latin1_General_100_BIN2") == text && EF.Functions.DataLength(v.TextValue) == text.Length * 2);
 }

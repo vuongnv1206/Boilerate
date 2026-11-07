@@ -1,26 +1,21 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Boilerate.Application.Catalog;
+using Boilerate.Application.Catalog.Products;
 using Boilerate.Application.Common.Exceptions;
-using Boilerate.Application.Common.Interfaces;
 using Boilerate.Application.Identity.Tokens;
-using Boilerate.Application.Identity.Users;
+using Boilerate.Application.Inventory.Digital;
 using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Common.Exceptions;
 using Boilerate.Domain.DigitalInventory;
 using Boilerate.Domain.Inventory;
-using Boilerate.Infrastructure.Commerce;
 using Boilerate.Infrastructure.Persistence.Context;
 using Boilerate.Infrastructure.Persistence.Initialization;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using NSubstitute;
 using Xunit;
 
 namespace Boilerate.Tests;
@@ -28,20 +23,13 @@ namespace Boilerate.Tests;
 [Collection("Foundation")]
 public sealed class DigitalInventoryIntegrationTests
 {
-    private static CommerceService Service(IServiceScope scope, string? deniedPermission = null)
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var users = Substitute.For<IUserService>();
-        users.HasPermissionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(call => (string)call[1] != deniedPermission);
-        return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<ICurrentUser>(), users,
-            Options.Create(new CommerceSettings()), scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
-    }
+    private static CatalogTestClient Service(IServiceScope scope, string? deniedPermission = null) =>
+        CatalogTestClient.ForScope(scope, deniedPermission: deniedPermission);
 
-    private static CreateProduct Simple(ProductType type, string slug, ProductFulfillmentKind kind) =>
+    private static CreateProductRequest Simple(ProductType type, string slug, ProductFulfillmentKind kind) =>
         new(type.Id, type.Version, new("Product " + slug, slug, null, [], [], []), [], [new(slug, 100, null, new())], kind);
 
-    private static async Task<ProductDto> Publish(CommerceService service, ProductDto product) =>
+    private static async Task<ProductDto> Publish(CatalogTestClient service, ProductDto product) =>
         await service.StatusAsync(new(product.Id, product.Version, ProductStatus.Published), default);
 
     [Theory, Trait("Category", "ProviderIntegration")]
@@ -329,7 +317,7 @@ public sealed class DigitalInventoryIntegrationTests
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         response = await client.GetAsync($"/api/digital-inventory/variants/{variantId}");
         response.EnsureSuccessStatusCode();
-        var mismatch = new ImportDigitalStock(product.Id, Guid.NewGuid(), stock.ProductVersion, [new("HTTP-2", "MustNotLeak")]);
+        var mismatch = new ImportDigitalStockRequest(product.Id, Guid.NewGuid(), stock.ProductVersion, [new("HTTP-2", "MustNotLeak")]);
         response = await client.PostAsJsonAsync($"/api/digital-inventory/variants/{variantId}/items", mismatch);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }

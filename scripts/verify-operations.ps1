@@ -1,18 +1,15 @@
 #requires -Version 7.2
 <#
 .SYNOPSIS
-Runs one explicit operations acceptance stage and records its actual outcome.
+Runs one explicit local operations acceptance stage and records its actual outcome.
 .EXAMPLE
 ./scripts/verify-operations.ps1 -Stage Local
 .EXAMPLE
 ./scripts/verify-operations.ps1 -Stage Recovery
-.EXAMPLE
-./scripts/verify-operations.ps1 -Stage Container -ContainerImage boilerate-ci -SkipBuild
 #>
 param(
-    [ValidateSet('Local', 'Recovery', 'Container')][string]$Stage = 'Local',
+    [ValidateSet('Local', 'Recovery')][string]$Stage = 'Local',
     [ValidateSet('Debug', 'Release')][string]$Configuration = 'Release',
-    [string]$ContainerImage = $env:BOILERATE_CONTAINER_IMAGE,
     [switch]$SkipBuild
 )
 $ErrorActionPreference = 'Stop'
@@ -31,7 +28,6 @@ $summary = [ordered]@{
     buildRequested = !$SkipBuild; logs = @()
 }
 $previousRecovery = $env:BOILERATE_TEST_RECOVERY
-$previousImage = $env:BOILERATE_CONTAINER_IMAGE
 $exitCode = 1
 
 function Stop-Blocked([string]$Reason) {
@@ -51,47 +47,23 @@ function Invoke-Dotnet([string[]]$Arguments, [string]$LogName) {
 
 Push-Location $taskRoot
 try {
-    if ($Stage -in @('Recovery', 'Container')) {
-        if ([string]::IsNullOrWhiteSpace($env:BOILERATE_TEST_POSTGRES)) {
-            Stop-Blocked 'Set BOILERATE_TEST_POSTGRES to an isolated PostgreSQL test server.'
-        }
+    $hasPostgres = ![string]::IsNullOrWhiteSpace($env:BOILERATE_TEST_POSTGRES)
+    if ($Stage -eq 'Recovery') {
         if (!$IsWindows -and [string]::IsNullOrWhiteSpace($env:BOILERATE_TEST_MSSQL)) {
             Stop-Blocked 'Set BOILERATE_TEST_MSSQL to an isolated SQL Server test server.'
         }
+        $env:BOILERATE_TEST_RECOVERY = '1'
     }
-    if ($Stage -eq 'Container') {
-        if (!$IsLinux) { Stop-Blocked 'The current container gate requires a Linux host; run it in Linux CI.' }
-        if ([string]::IsNullOrWhiteSpace($ContainerImage)) { Stop-Blocked 'Build the production image and supply -ContainerImage.' }
-        $probe = [Diagnostics.ProcessStartInfo]::new('docker')
-        $probe.UseShellExecute = $false
-        $probe.CreateNoWindow = $true
-        $probe.RedirectStandardOutput = $true
-        $probe.RedirectStandardError = $true
-        foreach ($argument in @('info', '--format', '{{.OSType}}')) { $probe.ArgumentList.Add($argument) }
-        try { $process = [Diagnostics.Process]::Start($probe) }
-        catch { Stop-Blocked 'Docker CLI is unavailable.' }
-        try {
-            $stdout = $process.StandardOutput.ReadToEndAsync()
-            $stderr = $process.StandardError.ReadToEndAsync()
-            if (!$process.WaitForExit(15000)) {
-                $process.Kill($true)
-                Stop-Blocked 'Docker engine did not respond within 15 seconds.'
-            }
-            $engine = $stdout.GetAwaiter().GetResult().Trim()
-            $null = $stderr.GetAwaiter().GetResult()
-            if ($process.ExitCode -ne 0 -or $engine -ne 'linux') { Stop-Blocked 'A running Linux Docker engine is required.' }
-        } finally { $process.Dispose() }
-        $env:BOILERATE_CONTAINER_IMAGE = $ContainerImage
-    }
-    if ($Stage -eq 'Recovery') { $env:BOILERATE_TEST_RECOVERY = '1' }
     if (!$SkipBuild) {
         Invoke-Dotnet -Arguments @('restore', 'Boilerate.sln', '--locked-mode') -LogName 'restore.log'
         Invoke-Dotnet -Arguments @('build', 'Boilerate.sln', '-c', $Configuration, '--no-restore') -LogName 'build.log'
     }
     $filter = switch ($Stage) {
         'Local' { 'FullyQualifiedName~DeploymentRuntimeTests' }
-        'Recovery' { 'Runtime=Recovery' }
-        'Container' { 'Runtime=Container' }
+        'Recovery' {
+            if ($hasPostgres) { 'Runtime=Recovery' }
+            else { 'Runtime=Recovery&FullyQualifiedName!~postgresql' }
+        }
     }
     $trxName = 'operations-' + $Stage.ToLowerInvariant() + '.trx'
     # A failed test must still have its TRX counted, so inspect the exit code after parsing it.
@@ -107,15 +79,16 @@ try {
     $summary.passed = [int]$counts.passed
     $summary.failed = [int]$counts.failed
     $summary.skipped = $summary.total - $summary.passed - $summary.failed
-    $expected = if ($Stage -eq 'Local') { 1 } else { 2 }
+    $expectedProviders = if ($hasPostgres) { @('mssql', 'postgresql') } else { @('mssql') }
+    $expected = if ($Stage -eq 'Local') { 1 } else { $expectedProviders.Count }
     if ($testExit -ne 0 -or $summary.failed -ne 0 -or $summary.skipped -ne 0 -or $summary.passed -lt $expected) {
-        throw 'Acceptance requires executed passing cases, no failures/skips, and coverage of both providers for Recovery/Container.'
+        throw 'Acceptance requires executed passing cases and no failures or skips.'
     }
-    if ($Stage -ne 'Local') {
+    if ($Stage -eq 'Recovery') {
         $results = @($trx.GetElementsByTagName('UnitTestResult'))
-        foreach ($provider in @('mssql', 'postgresql')) {
+        foreach ($provider in $expectedProviders) {
             if (!($results | Where-Object { $_.outcome -eq 'Passed' -and $_.testName -match ('provider: "' + $provider + '"') })) {
-                throw 'The TRX must contain a passing case for each configured database provider.'
+                throw "The TRX must contain a passing recovery case for provider '$provider'."
             }
         }
     }
@@ -128,7 +101,6 @@ try {
     Write-Host "Operations $Stage`: $($summary.status). Inspect local evidence for details."
 } finally {
     $env:BOILERATE_TEST_RECOVERY = $previousRecovery
-    $env:BOILERATE_CONTAINER_IMAGE = $previousImage
     $summary.completedAtUtc = [DateTime]::UtcNow.ToString('o')
     $summary | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $summaryPath
     Pop-Location

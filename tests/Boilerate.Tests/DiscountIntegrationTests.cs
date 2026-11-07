@@ -1,17 +1,14 @@
-using Boilerate.Application.Catalog;
+using Boilerate.Application.Catalog.Products;
 using Boilerate.Application.Common.Exceptions;
-using Boilerate.Application.Common.Interfaces;
-using Boilerate.Application.Identity.Users;
-using Boilerate.Application.Ordering;
+using Boilerate.Application.Common.Persistence;
+using Boilerate.Application.Ordering.Discounts;
+using Boilerate.Application.Ordering.Shared;
+using Boilerate.Application.Payments;
 using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Ordering;
-using Boilerate.Infrastructure.Commerce;
 using Boilerate.Infrastructure.Persistence.Context;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using NSubstitute;
 using Xunit;
 
 namespace Boilerate.Tests;
@@ -25,27 +22,10 @@ public sealed class DiscountIntegrationTests
         public override DateTimeOffset GetUtcNow() => Current;
     }
 
-    private static IUserService Users()
-    {
-        var users = Substitute.For<IUserService>();
-        users.HasPermissionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
-        return users;
-    }
+    private static CatalogTestClient Catalog(IServiceScope scope) => CatalogTestClient.ForScope(scope);
 
-    private static CommerceService Catalog(IServiceScope scope)
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<ICurrentUser>(), Users(),
-            Options.Create(new CommerceSettings()), scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
-    }
-
-    private static OrderingService Ordering(IServiceScope scope, TimeProvider clock)
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<ICurrentUser>(), Users(),
-            Options.Create(new OrderingSettings { ReservationMinutes = 1 }), clock,
-            scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
-    }
+    private static OrderingTestClient Ordering(IServiceScope scope, TimeProvider clock) =>
+        OrderingTestClient.ForScope(scope, clock: clock, settings: new OrderingSettings { ReservationMinutes = 1 });
 
     private static Checkout Checkout(CartDto cart) => new(cart.Version!, Guid.NewGuid(), OrderPaymentMethod.Prepaid,
         "Buyer", "buyer@example.test", "0901234567", "Address", cart.Total);
@@ -69,7 +49,7 @@ public sealed class DiscountIntegrationTests
         var variant = product.Variants.Single().Id;
         var balance = (await catalog.InventoryAsync(1, 10, default, variantId: variant)).Items.Single();
         await catalog.AdjustAsync(new(balance.Id, balance.Version, Guid.NewGuid(), 5, "Discount test stock"), default);
-        var discounts = new DiscountService(db, new CommerceUnitOfWork(db));
+        var discounts = DiscountTestClient.ForScope(firstScope);
         var code = await discounts.CreateAsync(new("test10", "Ten percent", DiscountKind.Percentage, 10, 0, null, null, 1, true), default);
         Assert.Equal("TEST10", code.Code);
 

@@ -1,14 +1,22 @@
 using System.Security.Cryptography;
 using System.Text;
-using Boilerate.Application.Catalog;
+using Boilerate.Application.Catalog.Products;
+using Boilerate.Application.Catalog.ProductTypes;
 using Boilerate.Application.Identity.Roles;
-using Boilerate.Application.Ordering;
+using Boilerate.Application.Inventory.Digital;
+using Boilerate.Application.Inventory.Physical;
+using Boilerate.Application.Ordering.Cart;
+using Boilerate.Application.Ordering.Orders;
+using Boilerate.Application.Ordering.Shared;
+using Boilerate.Application.Payments;
+using Boilerate.Application.Renewals;
 using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Identity;
 using Boilerate.Domain.Ordering;
 using Boilerate.Domain.Renewals;
 using Boilerate.Infrastructure.Persistence.Context;
 using Boilerate.Tests;
+using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -58,15 +66,15 @@ internal static class AdminAcceptanceData
         var sharedContent = $"https://acceptance.example.test/{runKey}/shared-content";
         using (var scope = fixture.Scope(adminActorId))
         {
-            var catalog = scope.ServiceProvider.GetRequiredService<ICommerceService>();
-            await catalog.InitializeAsync(ct);
-            var type = await catalog.CreateTypeAsync(new($"LIVE-{runKey}", "Live digital acceptance", []), ct);
-            extension = await ProductAsync(catalog, type, runKey, "extension", ProductFulfillmentKind.ManualExtension, ct);
-            unique = await ProductAsync(catalog, type, runKey, "unique", ProductFulfillmentKind.DigitalUnique, ct);
-            shared = await ProductAsync(catalog, type, runKey, "shared", ProductFulfillmentKind.DigitalShared, ct);
-            await catalog.ImportDigitalAsync(new(unique.Id, unique.Variants.Single().Id, unique.Version,
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            await sender.Send(new InitializeInventoryRequest(), ct);
+            var type = await sender.Send(new CreateProductTypeRequest($"LIVE-{runKey}", "Live digital acceptance", []), ct);
+            extension = await ProductAsync(sender, type, runKey, "extension", ProductFulfillmentKind.ManualExtension, ct);
+            unique = await ProductAsync(sender, type, runKey, "unique", ProductFulfillmentKind.DigitalUnique, ct);
+            shared = await ProductAsync(sender, type, runKey, "shared", ProductFulfillmentKind.DigitalShared, ct);
+            await sender.Send(new ImportDigitalStockRequest(unique.Id, unique.Variants.Single().Id, unique.Version,
                 uniqueContents.Select((content, index) => new DigitalStockInput($"LIVE-{runKey}-{index + 1}", content)).ToList()), ct);
-            await catalog.SaveSharedAsync(new(shared.Id, shared.Variants.Single().Id, shared.Version, sharedContent), ct);
+            await sender.Send(new SaveSharedDigitalContentRequest(shared.Id, shared.Variants.Single().Id, shared.Version, sharedContent), ct);
         }
 
         var scenarios = new Dictionary<string, AcceptanceScenario>(StringComparer.Ordinal);
@@ -113,13 +121,13 @@ internal static class AdminAcceptanceData
         return new(Guid.Parse(user.Id), email, password, role);
     }
 
-    private static async Task<ProductDto> ProductAsync(ICommerceService catalog, ProductType type, string runKey,
+    private static async Task<ProductDto> ProductAsync(ISender sender, ProductType type, string runKey,
         string kind, ProductFulfillmentKind fulfillment, CancellationToken ct)
     {
         var slug = $"live-{kind}-{runKey}";
-        var product = await catalog.CreateAsync(new(type.Id, type.Version, new($"Live {kind}", slug, null, [], [], []), [],
+        var product = await sender.Send(new CreateProductRequest(type.Id, type.Version, new($"Live {kind}", slug, null, [], [], []), [],
             [new($"LIVE-{kind.ToUpperInvariant()}-{runKey}", 100000, null, [])], fulfillment), ct);
-        return await catalog.StatusAsync(new(product.Id, product.Version, ProductStatus.Published), ct);
+        return await sender.Send(new ChangeProductStatusRequest(product.Id, product.Version, ProductStatus.Published), ct);
     }
 
     private static async Task<OrderDto> PaidOrderAsync(FoundationDatabase fixture, Guid adminActorId, AcceptanceActor customer,
@@ -128,17 +136,17 @@ internal static class AdminAcceptanceData
         OrderDto order;
         using (var scope = fixture.Scope(customer.UserId))
         {
-            var ordering = scope.ServiceProvider.GetRequiredService<IOrderingService>();
-            var current = await ordering.GetCartAsync(ct);
-            var cart = await ordering.SaveCartAsync(new(current.Version, [new(product.Variants.Single().Id, quantity)]), ct);
-            order = await ordering.CheckoutAsync(new(cart.Version!, Operation(fixture, key, "checkout"), OrderPaymentMethod.Prepaid,
-                "Live acceptance customer", customer.Email, "0900000000", null, cart.Total), ct);
+            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+            var current = await sender.Send(new GetMyCartRequest(), ct);
+            var cart = await sender.Send(new SaveMyCartRequest(new(current.Version, [new(product.Variants.Single().Id, quantity)])), ct);
+            order = await sender.Send(new CheckoutMyCartRequest(new(cart.Version!, Operation(fixture, key, "checkout"), OrderPaymentMethod.Prepaid,
+                "Live acceptance customer", customer.Email, "0900000000", null, cart.Total)), ct);
         }
         using (var scope = fixture.Scope(adminActorId))
         {
-            return await scope.ServiceProvider.GetRequiredService<IPaymentService>().ConfirmPaymentAsync(order.Id,
+            return await scope.ServiceProvider.GetRequiredService<ISender>().Send(new ConfirmPaymentRequest(order.Id,
                 new(order.Version, Operation(fixture, key, "payment"), $"LIVE-{key}-{fixture.Name}", order.Total, order.Currency,
-                    DateTime.UtcNow.AddSeconds(-1)), ct);
+                    DateTime.UtcNow.AddSeconds(-1))), ct);
         }
     }
 
@@ -147,10 +155,10 @@ internal static class AdminAcceptanceData
     {
         var order = await PaidOrderAsync(fixture, adminActorId, customer, product, key, 1, ct);
         using var scope = fixture.Scope(customer.UserId);
-        var renewals = scope.ServiceProvider.GetRequiredService<IRenewalService>();
-        var renewal = (await renewals.RenewalsAsync(order.Id, ct)).Single();
-        renewal = await renewals.SetRenewalTargetAsync(order.Id, renewal.Id,
-            new(renewal.Version, Operation(fixture, key, "target"), target), ct);
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var renewal = (await sender.Send(new GetMyOrderRenewalsRequest(order.Id), ct)).Single();
+        renewal = await sender.Send(new SetRenewalTargetRequest(order.Id, renewal.Id,
+            new(renewal.Version, Operation(fixture, key, "target"), target)), ct);
         if (order.PaymentStatus != OrderPaymentStatus.Paid || renewal.Status != RenewalStatus.Ready)
             throw new InvalidOperationException("The renewal acceptance scenario is not ready for processing.");
         return new(order.Id, renewal.Id, product.Id, product.Variants.Single().Id, customer.UserId, customerKey, target);
@@ -161,7 +169,7 @@ internal static class AdminAcceptanceData
     {
         var order = await PaidOrderAsync(fixture, adminActorId, customer, product, key, quantity, ct);
         using var scope = fixture.Scope(customer.UserId);
-        var delivered = await scope.ServiceProvider.GetRequiredService<IPaymentService>().DigitalDeliveriesAsync(order.Id, ct);
+        var delivered = await scope.ServiceProvider.GetRequiredService<ISender>().Send(new GetMyDigitalDeliveriesRequest(order.Id), ct);
         if (!expected.Order(StringComparer.Ordinal).SequenceEqual(delivered.Select(item => item.Content).Order(StringComparer.Ordinal)))
             throw new InvalidOperationException("The digital acceptance scenario did not deliver the expected fixture content.");
         return new(order.Id, null, product.Id, product.Variants.Single().Id, customer.UserId, customerKey, ExpectedDigitalContents: expected);

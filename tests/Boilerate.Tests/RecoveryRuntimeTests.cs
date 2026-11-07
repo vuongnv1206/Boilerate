@@ -1,7 +1,5 @@
 using System.Security.Cryptography;
-using Boilerate.Application.Catalog;
-using Boilerate.Application.Common.Interfaces;
-using Boilerate.Application.Identity.Users;
+using Boilerate.Application.Catalog.Products;
 using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Media;
 using Boilerate.Domain.Messaging;
@@ -12,8 +10,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using NSubstitute;
 using Xunit;
 
 namespace Boilerate.Tests;
@@ -135,7 +131,7 @@ public sealed class RecoveryRuntimeTests
                 Assert.Equal(actor, movement.ActorId);
                 Assert.Equal("snapshot-key-proof", restored.Services.GetRequiredService<IDataProtectionProvider>()
                     .CreateProtector("RecoveryDrill.v1").Unprotect(protectedValue));
-                var opened = await scope.ServiceProvider.GetRequiredService<ICommerceMediaService>().OpenAsync(linkedId, true, default);
+                var opened = await service.OpenMediaAsync(linkedId, true, default);
                 await using (opened.Stream)
                 {
                     using var image = new MemoryStream();
@@ -182,20 +178,13 @@ public sealed class RecoveryRuntimeTests
         ["DataProtection:ApplicationName"] = "Boilerate.RecoveryDrill", ["Commerce:WorkerEnabled"] = "false"
     };
 
-    private static CommerceService Commerce(IServiceScope scope)
-    {
-        var users = Substitute.For<IUserService>();
-        users.HasPermissionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
-        return new(scope.ServiceProvider.GetRequiredService<ApplicationDbContext>(), scope.ServiceProvider.GetRequiredService<CommerceUnitOfWork>(),
-            scope.ServiceProvider.GetRequiredService<ICurrentUser>(), users, Options.Create(new CommerceSettings()),
-            scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
-    }
+    private static CatalogTestClient Commerce(IServiceScope scope) => CatalogTestClient.ForScope(scope);
 
     private static async Task<Guid> Upload(IServiceScope scope)
     {
         using var stream = new MemoryStream(Image);
-        return (await scope.ServiceProvider.GetRequiredService<ICommerceMediaService>()
-            .UploadAsync(new FormFile(stream, 0, stream.Length, "file", "recovery.png"), default)).Id;
+        return (await Commerce(scope)
+            .UploadMediaAsync(new FormFile(stream, 0, stream.Length, "file", "recovery.png"), default)).Id;
     }
 
     private static Dictionary<string, string> Manifest(string directory) => Directory.GetFiles(directory, "*", SearchOption.AllDirectories)

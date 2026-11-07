@@ -1,4 +1,3 @@
-using Boilerate.Application.Catalog;
 using Boilerate.Application.Common.Exceptions;
 using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Identity;
@@ -138,7 +137,7 @@ public sealed class DevelopmentSeedingTests
             Assert.Equal(8, await db.Products.CountAsync(product => product.Status == ProductStatus.Published));
             Assert.All(await db.StockMovements.ToListAsync(), movement => Assert.NotEqual(Guid.Empty, movement.ActorId));
 
-            var service = scope.ServiceProvider.GetRequiredService<ICommerceService>();
+            var service = CatalogTestClient.ForScope(scope);
             var firstId = await db.Products.Where(product => product.Slug == "tui-everyday-tote").Select(product => product.Id).SingleAsync();
             var first = await service.GetAsync(firstId, false, default);
             var type = await service.TypeAsync(first.ProductTypeId, default);

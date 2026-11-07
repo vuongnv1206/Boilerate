@@ -1,14 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
-using Boilerate.Application.Catalog;
+using Boilerate.Application.Catalog.Products;
+using Boilerate.Application.Catalog.ProductTypes;
 using Boilerate.Application.Common.Exceptions;
-using Boilerate.Application.Common.Interfaces;
 using Boilerate.Application.Common.Mailing;
 using Boilerate.Application.Identity.Tokens;
-using Boilerate.Application.Identity.Users;
+using Boilerate.Application.Inventory.Physical;
 using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Common.Exceptions;
-using Boilerate.Domain.Inventory;
 using Boilerate.Domain.Media;
 using Boilerate.Domain.Messaging;
 using Boilerate.Infrastructure.Commerce;
@@ -21,23 +20,16 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using NSubstitute;
 using Xunit;
 namespace Boilerate.Tests;
 
 [Collection("Foundation")]
 public sealed class CommerceIntegrationTests
 {
-    private static CommerceService Service(IServiceScope scope, bool price = true)
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var users = Substitute.For<IUserService>();
-        users.HasPermissionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(price);
-        return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<ICurrentUser>(), users, Options.Create(new CommerceSettings()),
-            scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>());
-    }
+    private static CatalogTestClient Service(IServiceScope scope, bool price = true) =>
+        CatalogTestClient.ForScope(scope, allowPermissions: price);
     private static ProductContent Content(string slug, params Guid[] categories) => new("Product " + slug, slug, null, categories.ToList(), [], []);
-    private static CreateProduct Simple(ProductType type, string slug, decimal? price = 100, params Guid[] categories) =>
+    private static CreateProductRequest Simple(ProductType type, string slug, decimal? price = 100, params Guid[] categories) =>
         new(type.Id, type.Version, Content(slug, categories), [], [new(slug, price, null, new())]);
     [Fact, Trait("Category", "ProviderIntegration")]
     public async Task InventoryFiltersApplyBeforeCountAndPaginationOnSqlServer()
@@ -177,7 +169,7 @@ public sealed class CommerceIntegrationTests
         await Reject($"UPDATE \"Catalog\".\"VariantOptionValues\" SET \"OptionValueId\"={foreign.Values.First().Id} WHERE \"VariantId\"={variant.Id}");
         await Reject($"UPDATE \"Catalog\".\"VariantOptionValues\" SET \"OptionId\"={foreign.Id},\"OptionValueId\"={foreign.Values.First().Id} WHERE \"VariantId\"={variant.Id}");
         await Reject($"UPDATE \"Catalog\".\"ProductVariants\" SET \"IsDefault\"={true} WHERE \"Id\"={alternate}");
-        await Reject($"UPDATE \"Catalog\".\"ProductVariants\" SET \"NormalizedSku\"={variant.Sku.ToUpperInvariant()} WHERE \"Id\"={second.Variants.Single().Id}");
+        await Reject($"UPDATE \"Catalog\".\"ProductVariants\" SET \"CombinationKey\"={variant.CombinationKey} WHERE \"Id\"={alternate}");
         var defaultId = alternate;
         p = await s.DefaultAsync(new(p.Id, defaultId, p.Version), default);
         Assert.Equal(defaultId, p.Variants.Single(v => v.IsDefault).Id);
@@ -250,7 +242,7 @@ public sealed class CommerceIntegrationTests
             await s.InitializeAsync(default);
             type = await s.CreateTypeAsync(new("A", "A", []), default);
             using var stream = new MemoryStream(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10, 1 });
-            var asset = await scope.ServiceProvider.GetRequiredService<ICommerceMediaService>().UploadAsync(new FormFile(stream, 0, stream.Length, "file", "image.png"), default);
+            var asset = await s.UploadMediaAsync(new FormFile(stream, 0, stream.Length, "file", "image.png"), default);
             assetId = asset.Id;
             p = await s.CreateAsync(Simple(type, "media") with
             {
@@ -259,12 +251,12 @@ public sealed class CommerceIntegrationTests
                     Media = [new(assetId, 0, "Test")]
                 }
             }, default);
-            await Assert.ThrowsAsync<NotFoundException>(() => scope.ServiceProvider.GetRequiredService<ICommerceMediaService>().OpenAsync(assetId, true, default));
+            await Assert.ThrowsAsync<NotFoundException>(() => s.OpenMediaAsync(assetId, true, default));
             p = await s.StatusAsync(new(p.Id, p.Version, ProductStatus.Published), default);
-            var opened = await scope.ServiceProvider.GetRequiredService<ICommerceMediaService>().OpenAsync(assetId, true, default);
+            var opened = await s.OpenMediaAsync(assetId, true, default);
             opened.Stream.Dispose();
             await Processor(scope).CleanupAsync(assetId, default);
-            opened = await scope.ServiceProvider.GetRequiredService<ICommerceMediaService>().OpenAsync(assetId, true, default);
+            opened = await s.OpenMediaAsync(assetId, true, default);
             opened.Stream.Dispose();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             await Assert.ThrowsAsync<DomainException>(() => s.EditAsync(new(p.Id, p.Version, type.Version, Content("media") with { Fields = [new(Guid.NewGuid(), ProductFieldType.Text, TextValue: "bad")] }), default));
@@ -318,7 +310,7 @@ public sealed class CommerceIntegrationTests
             await db.OutboxMessages.Where(m => m.MessageId == messageId).ExecuteUpdateAsync(s => s.SetProperty(m => m.Payload, "invalid").SetProperty(m => m.State, OutboxState.Pending));
             Assert.True(await Processor(scope, 1).RunOneAsync(default));
             Assert.Equal(OutboxState.DeadLetter, (await db.OutboxMessages.AsNoTracking().SingleAsync()).State);
-            Assert.True(await Service(scope).ReplayAsync(new(messageId), default));
+            Assert.True(await scope.ServiceProvider.GetRequiredService<MediatR.ISender>().Send(new Boilerate.Application.Outbox.ReplayOutboxMessageRequest(messageId), default));
             Assert.Equal(OutboxState.Pending, (await db.OutboxMessages.AsNoTracking().SingleAsync()).State);
             Assert.True(await db.Trails.AnyAsync(t => t.TableName == "OutboxMessages"));
         }
@@ -339,11 +331,11 @@ public sealed class CommerceIntegrationTests
             type = await s.CreateTypeAsync(new("RACE", "Race", []), default);
             p = await s.CreateAsync(Simple(type, "race"), default);
             using var input = new MemoryStream(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10, 1 });
-            var uploaded = await scope.ServiceProvider.GetRequiredService<ICommerceMediaService>().UploadAsync(new FormFile(input, 0, input.Length, "file", "race.png"), default);
+            var uploaded = await s.UploadMediaAsync(new FormFile(input, 0, input.Length, "file", "race.png"), default);
             assetId = uploaded.Id;
             // Upload validation fails after durable intent; expired intent is swept after restart.
             using var bad = new MemoryStream(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 });
-            await Assert.ThrowsAsync<FluentValidation.ValidationException>(() => scope.ServiceProvider.GetRequiredService<ICommerceMediaService>().UploadAsync(new FormFile(bad, 0, bad.Length, "file", "bad.png"), default));
+            await Assert.ThrowsAsync<FluentValidation.ValidationException>(() => s.UploadMediaAsync(new FormFile(bad, 0, bad.Length, "file", "bad.png"), default));
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             await db.MediaAssets.Where(a => a.State == MediaState.Uploading).ExecuteUpdateAsync(s => s.SetProperty(a => a.ExpiresAt, DateTime.UtcNow.AddDays(-1)));
             // A page full of older dead letters must not hide the failed upload from the sweeper.
@@ -412,18 +404,18 @@ public sealed class CommerceIntegrationTests
         finally { Environment.SetEnvironmentVariable("BOILERATE_BOOTSTRAP_EMAIL", oldEmail); Environment.SetEnvironmentVariable("BOILERATE_BOOTSTRAP_PASSWORD", oldPassword); }
         await using var app = await TestHostApplication.StartAsync(f, true);
         var client = app.GetTestClient();
-        Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/products/variants/preview", new PreviewVariants([]))).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/products/variants/preview", new PreviewVariantsRequest([]))).StatusCode);
         var login = await client.PostAsJsonAsync("/api/tokens/get", new TokenRequest("commerce@example.test", "CommercePassword!29874"));
         login.EnsureSuccessStatusCode();
         var token = (await login.Content.ReadFromJsonAsync<TokenResponse>())!;
         client.DefaultRequestHeaders.Authorization = new("Bearer", token.Token);
         (await client.PostAsync("/api/inventory/initialize", null)).EnsureSuccessStatusCode();
-        var createdType = await client.PostAsJsonAsync("/api/product-types", new CreateProductType("HTTP", "HTTP", []));
+        var createdType = await client.PostAsJsonAsync("/api/product-types", new CreateProductTypeRequest("HTTP", "HTTP", []));
         createdType.EnsureSuccessStatusCode();
         var type = await createdType.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
         var typeId = type.GetProperty("id").GetGuid();
         var typeVersion = type.GetProperty("version").GetString()!;
-        var request = new CreateProduct(typeId, typeVersion, Content("http"), [], [new("HTTP", 100, null, new())]);
+        var request = new CreateProductRequest(typeId, typeVersion, Content("http"), [], [new("HTTP", 100, null, new())]);
         var response = await client.PostAsJsonAsync("/api/products", request);
         response.EnsureSuccessStatusCode();
         var product = (await response.Content.ReadFromJsonAsync<ProductDto>())!;
@@ -434,7 +426,7 @@ public sealed class CommerceIntegrationTests
             var price = await db.Functions.SingleAsync(x => x.Code == "Price");
             await db.Permissions.Where(p => p.FunctionId == price.Id).ExecuteUpdateAsync(s => s.SetProperty(p => p.DeletedOn, DateTime.UtcNow));
         }
-        response = await client.PutAsJsonAsync($"/api/products/{product.Id}/variants/{product.Variants.Single().Id}", new EditVariant(product.Id, product.Variants.Single().Id, product.Version, 200, null, true, null));
+        response = await client.PutAsJsonAsync($"/api/products/{product.Id}/variants/{product.Variants.Single().Id}", new UpdateProductVariantRequest(product.Id, product.Variants.Single().Id, product.Version, 200, null, true, null));
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         response = await client.PostAsJsonAsync("/api/products", request with
         {
@@ -442,13 +434,13 @@ public sealed class CommerceIntegrationTests
             Variants = [new("HTTP-SECOND", 200, null, new())]
         });
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-        response = await client.PutAsJsonAsync($"/api/products/{product.Id}", new EditProduct(product.Id, product.Version, typeVersion, Content("http") with
+        response = await client.PutAsJsonAsync($"/api/products/{product.Id}", new UpdateProductContentRequest(product.Id, product.Version, typeVersion, Content("http") with
         {
             Name = "Content still editable"
         }));
         response.EnsureSuccessStatusCode();
         product = (await response.Content.ReadFromJsonAsync<ProductDto>())!;
-        response = await client.PostAsJsonAsync($"/api/products/{product.Id}/status", new ChangeProductStatus(product.Id, product.Version, ProductStatus.Published));
+        response = await client.PostAsJsonAsync($"/api/products/{product.Id}/status", new ChangeProductStatusRequest(product.Id, product.Version, ProductStatus.Published));
         response.EnsureSuccessStatusCode();
         client.DefaultRequestHeaders.Authorization = null;
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/catalog/products/http")).StatusCode);

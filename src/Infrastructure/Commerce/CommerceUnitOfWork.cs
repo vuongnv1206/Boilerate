@@ -1,8 +1,10 @@
-using Boilerate.Infrastructure.Persistence.Context;
+using Boilerate.Application.Common.Persistence;
 using Boilerate.Domain.Common.Contracts;
+using Boilerate.Infrastructure.Persistence.Context;
+
 namespace Boilerate.Infrastructure.Commerce;
 
-public sealed class CommerceUnitOfWork(ApplicationDbContext db)
+public sealed class CommerceUnitOfWork(ApplicationDbContext db) : ICommerceUnitOfWork
 {
     public async Task<T> ExecuteAsync<T>(Func<Task<T>> operation, CancellationToken ct)
     {

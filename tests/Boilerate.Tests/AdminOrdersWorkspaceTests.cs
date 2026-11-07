@@ -1,8 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using Boilerate.Application.Catalog;
 using Boilerate.Application.Identity.Tokens;
-using Boilerate.Application.Ordering;
+using Boilerate.Application.Ordering.Shared;
 using Boilerate.Domain.Identity;
 using Boilerate.Domain.Ordering;
 using Boilerate.Infrastructure.Persistence.Context;

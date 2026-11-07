@@ -54,6 +54,8 @@ public sealed class PaymentMigrationTests
         var blocked = await Record.ExceptionAsync(() => db.GetService<IMigrator>().MigrateAsync(previous));
         Assert.True(blocked is Microsoft.Data.SqlClient.SqlException { Number: 51000 } ||
             blocked is Npgsql.PostgresException { SqlState: "P0001" }, blocked?.ToString() ?? "Downgrade must preserve payment history.");
+        Assert.Contains(await db.Database.GetAppliedMigrationsAsync(), name => name.EndsWith("_PaymentDigitalDelivery", StringComparison.Ordinal));
+        await db.GetService<IMigrator>().MigrateAsync();
         Assert.Equal(before, (await db.Database.GetAppliedMigrationsAsync()).ToArray());
         Assert.Equal(seeded.Receipt.Id, (await db.PaymentReceipts.AsNoTracking().SingleAsync()).Id);
         Assert.Equal(seeded.Delivery.ProtectedContent, (await db.DigitalDeliveries.AsNoTracking().SingleAsync()).ProtectedContent);

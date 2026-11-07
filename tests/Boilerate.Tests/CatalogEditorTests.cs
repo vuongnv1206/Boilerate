@@ -1,21 +1,18 @@
 using System.Net;
 using System.Net.Http.Json;
-using Boilerate.Application.Catalog;
+using Boilerate.Application.Catalog.Categories;
+using Boilerate.Application.Catalog.Products;
+using Boilerate.Application.Catalog.ProductTypes;
 using Boilerate.Application.Common.Exceptions;
-using Boilerate.Application.Common.Interfaces;
 using Boilerate.Application.Identity.Tokens;
-using Boilerate.Application.Identity.Users;
 using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Common.Exceptions;
 using Boilerate.Domain.Media;
-using Boilerate.Infrastructure.Commerce;
 using Boilerate.Infrastructure.Persistence.Context;
 using Boilerate.Infrastructure.Persistence.Initialization;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using NSubstitute;
 using Xunit;
 
 namespace Boilerate.Tests;
@@ -23,16 +20,10 @@ namespace Boilerate.Tests;
 [Collection("Foundation")]
 public sealed class CatalogEditorTests
 {
-    private static CommerceService Service(IServiceScope scope, bool price = true)
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var users = Substitute.For<IUserService>();
-        users.HasPermissionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(price);
-        return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<ICurrentUser>(), users, Options.Create(new CommerceSettings()),
-            scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>());
-    }
+    private static CatalogTestClient Service(IServiceScope scope, bool price = true) =>
+        CatalogTestClient.ForScope(scope, allowPermissions: price);
     private static ProductContent Content(string slug) => new(slug, slug, null, [], [], []);
-    private static SaveProductEditor Save(ProductDto p, ProductType type) => new(p.Id, p.Version, type.Version,
+    private static SaveProductEditorRequest Save(ProductDto p, ProductType type) => new(p.Id, p.Version, type.Version,
         new(p.Name, p.Slug, p.Description, p.CategoryIds.ToList(), [], p.Media.ToList()), [], [], [], p.Variants.Single(v => v.IsDefault).Sku);
     private static async Task<MediaAsset> Asset(ApplicationDbContext db)
     {
@@ -277,7 +268,7 @@ public sealed class CatalogEditorTests
         var type = await s.CreateTypeAsync(new("BULK", "Bulk", []), default);
         var one = await s.CreateAsync(new(type.Id, type.Version, Content("bulk-one"), [], [new("BULK-ONE", 100, null, [])]), default);
         var two = await s.CreateAsync(new(type.Id, type.Version, Content("bulk-two"), [], [new("BULK-TWO", null, null, [])]), default);
-        var request = new BulkProductStatus([new(one.Id, one.Version), new(two.Id, two.Version)], ProductStatus.Published);
+        var request = new BulkUpdateProductStatusRequest([new(one.Id, one.Version), new(two.Id, two.Version)], ProductStatus.Published);
         await Assert.ThrowsAsync<DomainException>(() => s.BulkStatusAsync(request, default));
         Assert.Equal(one.Version, (await s.GetAsync(one.Id, false, default)).Version);
         Assert.Equal(ProductStatus.Draft, (await s.GetAsync(one.Id, false, default)).Status);
@@ -290,7 +281,7 @@ public sealed class CatalogEditorTests
         Assert.Empty((await s.SearchAsync(new(), true, default)).Items);
         Assert.Equal(2, (await s.InventoryAsync(1, 100, default)).Total);
         await Assert.ThrowsAsync<DomainException>(() => s.BulkStatusAsync(request with { Items = [new(one.Id, one.Version), new(one.Id, one.Version)] }, default));
-        await Assert.ThrowsAsync<DomainException>(() => s.BulkStatusAsync(request with { Status = ProductStatus.Draft }, default));
+        await Assert.ThrowsAsync<FluentValidation.ValidationException>(() => s.BulkStatusAsync(request with { Status = ProductStatus.Draft }, default));
     }
 
     [Theory, Trait("Category", "ProviderIntegration")]
@@ -375,7 +366,7 @@ public sealed class CatalogEditorTests
         Assert.Equal("HTTP save", p.Name);
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PutAsJsonAsync($"/api/products/{Guid.NewGuid()}/editor", Save(p, type))).StatusCode);
         (await client.GetAsync("/api/categories/summaries")).EnsureSuccessStatusCode();
-        var bulk = await client.PostAsJsonAsync("/api/products/bulk-status", new BulkProductStatus([new(p.Id, p.Version)], ProductStatus.Published));
+        var bulk = await client.PostAsJsonAsync("/api/products/bulk-status", new BulkUpdateProductStatusRequest([new(p.Id, p.Version)], ProductStatus.Published));
         bulk.EnsureSuccessStatusCode();
         Assert.Equal(ProductStatus.Published, (await bulk.Content.ReadFromJsonAsync<BulkProductStatusResult>())!.Items.Single().Status);
         var productFunction = await db.Functions.SingleAsync(x => x.Code == "Product");
@@ -392,7 +383,7 @@ public sealed class CatalogEditorTests
         using (var denied = ImageForm())
             Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsync("/api/media", denied)).StatusCode);
         Assert.Equal(assetsBefore, await db.MediaAssets.CountAsync());
-        Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync("/api/products/bulk-status", new BulkProductStatus([new(p.Id, p.Version)], ProductStatus.Archived))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync("/api/products/bulk-status", new BulkUpdateProductStatusRequest([new(p.Id, p.Version)], ProductStatus.Archived))).StatusCode);
     }
 
     private static CatalogConfiguration Configuration(ProductDto product) => new(

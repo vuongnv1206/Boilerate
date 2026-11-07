@@ -1,9 +1,11 @@
 using System.Text.Json;
-using Boilerate.Application.Ordering;
+using Boilerate.Application.Ordering.Orders;
+using Boilerate.Application.Ordering.Shared;
 using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Ordering;
 using Boilerate.Domain.Payments;
 using Boilerate.Infrastructure.Persistence.Context;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -36,9 +38,9 @@ public sealed class PaymentTimestampTests
         await db.SaveChangesAsync();
         db.ChangeTracker.Clear();
 
-        var ordering = scope.ServiceProvider.GetRequiredService<IOrderingService>();
-        var detail = await ordering.GetOrderAsync(order.Id, false, default);
-        var summary = Assert.Single((await ordering.OrdersAsync(1, 20, false, default)).Items);
+        var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var detail = await sender.Send(new GetMyOrderDetailRequest(order.Id), default);
+        var summary = Assert.Single((await sender.Send(new GetMyOrdersRequest(1, 20), default)).Items);
         var expiry = checkoutAt.AddMinutes(30);
         Assert.Equal(paidAt, detail.PaidAtUtc);
         Assert.Equal(expiry, detail.ExpiresAt);

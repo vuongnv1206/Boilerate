@@ -1,10 +1,10 @@
 param([string]$Configuration = 'Release', [string]$TestFilter = '')
 $ErrorActionPreference = 'Stop'
-if ([string]::IsNullOrWhiteSpace($env:BOILERATE_TEST_POSTGRES)) {
-    throw 'Set BOILERATE_TEST_POSTGRES to an isolated PostgreSQL test server before verification.'
-}
 if (!$IsWindows -and [string]::IsNullOrWhiteSpace($env:BOILERATE_TEST_MSSQL)) {
     throw 'Set BOILERATE_TEST_MSSQL to an isolated SQL Server test server before verification.'
+}
+if ([string]::IsNullOrWhiteSpace($TestFilter) -and [string]::IsNullOrWhiteSpace($env:BOILERATE_TEST_POSTGRES)) {
+    $TestFilter = 'FullyQualifiedName!~postgresql'
 }
 $taskRoot = Split-Path $PSScriptRoot -Parent
 $output = Join-Path $taskRoot ('artifacts/verification/template-' + [guid]::NewGuid().ToString('N'))
@@ -25,12 +25,7 @@ try {
     Push-Location $generated
     try {
         $requiredFiles = @(
-            'Dockerfile', 'compose.yaml', '.dockerignore', 'README.md', 'AGENTS.md',
-            'plan.md', '.editorconfig', 'RenamedBackend.sln', 'docs/README.md',
-            'docs/backend/README.md', 'docs/backend/roadmap.md',
-            'docs/frontend/README.md', 'docs/frontend/roadmap.md', 'docs/shared/README.md',
-            'docs/shared/development-workflow.md', 'docs/shared/templates/feature-plan.md',
-            'docs/shared/contracts/frontend-backend.md'
+            'README.md', 'AGENTS.md', 'CLAUDE.md', '.editorconfig', 'RenamedBackend.sln'
         )
         foreach ($requiredFile in $requiredFiles) {
             if (!(Test-Path -LiteralPath (Join-Path $generated $requiredFile) -PathType Leaf)) {

@@ -7,6 +7,11 @@
     <AssemblyName>Boilerate.Host</AssemblyName>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Using Include="Boilerate.Application.Common.Models" />
+    <Using Include="Boilerate.Application.Common.Settings" />
+  </ItemGroup>
+
   <ItemGroup><Content Remove="Logs/**;Files/**" /></ItemGroup>
   <ItemGroup><InternalsVisibleTo Include="Boilerate.Tests" /></ItemGroup>
   <ItemGroup>

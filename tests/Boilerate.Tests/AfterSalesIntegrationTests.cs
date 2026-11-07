@@ -1,13 +1,18 @@
 using System.Data.Common;
 using System.Net;
 using System.Net.Http.Json;
-using Boilerate.Application.Catalog;
+using Boilerate.Application.AfterSales;
+using Boilerate.Application.Catalog.Products;
+using Boilerate.Application.Inventory.Digital;
 using Boilerate.Application.Common.Events;
 using Boilerate.Application.Common.Exceptions;
 using Boilerate.Application.Common.Interfaces;
 using Boilerate.Application.Identity.Tokens;
 using Boilerate.Application.Identity.Users;
-using Boilerate.Application.Ordering;
+using Boilerate.Application.Ordering.Shared;
+using Boilerate.Application.Payments;
+using Boilerate.Application.Renewals;
+using Boilerate.Application.Shipping;
 using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Common.Exceptions;
 using Boilerate.Domain.DigitalInventory;
@@ -32,25 +37,10 @@ namespace Boilerate.Tests;
 [Collection("Foundation")]
 public sealed class AfterSalesIntegrationTests
 {
-    private static CommerceService Catalog(IServiceScope scope)
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var users = Substitute.For<IUserService>();
-        users.HasPermissionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
-        return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<ICurrentUser>(), users,
-            Options.Create(new CommerceSettings()), scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
-    }
+    private static CatalogTestClient Catalog(IServiceScope scope) => CatalogTestClient.ForScope(scope);
 
-    private static OrderingService Ordering(IServiceScope scope, string? deniedPermission = null, ApplicationDbContext? dbOverride = null)
-    {
-        var db = dbOverride ?? scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var users = Substitute.For<IUserService>();
-        users.HasPermissionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(call => (string)call[1] != deniedPermission);
-        return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<ICurrentUser>(), users,
-            Options.Create(new OrderingSettings()), TimeProvider.System,
-            scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
-    }
+    private static OrderingTestClient Ordering(IServiceScope scope, string? deniedPermission = null, ApplicationDbContext? dbOverride = null) =>
+        OrderingTestClient.ForScope(scope, deniedPermission: deniedPermission, dbOverride: dbOverride);
 
     private static async Task<ProductDto> Product(IServiceScope scope, string slug,
         ProductFulfillmentKind kind = ProductFulfillmentKind.Physical, int stock = 10)
@@ -69,7 +59,7 @@ public sealed class AfterSalesIntegrationTests
         return product;
     }
 
-    private static async Task<OrderDto> Checkout(OrderingService ordering, OrderPaymentMethod method,
+    private static async Task<OrderDto> Checkout(OrderingTestClient ordering, OrderPaymentMethod method,
         params (Guid VariantId, int Quantity)[] lines)
     {
         var current = await ordering.GetCartAsync(default);

@@ -21,7 +21,7 @@ public sealed class FreshBaselineMigrationTests
         await db.Database.MigrateAsync();
 
         var migrations = (await db.Database.GetAppliedMigrationsAsync()).ToArray();
-        Assert.Equal(9,migrations.Length);
+        Assert.Equal(13,migrations.Length);
         Assert.EndsWith("_InitialFoundation",migrations[0],StringComparison.Ordinal);
         Assert.EndsWith("_CommerceCatalog",migrations[1],StringComparison.Ordinal);
         Assert.EndsWith("_DigitalInventory",migrations[2],StringComparison.Ordinal);
@@ -31,6 +31,10 @@ public sealed class FreshBaselineMigrationTests
         Assert.EndsWith("_ManualRenewals",migrations[6],StringComparison.Ordinal);
         Assert.EndsWith("_RefundsReturns",migrations[7],StringComparison.Ordinal);
         Assert.EndsWith("_GroupedAuthorization",migrations[8],StringComparison.Ordinal);
+        Assert.EndsWith("_WebflowCatalogEditor",migrations[9],StringComparison.Ordinal);
+        Assert.EndsWith("_GuestStorefront",migrations[10],StringComparison.Ordinal);
+        Assert.EndsWith("_AdminOverviewIndexes",migrations[11],StringComparison.Ordinal);
+        Assert.EndsWith("_DiscountCodes",migrations[12],StringComparison.Ordinal);
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
         Assert.False(db.Database.HasPendingModelChanges());
         Assert.Empty(await db.Users.ToListAsync());

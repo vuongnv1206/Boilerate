@@ -2,13 +2,15 @@ using System.Data.Common;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Boilerate.Application.Catalog;
+using Boilerate.Application.Catalog.Products;
 using Boilerate.Application.Common.Events;
 using Boilerate.Application.Common.Exceptions;
 using Boilerate.Application.Common.Interfaces;
 using Boilerate.Application.Identity.Users;
 using Boilerate.Application.Identity.Tokens;
-using Boilerate.Application.Ordering;
+using Boilerate.Application.Ordering.Shared;
+using Boilerate.Application.Payments;
+using Boilerate.Application.Renewals;
 using Boilerate.Domain.Auditing;
 using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Common.Exceptions;
@@ -31,26 +33,11 @@ namespace Boilerate.Tests;
 [Collection("Foundation")]
 public sealed class RenewalIntegrationTests
 {
-    private static CommerceService Catalog(IServiceScope scope)
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var users = Substitute.For<IUserService>();
-        users.HasPermissionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
-        return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<ICurrentUser>(), users,
-            Options.Create(new CommerceSettings()), scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
-    }
+    private static CatalogTestClient Catalog(IServiceScope scope) => CatalogTestClient.ForScope(scope);
 
-    private static OrderingService Ordering(IServiceScope scope, TimeProvider? clock = null, string? deniedPermission = null,
-        ApplicationDbContext? dbOverride = null)
-    {
-        var db = dbOverride ?? scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var users = Substitute.For<IUserService>();
-        users.HasPermissionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(call => (string)call[1] != deniedPermission);
-        return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<ICurrentUser>(), users,
-            Options.Create(new OrderingSettings()), clock ?? TimeProvider.System,
-            scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
-    }
+    private static OrderingTestClient Ordering(IServiceScope scope, TimeProvider? clock = null, string? deniedPermission = null,
+        ApplicationDbContext? dbOverride = null) =>
+        OrderingTestClient.ForScope(scope, clock: clock, deniedPermission: deniedPermission, dbOverride: dbOverride);
 
     private static async Task<ProductDto> Product(IServiceScope scope, string slug,
         ProductFulfillmentKind kind = ProductFulfillmentKind.ManualExtension)
@@ -63,7 +50,7 @@ public sealed class RenewalIntegrationTests
         return await catalog.StatusAsync(new(product.Id, product.Version, ProductStatus.Published), default);
     }
 
-    private static async Task<OrderDto> Checkout(OrderingService ordering, params (Guid VariantId, int Quantity)[] lines)
+    private static async Task<OrderDto> Checkout(OrderingTestClient ordering, params (Guid VariantId, int Quantity)[] lines)
     {
         var current = await ordering.GetCartAsync(default);
         var cart = await ordering.SaveCartAsync(new(current.Version,
@@ -85,7 +72,7 @@ public sealed class RenewalIntegrationTests
         return Assert.Single(await ordering.RenewalsAsync(order.Id, default));
     }
 
-    private static async Task<RenewalAdminDto> Start(OrderingService ordering, RenewalDto renewal)
+    private static async Task<RenewalAdminDto> Start(OrderingTestClient ordering, RenewalDto renewal)
     {
         var claim = await ordering.ClaimRenewalAsync(renewal.Id, new(renewal.Version, Guid.NewGuid()), default);
         return await ordering.StartRenewalAsync(renewal.Id,

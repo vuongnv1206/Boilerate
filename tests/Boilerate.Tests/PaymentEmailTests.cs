@@ -34,14 +34,7 @@ public sealed class PaymentEmailTests
             scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
     }
 
-    private static CommerceService Catalog(IServiceScope scope)
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var users = Substitute.For<IUserService>();
-        users.HasPermissionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
-        return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<ICurrentUser>(), users,
-            Options.Create(new CommerceSettings()), scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
-    }
+    private static CatalogTestClient Catalog(IServiceScope scope) => CatalogTestClient.ForScope(scope);
 
     private static async Task<(Guid OrderId, Guid MessageId)> Seed(ApplicationDbContext db)
     {
@@ -145,7 +138,7 @@ public sealed class PaymentEmailTests
         Assert.Equal(OutboxState.DeadLetter, message.State);
         Assert.Equal(2, message.Attempts);
         Assert.False(await processor.RunOneAsync(default));
-        Assert.True(await Catalog(scope).ReplayAsync(new(seeded.MessageId), default));
+        Assert.True(await scope.ServiceProvider.GetRequiredService<MediatR.ISender>().Send(new Boilerate.Application.Outbox.ReplayOutboxMessageRequest(seeded.MessageId), default));
         failing = false;
         Assert.True(await processor.RunOneAsync(default));
         message = await db.OutboxMessages.AsNoTracking().SingleAsync();

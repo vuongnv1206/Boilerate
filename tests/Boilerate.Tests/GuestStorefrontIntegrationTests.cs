@@ -1,12 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Boilerate.Application.Catalog;
+using Boilerate.Application.Catalog.Products;
+using Boilerate.Application.Inventory.Digital;
 using Boilerate.Application.Common.Exceptions;
-using Boilerate.Application.Common.Interfaces;
 using Boilerate.Application.Identity.Tokens;
-using Boilerate.Application.Identity.Users;
-using Boilerate.Application.Ordering;
+using Boilerate.Application.Ordering.Shared;
+using Boilerate.Application.Payments;
+using Boilerate.Application.Shipping;
+using Boilerate.Application.Storefront.Access;
 using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Common.Exceptions;
 using Boilerate.Domain.DigitalInventory;
@@ -27,37 +29,23 @@ namespace Boilerate.Tests;
 [Collection("Foundation")]
 public sealed class GuestStorefrontIntegrationTests
 {
-    private static CommerceService Catalog(IServiceScope scope)
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var users = Substitute.For<IUserService>();
-        users.HasPermissionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
-        return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<ICurrentUser>(), users,
-            Options.Create(new CommerceSettings()), scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
-    }
+    private static CatalogTestClient Catalog(IServiceScope scope) => CatalogTestClient.ForScope(scope);
 
-    private static OrderingService Ordering(IServiceScope scope, TimeProvider? clock = null)
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var users = Substitute.For<IUserService>();
-        users.HasPermissionAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
-        return new(db, new CommerceUnitOfWork(db), scope.ServiceProvider.GetRequiredService<ICurrentUser>(), users,
-            Options.Create(new OrderingSettings()), clock ?? TimeProvider.System,
-            scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>());
-    }
+    private static OrderingTestClient Ordering(IServiceScope scope, TimeProvider? clock = null) =>
+        OrderingTestClient.ForScope(scope, clock: clock);
 
-    private static CreateProduct Product(ProductType type, string slug,
+    private static CreateProductRequest Product(ProductType type, string slug,
         ProductFulfillmentKind kind = ProductFulfillmentKind.Physical) =>
         new(type.Id, type.Version, new("Product " + slug, slug, null, [], [], []), [], [new(slug, 100, null, new())], kind);
 
-    private static async Task<ProductDto> Published(CommerceService catalog, ProductType type, string slug,
+    private static async Task<ProductDto> Published(CatalogTestClient catalog, ProductType type, string slug,
         ProductFulfillmentKind kind = ProductFulfillmentKind.Physical)
     {
         var product = await catalog.CreateAsync(Product(type, slug, kind), default);
         return await catalog.StatusAsync(new(product.Id, product.Version, ProductStatus.Published), default);
     }
 
-    private static async Task Receive(CommerceService catalog, Guid variantId, int quantity)
+    private static async Task Receive(CatalogTestClient catalog, Guid variantId, int quantity)
     {
         var balance = (await catalog.InventoryAsync(1, 100, default)).Items.Single(i => i.VariantId == variantId);
         await catalog.AdjustAsync(new(balance.Id, balance.Version, Guid.NewGuid(), quantity, "Guest storefront test"), default);
@@ -202,13 +190,13 @@ public sealed class GuestStorefrontIntegrationTests
         var product = await Published(catalog, type, "guest-digital-license", ProductFulfillmentKind.DigitalUnique);
         var variantId = product.Variants.Single().Id;
         await catalog.ImportDigitalAsync(new(product.Id, variantId, product.Version, [new("ONE", "GuestSecret-123")]), default);
-        var storefrontSettings = new StorefrontSettingsService(db, new CommerceUnitOfWork(db));
+        var sender = scope.ServiceProvider.GetRequiredService<MediatR.ISender>();
         var cart = await ordering.SaveGuestCartAsync(Guid.NewGuid(), new(null, [new(variantId, 1)]), default);
         var guestId = (await db.Carts.AsNoTracking().SingleAsync()).CustomerId;
         await Assert.ThrowsAsync<ConflictException>(() => ordering.CheckoutGuestAsync(guestId, "digital@example.test",
             Checkout(cart, OrderPaymentMethod.Prepaid, "digital@example.test"), default));
         Assert.Empty(await db.Orders.ToListAsync());
-        await storefrontSettings.UpdateAsync(new("Bank", "123456", "SHOP OWNER", null, null, true, ""), default);
+        await sender.Send(new Boilerate.Application.Storefront.Settings.UpdateStorefrontSettingsRequest("Bank", "123456", "SHOP OWNER", null, null, true, ""), default);
         cart = await ordering.GetGuestCartAsync(guestId, default);
         var order = await ordering.CheckoutGuestAsync(guestId, "digital@example.test",
             Checkout(cart, OrderPaymentMethod.Prepaid, "digital@example.test"), default);
@@ -276,7 +264,7 @@ public sealed class GuestStorefrontIntegrationTests
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var protection = scope.ServiceProvider.GetRequiredService<IDataProtectionProvider>();
         var clock = new TestClock(new DateTimeOffset(2026, 10, 24, 10, 0, 0, TimeSpan.Zero));
-        var access = new GuestAccessService(db, new CommerceUnitOfWork(db), clock, protection);
+        var access = GuestAccessTestClient.ForScope(scope, clock);
 
         await access.RequestCodeAsync("attempts@example.test", default);
         var code = ReadCode(db, protection);

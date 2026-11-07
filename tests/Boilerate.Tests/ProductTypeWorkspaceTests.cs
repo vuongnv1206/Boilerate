@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using Boilerate.Application.Catalog;
+using Boilerate.Application.Catalog.Products;
+using Boilerate.Application.Catalog.ProductTypes;
 using Boilerate.Application.Identity.Tokens;
 using Boilerate.Domain.Catalog;
 using Boilerate.Domain.Identity;
@@ -40,7 +41,7 @@ public sealed class ProductTypeWorkspaceTests
         var login = await client.PostAsJsonAsync("/api/tokens/get", new TokenRequest(email, password));
         login.EnsureSuccessStatusCode();
         client.DefaultRequestHeaders.Authorization = new("Bearer", (await login.Content.ReadFromJsonAsync<TokenResponse>())!.Token);
-        var input = new CreateProductType("SCHEMA", "Schema", [new("LEVEL", ProductFieldType.Choice, "Level", "Pick a level", false, true,
+        var input = new CreateProductTypeRequest("SCHEMA", "Schema", [new("LEVEL", ProductFieldType.Choice, "Level", "Pick a level", false, true,
             [new("BEGINNER", "Beginner"), new("ADVANCED", "Advanced")])]);
         var created = await client.PostAsJsonAsync("/api/product-types", input);
         created.EnsureSuccessStatusCode();
@@ -56,7 +57,7 @@ public sealed class ProductTypeWorkspaceTests
         Assert.Equal(originalField.Choices.Select(choice => choice.Label).Order(), copiedField.Choices.Select(choice => choice.Label).Order());
         Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsJsonAsync("/api/product-types", input with { Code = "schema" })).StatusCode);
 
-        var edit = new EditProductType(original.Id, original.Version, "Changed original", true, [],
+        var edit = new UpdateProductTypeRequest(original.Id, original.Version, "Changed original", true, [],
             [new(originalField.Id, "Changed level", null, true, true, 0, [], [])]);
         var changed = await client.PutAsJsonAsync($"/api/product-types/{original.Id}", edit);
         changed.EnsureSuccessStatusCode();

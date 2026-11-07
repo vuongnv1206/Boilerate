@@ -7,6 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Using Include="Boilerate.Application.Common.Models" />
+    <Using Include="Boilerate.Application.Common.Settings" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Domain\Domain.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
@@ -17,5 +22,7 @@
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
     <PackageReference Include="Mapster" />
     <PackageReference Include="MediatR" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
   </ItemGroup>
 </Project>

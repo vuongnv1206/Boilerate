@@ -7,6 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Using Include="Boilerate.Application.Common.Models" />
+    <Using Include="Boilerate.Application.Common.Settings" />
+  </ItemGroup>
+
+  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <InternalsVisibleTo Include="Boilerate.Tests" />
   </ItemGroup>

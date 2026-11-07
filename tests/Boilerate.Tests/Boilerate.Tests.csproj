@@ -6,6 +6,10 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
+    <Using Include="Boilerate.Application.Common.Models" />
+    <Using Include="Boilerate.Application.Common.Settings" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../../src/Host/Host.csproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Microsoft.AspNetCore.TestHost" />
