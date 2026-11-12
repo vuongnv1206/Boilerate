@@ -1,6 +1,6 @@
 # Boilerate Backend (`.NET 10`)
 
-Backend Clean Architecture trên `.NET 10`: Identity, phân quyền `Function–Action` theo nhóm từ database, giữ phiên trình duyệt qua HttpOnly cookie, kiểm toán (`AuditTrails`), hệ thống thương mại một cửa hàng tùy chọn (`Catalog`, `Storefront`, `Ordering`, `Payments`, `Shipping`, `Renewals`, `AfterSales`) và các adapter mail/storage/cache/jobs. Giao diện người dùng nằm ở repo độc lập kế bên [Frontend](../Frontend/README.md).
+Backend Clean Architecture trên `.NET 10`: Identity, phân quyền `Function–Action` theo nhóm từ database, giữ phiên trình duyệt qua HttpOnly cookie, kiểm toán (`AuditTrails`), hệ thống thương mại một cửa hàng tùy chọn (`Catalog`, `Storefront`, `Ordering`, `Payments`, `Shipping`, `Renewals`, `AfterSales`) và các adapter mail/storage/cache/jobs. Giao diện người dùng nằm ở repo độc lập kế bên [Boilerate.Frontend](../Boilerate.Frontend/README.md).
 
 ## Tài liệu & Quy tắc phát triển
 
@@ -8,11 +8,11 @@ Backend Clean Architecture trên `.NET 10`: Identity, phân quyền `Function–
 - Nguồn tài liệu chính thức duy nhất của toàn dự án: [../docs/README.md](../docs/README.md).
   - Kiến trúc & Quy tắc nghiệp vụ: [../docs/overview/architecture.md](../docs/overview/architecture.md), [../docs/overview/business-rules.md](../docs/overview/business-rules.md), [../docs/overview/roadmap.md](../docs/overview/roadmap.md).
   - Hợp đồng API, Schema DB & Sổ tay Local: [../docs/contracts/commerce-api.md](../docs/contracts/commerce-api.md), [../docs/contracts/commerce-database.md](../docs/contracts/commerce-database.md), [../docs/contracts/local-runbook.md](../docs/contracts/local-runbook.md).
-  - Nhật ký & Kết quả kiểm chứng: [../docs/history/changelog.md](../docs/history/changelog.md), [../docs/history/verification-summary.md](../docs/history/verification-summary.md).
+  - Lịch sử các mốc tính năng: [../docs/history/changelog.md](../docs/history/changelog.md).
 
 ## Cấu trúc các tầng & Nguyên tắc Runtime
 
-- `Domain` giữ thực thể và bất biến nghiệp vụ; `Application` giữ use case, DTO, validation và interfaces; `Infrastructure` triển khai EF Core persistence, Identity, Commerce services và các adapter; `Host` khởi chạy HTTP/SignalR và lệnh CLI quản trị.
+- `Domain` giữ thực thể và bất biến nghiệp vụ; `Application` giữ use case, DTO, validation và interfaces; `Infrastructure` triển khai EF Core persistence, Identity, outbox và các adapter (nghiệp vụ Commerce nằm trong các handler vertical-slice của `Application`); `Host` khởi chạy HTTP/SignalR và lệnh CLI quản trị.
 - **Mặc định chạy SQL Server Local** (`DatabaseSettings:DBProvider = "mssql"` trong `src/Host/Configurations/database.json`). Code vẫn duy trì song song `src/Migrators.MSSQL` và `src/Migrators.PostgreSQL` trên cùng mô hình dữ liệu để có thể chuyển đổi `DBProvider` khi cần, nhưng quá trình phát triển local không dùng Docker và không yêu cầu cài đặt PostgreSQL.
 - `ICurrentUser` đọc người thao tác hiện tại; claims trong JWT chỉ định danh phiên (`sid`), còn quyền thực tế (`Function.Action` và `isCentralAdmin`) được kiểm tra trực tiếp từ database ở từng request. Async validators dùng chung `DbContext` chạy tuần tự.
 
@@ -69,6 +69,8 @@ Chi tiết các endpoint xác thực/phiên trình duyệt và quản trị hệ
 | `DatabaseSettings:DBProvider` | `mssql` (mặc định local) hoặc `postgresql` |
 | `Modules:Catalog:Enabled` | `false`; khi tắt sẽ ẩn routes/Swagger và dừng worker Commerce nhưng giữ nguyên schema/dữ liệu |
 | `Modules:Notifications:Enabled` | `false`; khi bật sẽ mở API, `/hubs/notifications` và dispatcher |
+| `Commerce:WorkerEnabled` | `true`; đặt `false` để tắt worker Commerce mà không tắt module Catalog |
+| `ReverseProxy:Enabled` | `false`; bật khi chạy sau reverse proxy để dùng forwarded headers từ proxy tin cậy |
 | `HangfireStorageSettings:Enabled` | `false`; yêu cầu cấu hình storage riêng khi bật |
 | `HangfireStorageSettings:EnableDashboard` | `false`; khi bật bắt buộc xác thực + quyền `Hangfire.View` |
 | `BlobStorageSettings:Enabled` | `false`; lưu file local tại `Files/` (hoặc Azure/AWS khi cấu hình) |

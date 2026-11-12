@@ -1,4 +1,4 @@
-@host = http://localhost:5020
+@host = http://localhost:5000
 @email = {{ADMIN_EMAIL}}
 @password = {{ADMIN_PASSWORD}}
 @accessToken = {{ACCESS_TOKEN}}
