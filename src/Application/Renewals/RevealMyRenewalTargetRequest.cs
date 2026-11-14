@@ -1,13 +1,10 @@
-using Boilerate.Application.Common.Exceptions;
 using Boilerate.Application.Common.Interfaces;
 using Boilerate.Application.Common.Persistence;
 using Boilerate.Application.Common.Validation;
 using Boilerate.Application.Ordering.Shared;
-using Boilerate.Domain.Ordering;
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.EntityFrameworkCore;
 
 namespace Boilerate.Application.Renewals;
 
@@ -29,22 +26,7 @@ public sealed class RevealMyRenewalTargetRequestHandler(
     TimeProvider clock,
     IDataProtectionProvider protection) : IRequestHandler<RevealMyRenewalTargetRequest, RenewalContentDto>
 {
-    public async Task<RenewalContentDto> Handle(RevealMyRenewalTargetRequest request, CancellationToken ct)
-    {
-        Guid customer = OrderingAuthHelper.RequireCustomer(actor);
-        DateTime now = clock.GetUtcNow().UtcDateTime;
-        return await work.ExecuteAsync(async () =>
-        {
-            if ((await RenewalWorkflowHelper.LoadRenewalOrderAsync(db, request.OrderId, customer, ct)).PaymentStatus != OrderPaymentStatus.Paid)
-            {
-                throw new ConflictException("Renewal history is available after payment.");
-            }
-
-            var renewal = await db.RenewalRequests
-                .SingleOrDefaultAsync(r => r.Id == request.Id && r.OrderId == request.OrderId, ct)
-                ?? throw new NotFoundException("Renewal not found.");
-            return RenewalWorkflowHelper.RevealTarget(db, protection, customer, now, renewal);
-        }, ct);
-    }
+    public Task<RenewalContentDto> Handle(RevealMyRenewalTargetRequest request, CancellationToken ct) =>
+        RenewalWorkflowHelper.RevealTargetForBuyerAsync(db, work, protection, clock.GetUtcNow().UtcDateTime,
+            request.OrderId, request.Id, OrderingAuthHelper.RequireCustomer(actor), null, ct);
 }
-

@@ -4,6 +4,7 @@ using System.Text.Json;
 using Boilerate.Application.Common.Exceptions;
 using Boilerate.Application.Ordering.Shared;
 using Boilerate.Application.Payments;
+using Boilerate.Application.Renewals;
 using Boilerate.Application.Shipping;
 using Boilerate.Application.Storefront.Access;
 using Boilerate.Application.Storefront.Cart;
@@ -94,6 +95,18 @@ public sealed class GuestStorefrontController(IDataProtectionProvider protection
     [HttpGet("orders/{id:guid}/digital-deliveries")]
     public Task<List<DigitalDeliveryDto>> DigitalDeliveries(Guid id, CancellationToken ct) =>
         Mediator.Send(new GetGuestDigitalDeliveriesRequest(id, GetVerifiedEmail()), ct);
+
+    [HttpGet("orders/{id:guid}/renewals")]
+    public Task<List<RenewalDto>> Renewals(Guid id, CancellationToken ct) =>
+        Mediator.Send(new GetGuestOrderRenewalsRequest(id, GetVerifiedEmail()), ct);
+
+    [HttpPut("orders/{id:guid}/renewals/{renewalId:guid}/target")]
+    public Task<RenewalDto> SetRenewalTarget(Guid id, Guid renewalId, SetRenewalTarget request, CancellationToken ct) =>
+        Mediator.Send(new SetGuestRenewalTargetRequest(id, renewalId, GetVerifiedEmail(), request), ct);
+
+    [HttpGet("orders/{id:guid}/renewals/{renewalId:guid}/target")]
+    public Task<RenewalContentDto> RenewalTarget(Guid id, Guid renewalId, CancellationToken ct) =>
+        Mediator.Send(new RevealGuestRenewalTargetRequest(id, renewalId, GetVerifiedEmail()), ct);
 
     private static Guid NewCartId() => Guid.NewGuid();
 

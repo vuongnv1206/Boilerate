@@ -133,6 +133,12 @@ public sealed class OutboxProcessor(ApplicationDbContext db, CommerceUnitOfWork 
     {
         var now = DateTime.UtcNow;
         await db.Set<GuestEmailChallenge>().Where(c => c.ExpiresAtUtc <= now.AddDays(-1)).ExecuteDeleteAsync(ct);
+        // A cart untouched for longer than the guest cart cookie lives (30 days) can no longer be reached.
+        // Carts that produced an order stay: the order refers to them.
+        DateTime idleSince = now.AddDays(-30);
+        var abandoned = db.Set<Cart>().Where(c => (c.LastModifiedOn ?? c.CreatedOn) <= idleSince && !db.Orders.Any(o => o.CartId == c.Id));
+        await db.Set<CartItem>().Where(i => abandoned.Any(c => c.Id == i.CartId)).ExecuteDeleteAsync(ct);
+        await abandoned.ExecuteDeleteAsync(ct);
         var requested = (await db.OutboxMessages.AsNoTracking()
             .Where(m => m.Type == "MediaCleanupRequested" && m.State != OutboxState.Completed)
             .Select(m => m.Payload).ToListAsync(ct)).ToHashSet(StringComparer.Ordinal);

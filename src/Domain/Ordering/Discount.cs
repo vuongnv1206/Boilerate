@@ -44,13 +44,20 @@ public sealed class Discount : CommerceEntity, IAggregateRoot
         Touch();
     }
 
+    public const string NotApplicable = "Mã giảm giá không áp dụng được.";
+
     public (decimal Amount, string? Error) Quote(decimal subtotal, DateTime now, int usedCount)
     {
-        if (!IsActive) return (0, "Mã giảm giá đang tắt.");
-        if (StartsAtUtc.HasValue && now < StartsAtUtc) return (0, "Mã giảm giá chưa bắt đầu.");
-        if (EndsAtUtc.HasValue && now >= EndsAtUtc) return (0, "Mã giảm giá đã hết hạn.");
+        // One answer for every code that cannot be used right now, so guessing reveals nothing about which codes exist.
+        if (!IsActive ||
+            (StartsAtUtc.HasValue && now < StartsAtUtc) ||
+            (EndsAtUtc.HasValue && now >= EndsAtUtc) ||
+            (UsageLimit.HasValue && usedCount >= UsageLimit))
+        {
+            return (0, NotApplicable);
+        }
+
         if (subtotal < MinimumSubtotal) return (0, "Đơn hàng chưa đạt giá trị tối thiểu của mã.");
-        if (UsageLimit.HasValue && usedCount >= UsageLimit) return (0, "Mã giảm giá đã hết lượt sử dụng.");
         var amount = Kind == DiscountKind.Percentage ? decimal.Floor(subtotal * Value / 100m) : Value;
         if (amount <= 0 || amount >= subtotal) return (0, "Mã giảm giá không phù hợp với tiền hàng hiện tại.");
         return (amount, null);

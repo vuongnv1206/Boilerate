@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Boilerate.Application.Common.Exceptions;
 using Boilerate.Application.Common.Persistence;
@@ -30,6 +32,104 @@ internal static class RenewalWorkflowHelper
         await OrderStockCoordinator.Orders(db)
             .SingleOrDefaultAsync(o => o.Id == id && (!ownerId.HasValue || o.CustomerId == ownerId.Value), ct)
         ?? throw new NotFoundException("Order not found.");
+
+    /// <summary>
+    /// The order as its buyer may see it: a signed-in customer by id, a guest by the email they verified.
+    /// Exactly one of <paramref name="customer"/> and <paramref name="guestEmail"/> is given.
+    /// </summary>
+    internal static async Task<Order> LoadBuyerOrderAsync(
+        IApplicationDbContext db,
+        Guid id,
+        Guid? customer,
+        string? guestEmail,
+        CancellationToken ct)
+    {
+        if (customer.HasValue)
+        {
+            return await LoadRenewalOrderAsync(db, id, customer, ct);
+        }
+
+        string email = OrderingAuthHelper.NormalizeEmail(guestEmail!);
+        return await OrderStockCoordinator.Orders(db)
+            .SingleOrDefaultAsync(o => o.Id == id && o.IsGuestOrder && o.NormalizedEmail == email, ct)
+            ?? throw new NotFoundException("Order not found.");
+    }
+
+    internal static async Task<List<RenewalDto>> ListForBuyerAsync(
+        IApplicationDbContext db,
+        Guid orderId,
+        Guid? customer,
+        string? guestEmail,
+        CancellationToken ct)
+    {
+        var order = await LoadBuyerOrderAsync(db, orderId, customer, guestEmail, ct);
+        var requests = await db.RenewalRequests.AsNoTracking()
+            .Where(r => r.OrderId == orderId)
+            .OrderBy(r => r.Id)
+            .ToListAsync(ct);
+        return requests.Select(r => MapRenewal(r, order.Items.Single(i => i.Id == r.OrderItemId))).ToList();
+    }
+
+    internal static Task<RenewalDto> SetTargetForBuyerAsync(
+        IApplicationDbContext db,
+        ICommerceUnitOfWork work,
+        IDataProtectionProvider protection,
+        DateTime nowUtc,
+        Guid orderId,
+        Guid id,
+        SetRenewalTarget input,
+        Guid? customer,
+        string? guestEmail,
+        CancellationToken ct)
+    {
+        string target = RenewalRequest.NormalizeTarget(input.AccountIdentifier);
+        string hash = OrderFulfillmentCoordinator.RenewalHash(new { AccountIdentifier = target });
+        return work.ExecuteAsync(async () =>
+        {
+            await OrderingAuthHelper.AcquireOrderingGateAsync(db, ct);
+            var order = await LoadBuyerOrderAsync(db, orderId, customer, guestEmail, ct);
+            // A guest has no user id; the id of their order's cart owner stands in as the actor.
+            Guid actorId = customer ?? order.CustomerId;
+            var renewal = await RenewalRequests(db)
+                .SingleOrDefaultAsync(r => r.Id == id && r.OrderId == orderId, ct)
+                ?? throw new NotFoundException("Renewal not found.");
+            if (!await ReplayAsync(db, id, input.OperationId, actorId, "TargetSet", hash, ct))
+            {
+                CommerceConcurrency.CheckVersion(input.Version, renewal.Version);
+                RequireRenewalOrder(order);
+                string key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(target.Normalize(NormalizationForm.FormKC).ToUpperInvariant())));
+                string preview = target.Length > 4 ? $"***{target[^4..]}" : "***";
+                renewal.SetTarget(TargetProtector(protection, id).Protect(target), key, preview);
+                OrderFulfillmentCoordinator.RecordRenewalOperation(db, renewal, input.OperationId, actorId, "TargetSet", hash, nowUtc);
+            }
+
+            return MapRenewal(renewal, order.Items.Single(i => i.Id == renewal.OrderItemId));
+        }, ct);
+    }
+
+    internal static Task<RenewalContentDto> RevealTargetForBuyerAsync(
+        IApplicationDbContext db,
+        ICommerceUnitOfWork work,
+        IDataProtectionProvider protection,
+        DateTime nowUtc,
+        Guid orderId,
+        Guid id,
+        Guid? customer,
+        string? guestEmail,
+        CancellationToken ct) =>
+        work.ExecuteAsync(async () =>
+        {
+            var order = await LoadBuyerOrderAsync(db, orderId, customer, guestEmail, ct);
+            if (order.PaymentStatus != OrderPaymentStatus.Paid)
+            {
+                throw new ConflictException("Renewal history is available after payment.");
+            }
+
+            var renewal = await db.RenewalRequests
+                .SingleOrDefaultAsync(r => r.Id == id && r.OrderId == orderId, ct)
+                ?? throw new NotFoundException("Renewal not found.");
+            return RevealTarget(db, protection, customer ?? order.CustomerId, nowUtc, renewal);
+        }, ct);
 
     internal static void RequireRenewalOrder(Order order, bool processing = false)
     {

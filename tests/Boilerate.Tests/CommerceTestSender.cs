@@ -316,6 +316,15 @@ public sealed class OrderingTestClient(ISender sender)
     public Task<RenewalContentDto> RevealRenewalTargetAsync(Guid orderId, Guid id, CancellationToken ct = default) =>
         sender.Send(new RevealMyRenewalTargetRequest(orderId, id), ct);
 
+    public Task<List<RenewalDto>> GuestRenewalsAsync(Guid orderId, string verifiedEmail, CancellationToken ct = default) =>
+        sender.Send(new GetGuestOrderRenewalsRequest(orderId, verifiedEmail), ct);
+
+    public Task<RenewalDto> SetGuestRenewalTargetAsync(Guid orderId, Guid id, string verifiedEmail, SetRenewalTarget request, CancellationToken ct = default) =>
+        sender.Send(new SetGuestRenewalTargetRequest(orderId, id, verifiedEmail, request), ct);
+
+    public Task<RenewalContentDto> RevealGuestRenewalTargetAsync(Guid orderId, Guid id, string verifiedEmail, CancellationToken ct = default) =>
+        sender.Send(new RevealGuestRenewalTargetRequest(orderId, id, verifiedEmail), ct);
+
     public Task<Page<RenewalAdminDto>> RenewalsAdminAsync(int page, int size, RenewalStatus? status, CancellationToken ct = default, string? queue = null) =>
         sender.Send(new GetAdminRenewalsRequest(page, size, status, queue), ct);
 

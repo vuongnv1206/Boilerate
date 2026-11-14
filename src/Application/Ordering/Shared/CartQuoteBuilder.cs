@@ -28,7 +28,7 @@ internal static class CartQuoteBuilder
         var discount = await db.Set<Discount>().AsNoTracking().SingleOrDefaultAsync(d => d.Code == code, ct);
         if (discount is null)
         {
-            return (null, 0, "Mã giảm giá không tồn tại.");
+            return (null, 0, Discount.NotApplicable);
         }
 
         int used = await db.Orders.CountAsync(o => o.DiscountId == discount.Id && o.DiscountUsageHeld, ct);

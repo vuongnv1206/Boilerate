@@ -211,6 +211,39 @@ public sealed class GuestStorefrontIntegrationTests
     }
 
     [Fact, Trait("Category", "ProviderIntegration")]
+    public async Task GuestSetsAndReadsTheRenewalTargetOfTheirOwnPaidOrder()
+    {
+        await using var fixture = new FoundationDatabase("mssql", true);
+        await fixture.CreateAsync();
+        using var scope = fixture.Scope(Guid.NewGuid());
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var catalog = Catalog(scope);
+        var ordering = Ordering(scope);
+        await catalog.InitializeAsync(default);
+        var type = await catalog.CreateTypeAsync(new("GUESTRENEWAL", "Guest renewal", []), default);
+        var product = await Published(catalog, type, "guest-renewal-pack", ProductFulfillmentKind.ManualExtension);
+        await scope.ServiceProvider.GetRequiredService<MediatR.ISender>().Send(
+            new Boilerate.Application.Storefront.Settings.UpdateStorefrontSettingsRequest("Bank", "123456", "SHOP OWNER", null, null, true, ""), default);
+        var cart = await ordering.SaveGuestCartAsync(Guid.NewGuid(), new(null, [new(product.Variants.Single().Id, 1)]), default);
+        var guestId = (await db.Carts.AsNoTracking().SingleAsync()).CustomerId;
+        const string email = "renewal@example.test";
+        var order = await ordering.CheckoutGuestAsync(guestId, email, Checkout(cart, OrderPaymentMethod.Prepaid, email), default);
+        await ordering.ConfirmPaymentAsync(order.Id,
+            new(order.Version, Guid.NewGuid(), "BANK-REF-RENEWAL", order.Total, "VND", DateTime.UtcNow), default);
+
+        var renewal = Assert.Single(await ordering.GuestRenewalsAsync(order.Id, email, default));
+        await Assert.ThrowsAsync<NotFoundException>(() => ordering.GuestRenewalsAsync(order.Id, "wrong@example.test", default));
+        await Assert.ThrowsAsync<NotFoundException>(() => ordering.SetGuestRenewalTargetAsync(order.Id, renewal.Id, "wrong@example.test",
+            new(renewal.Version, Guid.NewGuid(), "someone-else"), default));
+
+        var saved = await ordering.SetGuestRenewalTargetAsync(order.Id, renewal.Id, email,
+            new(renewal.Version, Guid.NewGuid(), "guest-account-01"), default);
+        Assert.NotEqual(renewal.Version, saved.Version);
+        Assert.Equal("guest-account-01", (await ordering.RevealGuestRenewalTargetAsync(order.Id, renewal.Id, email, default)).Content);
+        await Assert.ThrowsAsync<NotFoundException>(() => ordering.RevealGuestRenewalTargetAsync(order.Id, renewal.Id, "wrong@example.test", default));
+    }
+
+    [Fact, Trait("Category", "ProviderIntegration")]
     public async Task CompetingGuestCheckoutsCannotReserveTheLastPhysicalItemTwice()
     {
         await using var fixture = new FoundationDatabase("mssql", true);
